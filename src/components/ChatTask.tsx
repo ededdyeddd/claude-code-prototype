@@ -324,7 +324,7 @@ export function PlanView({ view }: { view: ChatTaskView }) {
             <p className="text-footnote text-muted">Forecast for what is left{spent > 0 && ` · $${spent.toFixed(2)} spent`}</p>
             {t.over && (
               <p className="pt-xs text-footnote text-clay">
-                May go over your limit: up to ${t.max} of ${view.envelope.limit}. Raise the limit below the message box, or cut scope.
+                May go over your limit: up to ${t.max} of ${view.envelope.limit}. Cut scope to fit.
               </p>
             )}
           </header>

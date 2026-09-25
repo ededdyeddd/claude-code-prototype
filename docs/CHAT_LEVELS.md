@@ -55,7 +55,7 @@
 
 **Таб Plan** (только чтение: гейт показывает «waiting for you», решение — в чате)
 
-- Итог сверху относительно конверта: «~$6–11 of the $12 limit», ниже потраченное. Если верхняя граница не влезает в лимит — терракотой «Doesn't fit the envelope…» до запуска.
+- Итог сверху относительно лимита: «~$6–11 of the $12 limit», ниже потраченное. Если верхняя граница не влезает в лимит — терракотой «May go over your limit: up to $X of $12. Cut scope to fit.» до запуска.
 - Этапы «1 · Scope → 2 · Build → 3 · Verify», задачи внутри, гейты между этапами — теми же точками, что шаги; кто одобряет, говорит текст («You approve …» / «Check: …»). Гейт, который ждёт тебя, — терракотовая точка и «waiting for you».
 - У задачи — диапазон «≈ $1–3», источник («23 similar tasks» / «size M · agent's estimate») в тултипе, как в Inbox. Время не прогнозируем.
 - «Plan rules»: «I change myself: subtasks and their order within a stage. I'll ask about: a new stage or gate, scope, anything over +$2.»
