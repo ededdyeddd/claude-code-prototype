@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Block, Turn, TurnStep } from "../data/transcripts";
+import type { Block, LiveStatus, Turn, TurnStep } from "../data/transcripts";
 import { Button, Icon } from "../ui";
 import { Irregular_radiating_starburst } from "./icons/Irregular_radiating_starburst";
 
@@ -33,7 +33,7 @@ function UserMessage({ text }: { text: string }) {
 }
 
 /** Collapsed "Thought for Ns" row; expands to the list of steps Claude took. */
-function TurnStatus({ label, steps = [] }: { label: string; steps?: TurnStep[] }) {
+function TurnStatus({ label, target, steps = [] }: { label: string; target?: string; steps?: TurnStep[] }) {
   const [open, setOpen] = useState(false);
   return (
     <div data-cds="TurnStatus" className="flex flex-col gap-xs">
@@ -43,7 +43,10 @@ function TurnStatus({ label, steps = [] }: { label: string; steps?: TurnStep[] }
         onClick={() => setOpen((o) => !o)}
         className="group/status -ms-1 flex w-fit items-center gap-1 rounded-sm px-1 text-body text-muted outline-none hover:text-secondary focus-visible:shadow-focus"
       >
-        {label}
+        <span>
+          {label}
+          {target && <span className="text-secondary"> {target}</span>}
+        </span>
         <Icon
           glyph={CHEVRON}
           size="sm"
@@ -175,7 +178,7 @@ function MessageActions() {
 }
 
 /** Chat transcript: user bubbles, assistant turns with status, prose answer and actions. */
-export function Transcript({ turns, working = false }: { turns: Turn[]; working?: boolean }) {
+export function Transcript({ turns, live }: { turns: Turn[]; live?: LiveStatus }) {
   return (
     <div className="flex flex-col gap-lg pt-lg pb-xl">
       {turns.map((t, i) =>
@@ -183,7 +186,7 @@ export function Transcript({ turns, working = false }: { turns: Turn[]; working?
           <UserMessage key={i} text={t.text} />
         ) : (
           <div key={i} className="group/message-row flex flex-col gap-sm">
-            {t.thought && <TurnStatus label={t.thought} steps={t.steps} />}
+            {t.thought && <TurnStatus label={t.thought} target={t.thoughtTarget} steps={t.steps} />}
             <div className="prose font-claude-response text-body text-primary [--font-claude-response:var(--cds-font-sans)]">
               {t.blocks.map((b, j) => (
                 <BlockView key={j} block={b} />
@@ -193,12 +196,13 @@ export function Transcript({ turns, working = false }: { turns: Turn[]; working?
           </div>
         )
       )}
-      {/* Spark: static when Claude waits for the next message, pulsing while it works */}
+      {/* Running: current step row, then a pulsing spark with stats. Finished: a static spark only. */}
+      {live && <TurnStatus label={live.step} target={live.target} />}
       <div className="flex h-[22px] items-center gap-sm">
-        <span className="flex" style={working ? { animation: "working-dot-pulse 2.4s infinite" } : undefined}>
+        <span className="flex" style={live ? { animation: "working-dot-pulse 2.4s infinite" } : undefined}>
           <Irregular_radiating_starburst />
         </span>
-        {working && <span className="text-body text-muted">Working…</span>}
+        {live && <span className="text-footnote text-muted">{live.stats}</span>}
       </div>
     </div>
   );

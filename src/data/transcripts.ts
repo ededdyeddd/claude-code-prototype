@@ -12,7 +12,17 @@ export type TurnStep = { icon: string; label: string; detail?: string };
 
 export type Turn =
   | { role: "user"; text: string }
-  | { role: "assistant"; thought?: string; steps?: TurnStep[]; blocks: Block[] };
+  | {
+      role: "assistant";
+      /** Status row above the answer, e.g. "Ran 3 commands" or "Pushed" + target "main". */
+      thought?: string;
+      thoughtTarget?: string;
+      steps?: TurnStep[];
+      blocks: Block[];
+    };
+
+/** What a running chat is doing right now: current step row + stats under the spark. */
+export type LiveStatus = { step: string; target?: string; stats: string };
 
 export const TRANSCRIPTS: Record<string, Turn[]> = {
   astrology: [
@@ -157,8 +167,13 @@ export const TRANSCRIPTS: Record<string, Turn[]> = {
         },
         { type: "p", text: "Запуск:" },
         { type: "code", lang: "bash", code: "npm install\nnpm run dev" },
-        { type: "p", text: "Сейчас собираю страницу Routines и навигацию по проектам в сайдбаре." },
+        { type: "p", text: "Дальше собираю страницу Routines и навигацию по проектам в сайдбаре." },
       ],
     },
   ],
+};
+
+/** Live status for chats that are still running (keyed by session id). */
+export const LIVE_STATUS: Record<string, LiveStatus> = {
+  "prototype-copy": { step: "Editing", target: "RoutinesPage.tsx", stats: "6s · 67 tokens · Thought for 1s" },
 };

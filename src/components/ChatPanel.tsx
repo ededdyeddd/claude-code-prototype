@@ -7,6 +7,7 @@ import { AlienButton } from "./AlienButton";
 import { ChatComposer } from "./ChatComposer";
 import { ChatComposerChin } from "./ChatComposerChin";
 import { Transcript } from "./Transcript";
+import { LIVE_STATUS } from "../data/transcripts";
 import type { Turn } from "../data/transcripts";
 import type { Session } from "../data/sessions";
 import { RepoBar } from "./RepoBar";
@@ -28,7 +29,7 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
           <ScrollFadeContainer>
             {transcript && (
               <div className={TRANSCRIPT_COLUMN}>
-                <Transcript turns={transcript} working={chat?.running} />
+                <Transcript turns={transcript} live={chat?.running ? LIVE_STATUS[chat.id] : undefined} />
               </div>
             )}
           </ScrollFadeContainer>
