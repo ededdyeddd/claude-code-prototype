@@ -62,11 +62,6 @@ function totals(view: ChatTaskView) {
 
 const TAB_LABEL: Record<TaskTab, string> = { chat: "Chat", brief: "Brief", plan: "Plan" };
 
-/** Clay dot: risky assumptions still to mark (the only accent in the bar); the count is in the gate bar. */
-function CountBadge({ n }: { n: number }) {
-  return <span aria-label="Waiting for you in Chat" className="block size-[6px] rounded-full bg-clay" />;
-}
-
 /** Neutral dot: an edit changed this tab since it was last opened. */
 function ChangedDot() {
   return <span aria-label="Changed" title="Changed by your edit" className="block size-[6px] rounded-full bg-muted" />;
@@ -91,12 +86,8 @@ export function TaskTabsBar({ view, tab, onTab }: { view: ChatTaskView; tab: Tas
         items={view.tabs.map((t) => ({
           value: t,
           label: TAB_LABEL[t],
-          badge:
-            t === "chat" && tab !== "chat" && (view.atGate || view.escalationPending) ? (
-              <CountBadge n={view.unmarked.length} />
-            ) : view.changed.includes(t) && tab !== t ? (
-              <ChangedDot />
-            ) : undefined,
+          // Only what changed; what waits for you is always in view in the dock over the composer.
+          badge: view.changed.includes(t) && tab !== t ? <ChangedDot /> : undefined,
         }))}
       />
       {status && (
