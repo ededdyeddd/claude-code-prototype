@@ -1,7 +1,6 @@
 import type { Review, ReviewTab } from "../data/task";
 import type { ChatTaskView } from "../data/chatTaskStore";
-import { accept } from "../data/chatTaskStore";
-import { Button, Tabs } from "../ui";
+import { Tabs } from "../ui";
 import { SidePane } from "./SidePane";
 import { StatusMark } from "./StatusMark";
 
@@ -87,7 +86,7 @@ function OrderScreen({ width, after }: { width: number; after: boolean }) {
 
 /**
  * The review artifact of a small task's result, opened next to the chat: what changed, how it looks,
- * what was checked. The result is accepted here or under the card in the feed.
+ * what was checked. It is for looking; the result is accepted in the chat's decision dock, which stays visible.
  */
 export function ReviewPane({
   view,
@@ -116,31 +115,6 @@ export function ReviewPane({
       maxWidth={maxWidth}
       onResize={onResize}
       onClose={onClose}
-      footer={
-        <div className="flex items-center justify-end gap-xs px-[var(--cds-gap-lg)] pb-[var(--cds-gap-md)]">
-          {view.accepted ? (
-            <span className="flex items-center gap-1.5 text-footnote text-muted">
-              <StatusMark status="done" /> Accepted
-            </span>
-          ) : (
-            <>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  onClose();
-                  (document.querySelector("[data-testid=code-prompt-input]") as HTMLElement | null)?.focus();
-                }}
-              >
-                Ask for changes
-              </Button>
-              <Button size="sm" variant="primary" onClick={() => accept(view.id)}>
-                Accept
-              </Button>
-            </>
-          )}
-        </div>
-      }
     >
       <div className="flex flex-col gap-lg px-[var(--cds-gap-lg)] pt-xs pb-[var(--cds-gap-xl)]">
         <Tabs label="Review" value={tab} items={TABS} onChange={onTab} />

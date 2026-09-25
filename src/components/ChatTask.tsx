@@ -616,7 +616,7 @@ function ResultCard({ view }: { view: ChatTaskView }) {
   const review = view.task.result?.review;
   return (
     <div className={CARD}>
-      <span className="text-footnote text-muted">Check the result, then accept</span>
+      <span className="text-footnote text-muted">What I checked</span>
       <ul className="flex flex-col gap-sm">
         {claims.map((c) => (
           <li key={c.text} className="flex items-start gap-sm">
@@ -665,17 +665,11 @@ function ResultCard({ view }: { view: ChatTaskView }) {
           <Icon glyph={CHEVRON} size="sm" className="!text-muted" />
         </button>
       )}
-      <div className="flex items-center justify-end gap-xs">
-        {view.accepted ? (
-          <span className="flex items-center gap-1.5 text-footnote text-muted">
-            <StatusMark status="done" /> Accepted
-          </span>
-        ) : (
-          <Button size="sm" variant="primary" onClick={() => accept(view.id)}>
-            Accept
-          </Button>
-        )}
-      </div>
+      {view.accepted && (
+        <span className="flex items-center justify-end gap-1.5 text-footnote text-muted">
+          <StatusMark status="done" /> Accepted
+        </span>
+      )}
     </div>
   );
 }
@@ -878,15 +872,18 @@ type Decision =
   | { key: string; kind: "escalation" }
   | { key: string; kind: "assumption"; a: Assumption }
   | { key: string; kind: "gate" }
-  | { key: string; kind: "question"; q: Question };
+  | { key: string; kind: "question"; q: Question }
+  | { key: string; kind: "result" };
 
 /**
  * Every decision of the chat, docked over the composer one at a time, as Claude asks: an escalation offer,
- * then the risky assumptions, then the gate on the brief and plan, then the agent's questions (blocking first).
+ * then the risky assumptions, then the gate on the brief and plan, then the agent's questions (blocking first),
+ * then accepting a small task's result.
  * The Brief and Plan tabs are to read; this is the one place to decide. Answering moves on to the next.
  */
 export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: ChatTaskView; setTab: (t: TaskTab) => void }) {
   const { answers } = useInbox();
+  const { openReview } = useContext(ChatTaskContext);
   const [index, setIndex] = useState(0);
   const [choices, setChoices] = useState<Record<string, string>>({});
   const [customs, setCustoms] = useState<Record<string, CustomAnswer | undefined>>({});
@@ -898,6 +895,7 @@ export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: 
     ...(view?.atGate ? view.unmarked.map((a) => ({ key: `a:${a.id}`, kind: "assumption" as const, a })) : []),
     ...(view?.atGate ? [{ key: "gate", kind: "gate" as const }] : []),
     ...open.map((q) => ({ key: `q:${q.id}`, kind: "question" as const, q })),
+    ...(view?.resultPending ? [{ key: "result", kind: "result" as const }] : []),
   ];
   if (items.length === 0) return null;
   const i = Math.min(index, items.length - 1);
@@ -976,6 +974,40 @@ export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: 
         }
       />
     );
+  } else if (item.kind === "result" && view) {
+    const review = view.task.result?.review;
+    body = (
+      <DecisionCard
+        bare
+        corner={corner}
+        label="Check the result"
+        title="Accept the result?"
+        context={
+          review && openReview ? (
+            <p className="flex flex-wrap items-baseline gap-x-1">
+              What I did and how I checked it is in my message above.
+              <TextLink onClick={() => openReview("changes")}>Review the change</TextLink>
+            </p>
+          ) : (
+            "What I did and how I checked it is in my message above."
+          )
+        }
+        actions={
+          <>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => (document.querySelector("[data-testid=code-prompt-input]") as HTMLElement | null)?.focus()}
+            >
+              Ask for changes
+            </Button>
+            <Button size="sm" variant="primary" onClick={() => accept(view.id)}>
+              Accept
+            </Button>
+          </>
+        }
+      />
+    );
   } else if (item.kind === "question") {
     // Keyed by task and question: question ids repeat across tasks ("q1").
     const key = answerKey(task.id, item.q.id);
@@ -998,7 +1030,7 @@ export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: 
   }
 
   return (
-    <div className="mb-xs flex max-h-[min(60vh,520px)] flex-col overflow-y-auto rounded-lg bg-surface-2 p-lg shadow-panel-sm dark:outline dark:outline-1 dark:outline-alpha-2">
+    <div className="mb-xs flex max-h-[min(60vh,520px)] flex-col overflow-y-auto rounded-lg border border-alpha-2 bg-surface-2 p-lg">
       {body}
     </div>
   );
