@@ -14,6 +14,7 @@ React prototype of the Claude Code desktop app (Vite + React 19 + TS + Tailwind 
 
 ## Chat levels
 - Task UI inside a chat (levels 0–3, S2 composer + autonomy envelope, S3 brief/plan gate, result and escalation cards) is specified in `docs/CHAT_LEVELS.md`. Demo routes are listed at its top.
+- The task pane beside a chat (Plan | Brief tabs, plan steps, brief sections), questions in the feed, and chat typography are specified in `docs/BRIEF_AND_PLAN.md`, with a decision log. Update it when a decision changes.
 
 ## Don't
 - Don't edit `src/styles/design-system.css` (the original compiled CSS). Import order in `main.tsx` matters: design-system.css first, then tailwind.css.
