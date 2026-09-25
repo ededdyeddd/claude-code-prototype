@@ -692,7 +692,7 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
           </ul>
         </section>
       )}
-      <section className="flex flex-col gap-xs">
+      <section className="flex flex-col gap-sm">
         <h3 className={heading}>
           What I propose{inFeed && aside(`~${money(t.min, t.max)} of the $${view.envelope.limit} limit`)}
         </h3>
