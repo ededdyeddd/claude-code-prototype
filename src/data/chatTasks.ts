@@ -38,7 +38,7 @@ export const DEFAULT_ENVELOPE: Envelope = {
     { id: "push", label: "Push to the task branch", column: "free" },
     { id: "pr", label: "Open a PR", column: "ask" },
     { id: "skip-tests", label: "Skip or delete tests", column: "never" },
-    { id: "no-verify", label: "--no-verify", column: "never" },
+    { id: "no-verify", label: "Commit with --no-verify", column: "never" },
     { id: "force-push", label: "Force push", column: "never" },
   ],
 };
@@ -65,7 +65,7 @@ const ONE_CLICK: Task = {
   summary: "Повторный заказ — одним нажатием сохранённой картой. Готово, когда 3-D Secure проходит в тесте, а без согласия карта не сохраняется.",
   project: "storefront",
   stage: "Scope",
-  now: "Scope · waiting on the brief",
+  now: "Scope · waiting for you",
   waitingFor: "1m",
   agent: "payments-engineer",
   model: "Opus 5.5",
@@ -73,7 +73,7 @@ const ONE_CLICK: Task = {
   tokens: "210K",
   delivery: "push",
   level: 3,
-  levelReason: "payments are a risky zone, and 23 similar tasks touched 4 modules",
+  levelReason: "payments are risky, and 23 similar tasks touched 4 modules",
   brief: {
     understanding:
       "Покупатель, который уже платил, оплачивает следующий заказ в один клик: сохранённая карта выбрана заранее, CVC не спрашиваем, 3-D Secure — только когда требует банк. Карты хранит Stripe, у нас — токен и последние 4 цифры.",
@@ -142,7 +142,7 @@ const ONE_CLICK: Task = {
   launched: {
     role: "assistant",
     time: "just now",
-    blocks: [{ type: "p", text: "Гейт пройден, начинаю «Build». Вопросы по ходу и следующий гейт будут в плане." }],
+    blocks: [{ type: "p", text: "Начинаю со сборки: сохранение карты в Stripe Customer. Если понадобится твоё решение — спрошу здесь." }],
   },
 };
 
@@ -153,7 +153,7 @@ const REORDER_BUTTON: Task = {
   summary: "Кнопка уезжала за край на узких экранах; перенёс её под сумму.",
   project: "storefront",
   stage: "Done",
-  now: "Result · waiting for acceptance",
+  now: "Result · waiting for you",
   agent: "ui-engineer",
   model: "Opus 5.5",
   spent: "$0.35",
@@ -169,8 +169,8 @@ const REORDER_BUTTON: Task = {
   autoDecisions: [],
   result: {
     claims: [
-      { text: "Кнопка «Повторить заказ» видна на экранах от 320px", evidence: "Screenshots 320 / 375 / 768 before and after", show: "screens" },
-      { text: "Остальные брейкпоинты не изменились", evidence: "0 changed visual snapshots out of 42", show: "checks" },
+      { text: "Кнопка «Повторить заказ» видна на экранах от 320px", evidence: "Screenshots at 320, 375 and 768 px, before and after", show: "screens" },
+      { text: "Остальные брейкпоинты не изменились", evidence: "42 visual snapshots, 0 changed", show: "checks" },
       { text: "Поведение кнопки не менялось", evidence: "`order-history.test.ts` · 12 passed", show: "checks" },
     ],
     review: {
@@ -221,7 +221,7 @@ const LOYALTY: Task = {
   summary: "Скидка 5% в корзине покупателям от 3 оплаченных заказов. Готово, когда скидка видна в корзине и в письме о заказе.",
   project: "storefront",
   stage: "Migration",
-  now: "Migration · waiting on your approval",
+  now: "Migration · waiting for you",
   waitingFor: "8m",
   agent: "payments-engineer",
   model: "Opus 5.5",
@@ -229,18 +229,18 @@ const LOYALTY: Task = {
   tokens: "480K",
   delivery: "push",
   level: 1,
-  levelReason: "it grew in progress and needs a migration, which is irreversible",
+  levelReason: "it needs a migration, which can't be undone",
   escalation: {
     to: 3,
-    text: "Задача оказалась больше, чем выглядела: скидке нужна история заказов, а её нет в схеме. Предлагаю 3 этапа с гейтом перед миграцией.",
+    text: "Задача оказалась больше, чем выглядела: скидке нужна история заказов, а её нет в схеме. Предлагаю разбить на 3 этапа и перед миграцией спросить тебя.",
     afterAgree: [
       {
         role: "assistant",
         time: "just now",
-        blocks: [{ type: "p", text: "Разложил в план: сделанное отмечено, миграция — после твоего гейта." }, { type: "brief-card" }],
+        blocks: [{ type: "p", text: "Разложил на 3 этапа. Сделанное отмечено, миграцию начну только после твоего согласия." }, { type: "brief-card" }],
       },
     ],
-    afterDecline: "Доделываю без плана. Границы конверта в силе: миграцию всё равно спрошу перед запуском.",
+    afterDecline: "Доделываю без плана. Лимиты те же: перед миграцией всё равно спрошу.",
   },
   brief: {
     understanding:

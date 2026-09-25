@@ -105,7 +105,7 @@ export function sendMessage(id: string, text: string) {
           {
             role: "assistant",
             time: "just now",
-            blocks: [edit ? { type: "edit-note", text: edit.reply } : { type: "p", text: "Понял. Если это меняет бриф или план — отмечу там." }],
+            blocks: [edit ? { type: "edit-note", text: edit.reply } : { type: "p", text: "Понял. В бриф и план это пока не легло — напиши, что именно поменять." }],
           },
         ],
       })),

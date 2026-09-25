@@ -11,7 +11,7 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 
 const LIMITS = [6, 12, 20, 40] as const;
 
-const ACCESS_WORD: Record<PathAccess, string> = { write: "writes", read: "reads only", never: "never" };
+const ACCESS_WORD: Record<PathAccess, string> = { write: "can edit", read: "read only", never: "no access" };
 const NEXT_ACCESS: Record<PathAccess, PathAccess> = { write: "read", read: "never", never: "write" };
 
 const COLUMNS: { id: ActionColumn; label: string }[] = [
@@ -37,8 +37,8 @@ function EnvelopePanel({ envelope, onChange, onClose }: { envelope: Envelope; on
     <div className="flex w-[440px] flex-col gap-lg p-lg">
       <header className="flex items-start gap-sm">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <h2 className="text-body font-medium text-primary">Autonomy envelope</h2>
-          <p className="text-footnote text-secondary">Inside it I act quietly; at the edge I ask.</p>
+          <h2 className="text-body font-medium text-primary">Limits for this task</h2>
+          <p className="text-footnote text-secondary">Within these limits I work without asking. At the edge, I ask.</p>
         </div>
         <Button size="xs" icon={CLOSE} aria-label="Close" onClick={onClose} />
       </header>
@@ -54,11 +54,11 @@ function EnvelopePanel({ envelope, onChange, onClose }: { envelope: Envelope; on
           />
         </div>
         <p className="text-footnote text-muted">
-          At {Math.round(envelope.askAt * 100)}% (${Math.round(envelope.limit * envelope.askAt)}) I stop and ask. The forecast appears in the plan.
+          At {Math.round(envelope.askAt * 100)}% (${Math.round(envelope.limit * envelope.askAt)}) I'll stop and ask. The forecast is in the plan.
         </p>
       </Section>
 
-      <Section title="Territory">
+      <Section title="Files">
         <div className="flex flex-wrap gap-xs">
           {envelope.paths.map((p, i) => (
             <button
@@ -108,7 +108,7 @@ function EnvelopePanel({ envelope, onChange, onClose }: { envelope: Envelope; on
 
       <footer className="flex items-end gap-md border-t border-alpha-2 pt-md">
         <p className="min-w-0 flex-1 text-caption text-muted">
-          A behaviour boundary, not a data isolation guarantee. Defaults come from the project settings; changes here apply to this task only.
+          These limits guide what I do; they don't isolate your data. Defaults come from project settings; changes apply to this task only.
         </p>
         {edited && (
           <Button size="xs" variant="secondary" onClick={() => onChange(DEFAULT_ENVELOPE)}>
@@ -143,7 +143,7 @@ export function EnvelopeChip({ chatId, defaultOpen = false }: { chatId: string; 
         </span>
         <Icon glyph={CHEVRON_UP} size="sm" className="ms-1 !text-current opacity-70" />
       </Button>
-      <Popover anchor={ref} open={open} onClose={() => setOpen(false)} label="Autonomy envelope">
+      <Popover anchor={ref} open={open} onClose={() => setOpen(false)} label="Limits for this task">
         <EnvelopePanel envelope={envelope} onChange={(e) => setEnvelope(chatId, e)} onClose={() => setOpen(false)} />
       </Popover>
     </>

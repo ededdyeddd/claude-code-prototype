@@ -221,18 +221,18 @@ function NewChatLine({
   return bigTask ? (
     <div className={line + " text-secondary"}>
       <span className="min-w-0 truncate">
-        {reason && reason !== "size" ? `Looks like a large task (${reason})` : "As a task"} — I'll put together a brief and plan first
+        {reason && reason !== "size" ? `Looks like a large task (${reason})` : "Looks like a large task"} — I'll write a brief and plan first
       </span>
       <Button size="xs" onClick={() => onAsTask(false)}>
-        Just do it
+        Skip the brief
       </Button>
     </div>
   ) : (
     <div className={line + " text-muted"}>
       <Button size="xs" onClick={() => onAsTask(true)} className="!text-secondary">
-        Make it a task
+        Plan it first
       </Button>
-      <span className="shrink-0">or /plan</span>
+      <span className="shrink-0">or type /plan</span>
     </div>
   );
 }

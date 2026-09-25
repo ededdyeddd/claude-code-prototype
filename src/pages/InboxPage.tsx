@@ -260,9 +260,9 @@ function TaskRow({
     group !== "blocked" || blocking
       ? undefined
       : session.escalationPending
-        ? "wants to split it into stages"
+        ? "split into stages?"
         : session.unmarked.length > 0
-          ? `${session.unmarked.length} ${plural(session.unmarked.length, "assumption", "assumptions")} to check`
+          ? `${session.unmarked.length} ${plural(session.unmarked.length, "assumption", "assumptions")} to confirm`
           : gate
             ? `approve ${gate.title}`
             : undefined;
@@ -481,7 +481,7 @@ export function InboxPage() {
               selected.level !== undefined && (
                 <GateCard
                   view={{ id: selected.id, task: selected, ...session }}
-                  onOpenBrief={selected.brief ? () => navigate(`/code/${selected.id}`) : undefined}
+                  onOpenBrief={selected.brief ? () => navigate(`/code/${selected.id}?tab=brief`) : undefined}
                   onDone={openNext}
                 />
               )
