@@ -9,7 +9,7 @@ import { usePersistentWidth } from "../data/usePersistentWidth";
 import { AWAY, TASKS } from "../data/inbox";
 import { currentGate, gateText, type Task } from "../data/task";
 import { PlanPane, whenHint } from "../components/PlanPane";
-import { deriveTask } from "../data/chatTaskStore";
+import { deriveTask, type TaskState } from "../data/chatTaskStore";
 import { answer, answerKey, openQuestions, setAttention, unanswer, useInbox, type Attention } from "../data/inboxStore";
 
 // Anthropicons codepoints (see /tokens#icons)
@@ -236,11 +236,14 @@ function TaskRow({
   task,
   answers,
   group,
+  chat,
   selected,
   onSelect,
 }: {
   task: Task;
   answers: Record<string, string>;
+  /** Session of a task chat: marked assumptions, escalation. */
+  chat?: TaskState;
   /** The group the row sits in: a task can be blocked by a gate or an escalation, not only by a question. */
   group: "blocked" | "canWait" | "running";
   selected: boolean;
@@ -249,8 +252,19 @@ function TaskRow({
   const open = openQuestions(task, answers);
   const blocking = open.filter((q) => q.blocking).length;
   const later = open.length - blocking;
-  // Blocked without a question: the gate of a task chat, or an offer to grow the task.
-  const decision = group === "blocked" && !blocking ? (currentGate(task)?.mine ? "your gate" : "your decision") : undefined;
+  // Blocked without a question: what exactly the person has to do, in the same words as "1 question".
+  const session = deriveTask(task, chat);
+  const gate = currentGate(task);
+  const decision =
+    group !== "blocked" || blocking
+      ? undefined
+      : session.escalationPending
+        ? "wants to split it into stages"
+        : session.unmarked.length > 0
+          ? `${session.unmarked.length} ${plural(session.unmarked.length, "assumption", "assumptions")} to check`
+          : gate
+            ? `approve ${gate.title}`
+            : undefined;
   const needs = open.length > 0 || !!decision;
   const nextGate = task.stages.flatMap((s) => (s.gate?.status === "ahead" && s.gate.eta ? [s.gate] : []))[0];
   const stageText = needs ? task.stage : task.waitingFor ? `${task.stage} · resumed` : task.now;
@@ -421,6 +435,7 @@ export function InboxPage() {
                           key={t.id}
                           task={t}
                           group={title === "Blocked" ? "blocked" : title === "Can wait" ? "canWait" : "running"}
+                          chat={chats[t.id]}
                           answers={answers}
                           selected={t.id === selectedId}
                           onSelect={() => setSelectedId(t.id)}
