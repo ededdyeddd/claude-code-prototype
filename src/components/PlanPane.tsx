@@ -358,7 +358,7 @@ export function QuestionCard({
     <section
       id={questionAnchor(task.id, question.id)}
       aria-label={question.text}
-      className="flex scroll-mt-[var(--cds-gap-xl)] flex-col gap-lg rounded-lg border border-alpha-2 p-lg transition-colors duration-fast data-[linked]:border-alpha-5"
+      className="flex scroll-mt-[var(--cds-gap-xl)] flex-col gap-md rounded-lg border border-alpha-2 p-lg transition-colors duration-fast data-[linked]:border-alpha-5"
     >
       <div className="flex flex-col gap-xs">
         <div className="flex min-h-5 items-center justify-between gap-sm">
