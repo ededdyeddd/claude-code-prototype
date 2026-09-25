@@ -78,7 +78,9 @@ export function SidePane({
         {/* Hairlines show up only while content scrolls under the header or above the footer, as in chats. */}
         <header
           className={cx(
-            "flex shrink-0 items-start gap-sm border-b ps-[var(--cds-gap-lg)] pe-sm pt-[var(--cds-gap-md)] pb-xs transition-colors duration-fast",
+            "flex shrink-0 items-start gap-sm border-b ps-[var(--cds-gap-lg)] pe-sm pt-[var(--cds-gap-md)] transition-colors duration-fast",
+            // Tabs in place of the heading are lighter than the serif title: the content needs more room under them.
+            typeof title === "string" ? "pb-xs" : "pb-[var(--cds-gap-md)]",
             scroll.top ? "border-alpha-2" : "border-transparent",
           )}
         >
