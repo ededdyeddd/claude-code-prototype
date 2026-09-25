@@ -386,13 +386,27 @@ export function GateCard({ view, onOpenBrief, onDone }: { view: ChatTaskView; on
 }
 
 /** A quiet inline link inside a card: to the full brief, or "Details" that unfold under it. */
-function TextLink({ onClick, children, ...rest }: { onClick: () => void; children: ReactNode; "aria-expanded"?: boolean }) {
+function TextLink({
+  onClick,
+  children,
+  underline = true,
+  ...rest
+}: {
+  onClick: () => void;
+  children: ReactNode;
+  /** Off for toggles that carry a chevron: the chevron already says it is clickable. */
+  underline?: boolean;
+  "aria-expanded"?: boolean;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
       {...rest}
-      className="flex w-fit items-center gap-0.5 rounded-sm text-left text-footnote text-muted underline decoration-alpha-4 underline-offset-2 outline-none hover:text-primary focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
+      className={cx(
+        "flex w-fit items-center gap-0.5 rounded-sm text-left text-footnote text-muted outline-none hover:text-primary focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]",
+        underline && "underline decoration-alpha-4 underline-offset-2",
+      )}
     >
       {children}
     </button>
@@ -747,7 +761,7 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
 /** "Details" toggle for a card: a quiet link with a chevron after it, turned when open (as on plan steps). */
 function DetailsToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
-    <TextLink aria-expanded={open} onClick={onToggle}>
+    <TextLink aria-expanded={open} onClick={onToggle} underline={false}>
       Details
       <Icon glyph={CHEVRON} size="sm" className={cx("!text-muted transition-transform duration-fast", open && "rotate-90")} />
     </TextLink>
