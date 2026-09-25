@@ -5,9 +5,9 @@ import { Irregular_radiating_starburst } from "./icons/Irregular_radiating_starb
 
 const CHEVRON = "";
 const COPY = "";
-const RETRY = "";
-const THUMB_UP = "";
-const THUMB_DOWN = "";
+const FORK = "\uE012";
+const PIN = "\uE0BD";
+const SPEAKER = "\uE0E4";
 const RUN = "\uE0C1";
 const FILE_CODE = "\uE048";
 const FILES = "\uE02D";
@@ -256,17 +256,18 @@ function CodeBlock({ code }: { code: string }) {
   );
 }
 
-/** Copy / retry / feedback actions under an assistant reply; revealed on hover like in the app. */
-function MessageActions() {
+/** Actions under an assistant reply, revealed on hover: copy, fork, pin, read aloud, and the reply time. */
+function MessageActions({ time }: { time?: string }) {
   return (
     <div
       data-cds="MessageActions"
       className="-ms-1.5 flex items-center gap-0.5 opacity-0 transition-opacity duration-fast group-hover/message-row:opacity-100 focus-within:opacity-100"
     >
       <Button size="xs" icon={COPY} aria-label="Copy" />
-      <Button size="xs" icon={RETRY} aria-label="Retry" />
-      <Button size="xs" icon={THUMB_UP} aria-label="Good response" />
-      <Button size="xs" icon={THUMB_DOWN} aria-label="Bad response" />
+      <Button size="xs" icon={FORK} aria-label="Fork from here" />
+      <Button size="xs" icon={PIN} aria-label="Pin" />
+      <Button size="xs" icon={SPEAKER} aria-label="Read aloud" />
+      {time && <span className="ms-1.5 text-footnote text-muted">{time}</span>}
     </div>
   );
 }
@@ -286,7 +287,7 @@ export function Transcript({ turns, live }: { turns: Turn[]; live?: LiveStatus }
                 <BlockView key={j} block={b} />
               ))}
             </div>
-            <MessageActions />
+            <MessageActions time={t.time} />
           </div>
         )
       )}

@@ -11,6 +11,15 @@ import { LIVE_STATUS } from "../data/transcripts";
 import type { Turn } from "../data/transcripts";
 import type { Session } from "../data/sessions";
 import { RepoBar } from "./RepoBar";
+import { ContextUsage } from "./icons/Blue_dot_right_edge";
+
+// Rough context estimate for the mock: characters in the transcript vs. a small window,
+// so a long chat fills the ring noticeably more than a short one.
+const CONTEXT_WINDOW_CHARS = 12000;
+function contextUsage(turns?: Turn[]) {
+  if (!turns) return 0;
+  return Math.min(0.95, JSON.stringify(turns).length / CONTEXT_WINDOW_CHARS);
+}
 
 // Same column (max width + gutters) as the composer below, so messages line up with it.
 const TRANSCRIPT_COLUMN =
@@ -23,6 +32,7 @@ const TRANSCRIPT_COLUMN =
 export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Session }) {
   const hasContent = !!transcript;
   return (
+    <ContextUsage.Provider value={contextUsage(transcript)}>
     <div className="contents">
       <div className="contents">
         <div className="epitaxy-chat-panel-body flex-1 min-h-0 relative w-full mx-auto [.epitaxy-chat-panel_&]:[@container_tile-slot_(max-width:560px)]:[--chat-gutter:16px] [--chat-column-gutter-start:var(--chat-gutter-start,var(--chat-gutter,32px))] [--chat-column-gutter-end:var(--chat-gutter-end,var(--chat-gutter,32px))] [[data-chat-gutter-start=shave]_&]:[--chat-column-gutter-start:var(--chat-gutter-start,calc(var(--chat-gutter)-(var(--tiles-gap)-var(--tiles-padding))))] [[data-chat-gutter-end=shave]_&]:[--chat-column-gutter-end:var(--chat-gutter-end,calc(var(--chat-gutter)-(var(--tiles-gap)-var(--tiles-padding))))] [[data-chat-gutter-end=bleed]_&]:[--chat-column-gutter-end:var(--chat-gutter-end,calc(var(--chat-gutter)+var(--tiles-padding)))] max-w-[calc(var(--max-content-width)+var(--chat-column-gutter-start)+var(--chat-column-gutter-end))] ps-[var(--chat-column-gutter-start)] pe-[var(--chat-column-gutter-end)] [[data-pane-overlay]_&]:[translate:var(--epitaxy-overlay-column-shift,none)] *:[--epitaxy-overlay-column-shift:none] [[data-pane-overlay]_&]:[transition:translate_var(--tile-overlay-duration)_var(--tile-overlay-ease)] [--max-content-width:var(--chat-column-measure,768px)] [[data-transcript-width=m]_&]:[--max-content-width:var(--chat-column-measure,960px)] [[data-transcript-width=l]_&]:[--max-content-width:var(--chat-column-measure,1280px)]">
@@ -78,6 +88,7 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
         </div>
       </div>
     </div>
+    </ContextUsage.Provider>
   );
 }
 

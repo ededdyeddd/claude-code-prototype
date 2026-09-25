@@ -27,7 +27,9 @@ export type Session = {
 export const PROJECTS = ["yango-prototype"];
 
 export const SESSIONS: Session[] = [
-  { id: "prototype-copy", title: "Prototype copy", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 9082, removed: 37 }, status: "active", env: "local", lastActivity: 1, created: 300, running: true },
+  { id: "visual-polish", title: "Доработки визуала и анимации", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 1386, removed: 58 }, status: "active", env: "local", lastActivity: 10, created: 60 },
+  { id: "design-system", title: "Создание дизайн-системы", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 1911, removed: 10 }, status: "active", env: "local", lastActivity: 60, created: 120 },
+  { id: "copy-prototype", title: "Копирование прототипа", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 2804, removed: 0 }, status: "active", env: "local", lastActivity: 120, created: 180 },
   { id: "astrology", title: "Astrology app plan", project: null, status: "active", env: "cloud", lastActivity: 3000, created: 3500 },
   { id: "yango-interview", title: "Как пройти собеседование в yango", project: null, status: "active", env: "local", lastActivity: 5000, created: 7000 },
 ];

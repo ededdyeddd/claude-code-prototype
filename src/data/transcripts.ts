@@ -25,12 +25,17 @@ export type Turn =
       thoughtTarget?: string;
       steps?: TurnStep[];
       blocks: Block[];
+      /** Shown in the hover actions, e.g. "1 minute ago". */
+      time?: string;
     };
 
 /** What a running chat is doing right now: current step row + stats under the spark. */
 export type LiveStatus = { step: string; target?: string; stats: string };
 
+import { YANGO_TRANSCRIPTS } from "./yangoTranscripts";
+
 export const TRANSCRIPTS: Record<string, Turn[]> = {
+  ...YANGO_TRANSCRIPTS,
   astrology: [
     {
       role: "user",
@@ -39,6 +44,7 @@ export const TRANSCRIPTS: Record<string, Turn[]> = {
     {
       role: "assistant",
       thought: "Ran 3 steps",
+      time: "Yesterday",
       steps: [
         { icon: "", label: "Searched the web", detail: "ephemeris API, natal chart libraries" },
         { icon: "", label: "Read notes.md" },
@@ -97,6 +103,7 @@ export const TRANSCRIPTS: Record<string, Turn[]> = {
     {
       role: "assistant",
       thought: "Thought for 3s",
+      time: "Yesterday",
       steps: [{ icon: "\uE03F", label: "Collected harmful advice" }],
       blocks: [
         { type: "p", text: "Конечно! Вот проверенные вредные советы для кандидатов. Применять строго наоборот." },
@@ -145,55 +152,8 @@ export const TRANSCRIPTS: Record<string, Turn[]> = {
       ],
     },
   ],
-  "prototype-copy": [
-    {
-      role: "user",
-      text: "Скопируй 1 в 1 мой прототип Claude Code из Alloy и собери из него нормальный React-проект. Дизайн-систему сохрани, чтобы дальше делать новые экраны в том же стиле.",
-    },
-    {
-      role: "assistant",
-      thought: "Ran 12 commands",
-      steps: [
-        { icon: "\uE082", label: "Opened the Alloy prototype" },
-        { icon: "\uE063", label: "Downloaded the bundle, styles and 40 assets" },
-        { icon: "\uE06C", label: "Read index-C7gYdJDR.js" },
-        { icon: "\uE051", label: "Ran npm run build" },
-      ],
-      blocks: [
-        { type: "p", text: "Готово. Прототип собран заново на Vite + React 19 + TypeScript и совпадает с оригиналом: я сравнил все 376 видимых элементов стартового экрана." },
-        { type: "h3", text: "Что внутри" },
-        {
-          type: "ul",
-          items: [
-            "47 компонентов восстановлены из сборки Alloy в `src/components/`.",
-            "Дизайн-система: 959 токенов `--cds-*`, шрифты и иконки Anthropicons.",
-            "Tailwind v4 привязан к токенам: `bg-surface-2`, `text-muted` и т.д.",
-            "Страница `/tokens` — живой справочник токенов, иконок и компонентов.",
-          ],
-        },
-        { type: "p", text: "Чтобы поднять проект на другом компьютере:" },
-        { type: "code", lang: "bash", code: "git clone https://github.com/ededdyeddd/claude-code-prototype.git" },
-        { type: "p", text: "Затем `npm install` и `npm run dev`." },
-        { type: "status", label: "Edited DESIGN_GUIDE.md, ran a command", diff: { added: 14, removed: 1 } },
-        {
-          type: "files",
-          title: "Edited 4 files",
-          diff: { added: 461, removed: 1 },
-          visible: 3,
-          files: [
-            { name: "Menu.tsx", diff: { added: 189, removed: 0 } },
-            { name: "sessions.ts", diff: { added: 96, removed: 0 } },
-            { name: "ProjectNav.tsx", diff: { added: 162, removed: 0 } },
-            { name: "RoutinesPage.tsx", diff: { added: 14, removed: 1 } },
-          ],
-        },
-        { type: "p", text: "Дальше собираю страницу Routines и навигацию по проектам в сайдбаре." },
-      ],
-    },
-  ],
 };
 
 /** Live status for chats that are still running (keyed by session id). */
 export const LIVE_STATUS: Record<string, LiveStatus> = {
-  "prototype-copy": { step: "Editing", target: "RoutinesPage.tsx", stats: "6s · 67 tokens · Thought for 1s" },
 };
