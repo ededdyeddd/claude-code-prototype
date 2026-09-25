@@ -857,9 +857,10 @@ function AssumptionDecision({ view, a, nav }: { view: ChatTaskView; a: Assumptio
 
 /** The gate on the brief and plan: approve and start, or not yet (edits go in the chat). What blocks it or what it costs is under "Approve". */
 function GateDecision({ view, nav, setTab, toAssumption }: { view: ChatTaskView; nav: DockNav; setTab: (t: TaskTab) => void; toAssumption: () => void }) {
-  const [picked, setPicked] = useState<number | null>(null);
   const gate = currentGate(view.live);
   const left = view.unmarked.length;
+  // The plan is my proposal: "Approve and start" is picked in advance once nothing blocks it, as a recommended option.
+  const [picked, setPicked] = useState<number | null>(left === 0 ? 0 : null);
   const submit = () => {
     if (picked === 0 && left === 0) launch(view.id);
     if (picked === 1) (focusComposer(), nav.toggle());
@@ -913,7 +914,8 @@ function GateDecision({ view, nav, setTab, toAssumption }: { view: ChatTaskView;
 
 /** The escalation offer: split into stages (recommended), or finish as is. The reasons are the agent's message above. */
 function EscalationChoice({ view, nav }: { view: ChatTaskView; nav: DockNav }) {
-  const [picked, setPicked] = useState<number | null>(null);
+  // The recommended option is picked in advance, as in the Inbox.
+  const [picked, setPicked] = useState<number | null>(0);
   const stages = view.task.stages.length;
   return (
     <DockFrame
@@ -1055,7 +1057,8 @@ export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: 
         key={key}
         task={task}
         question={item.q}
-        choice={choices[key]}
+        // The recommended option is picked in advance, as in the Inbox.
+        choice={choices[key] ?? item.q.options.find((o) => o.recommended)?.id}
         setChoice={(id) => setChoices((c) => ({ ...c, [key]: id }))}
         custom={customs[key]}
         setCustom={(c) => setCustoms((m) => ({ ...m, [key]: c }))}
