@@ -39,7 +39,7 @@ function UserMessage({ text }: { text: string }) {
   return (
     <div data-cds="UserMessage" className="flex justify-end">
       <div
-        className="max-w-[85%] whitespace-pre-wrap rounded-lg bg-alpha-2 px-md py-sm text-body text-primary"
+        className="max-w-[85%] whitespace-pre-wrap rounded-lg bg-alpha-2 px-md py-sm text-prose text-primary"
         style={{ fontFamily: "var(--font-user-message)" }}
       >
         {text}
@@ -292,7 +292,7 @@ export function Transcript({ turns, live }: { turns: Turn[]; live?: LiveStatus }
         ) : (
           <div key={i} className="group/message-row flex flex-col gap-sm">
             {t.thought && <TurnStatus label={t.thought} target={t.thoughtTarget} steps={t.steps} />}
-            <div className="prose font-claude-response text-body text-primary [--font-claude-response:var(--cds-font-sans)]">
+            <div className="prose font-claude-response text-prose text-primary [--font-claude-response:var(--cds-font-sans)]">
               {t.blocks.map((b, j) => (
                 <BlockView key={j} block={b} />
               ))}
