@@ -34,7 +34,7 @@ export function ListCard({
         onClick={onClick}
         className="flex w-full items-start gap-md rounded-[inherit] p-sm text-left outline-none focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
       >
-        <span className="flex size-[var(--cds-h-control)] shrink-0 items-center justify-center rounded border border-alpha-2 bg-alpha-1">
+        <span className="flex size-[var(--cds-h-control)] shrink-0 items-center justify-center rounded bg-alpha-1">
           <Icon glyph={icon} />
         </span>
         <span className="flex min-w-0 flex-col gap-0.5">
@@ -44,7 +44,7 @@ export function ListCard({
           {description && <span className="text-body text-secondary">{description}</span>}
           {meta && (
             <span className="mt-0.5 flex items-center gap-1.5 text-footnote text-muted">
-              {metaIcon && <Icon glyph={metaIcon} className="!text-muted" style={{ fontSize: "0.875rem" }} />}
+              {metaIcon && <Icon glyph={metaIcon} size="sm" className="!text-muted" />}
               {meta}
             </span>
           )}

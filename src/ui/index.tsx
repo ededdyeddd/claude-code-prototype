@@ -43,10 +43,44 @@ export function Theme({
 
 /* ------------------------------------------------------------------- Icon */
 
-/** Anthropicons glyph. Pick codepoints at /tokens#icons, e.g. <Icon glyph={""} />. */
-export function Icon({ glyph, className, style }: { glyph: string; className?: string; style?: CSSProperties }) {
+/**
+ * Size/weight pairs used by the original app for Anthropicons:
+ * sm = chevrons and inline meta (12px), md = buttons (16px), lg = sidebar navigation (20px).
+ * Thinner weights at larger sizes keep the stroke width visually consistent.
+ */
+const ICON_SIZES = {
+  sm: { fontSize: "calc(0.75rem*var(--cds-rem-scale,1))", fontWeight: 577.8, opsz: 12 },
+  md: { fontSize: "calc(1rem*var(--cds-rem-scale,1))", fontWeight: 533.3, opsz: 16 },
+  lg: { fontSize: "calc(1.25rem*var(--cds-rem-scale,1))", fontWeight: 433.3, opsz: 20 },
+} as const;
+
+export type IconSize = keyof typeof ICON_SIZES;
+
+/** Anthropicons glyph. Pick codepoints at /tokens#icons, e.g. <Icon glyph={"\uE001"} />. */
+export function Icon({
+  glyph,
+  size = "md",
+  className,
+  style,
+}: {
+  glyph: string;
+  size?: IconSize;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  const s = ICON_SIZES[size];
   return (
-    <span data-cds="Icon" aria-hidden="true" className={className} style={style}>
+    <span
+      data-cds="Icon"
+      aria-hidden="true"
+      className={cx("inline-flex shrink-0 items-center justify-center leading-none", className)}
+      style={{
+        fontSize: s.fontSize,
+        fontWeight: s.fontWeight,
+        fontVariationSettings: `"opsz" ${s.opsz}, "wght" ${s.fontWeight}`,
+        ...style,
+      }}
+    >
       {glyph}
     </span>
   );
@@ -120,7 +154,7 @@ export function Button({
       </span>
       {icon && <Icon glyph={icon} className={variant === "ghost" ? undefined : "!text-current"} />}
       {children != null && <span className="inline-flex min-w-0 items-center truncate">{children}</span>}
-      {trailingIcon && <Icon glyph={trailingIcon} className="-me-0.5 !text-current opacity-70" />}
+      {trailingIcon && <Icon glyph={trailingIcon} size="sm" className="-me-0.5 !text-current opacity-70" />}
     </button>
   );
 }

@@ -158,7 +158,7 @@ export function MenuSelectItem<T extends string>({
       >
         <span className="min-w-0 flex-1 truncate">{label}</span>
         <span className="text-muted">{current}</span>
-        <Icon glyph={CHEVRON_RIGHT} className="-me-1 !text-muted" style={{ fontSize: "0.75rem" }} />
+        <Icon glyph={CHEVRON_RIGHT} size="sm" className="-me-1 !text-muted" />
       </button>
       <div onMouseEnter={show} onMouseLeave={hide}>
         <Menu anchor={ref} open={open} onClose={() => setOpen(false)} placement="right-start" minWidth={160}>

@@ -1,3 +1,4 @@
+import { Icon } from "../ui";
 const PR_ICON = "\uE07A";
 const PR_COLOR = { open: "var(--cds-text-git-opened)", merged: "var(--cds-text-git-merged)", draft: "var(--cds-text-git-draft)" };
 
@@ -43,8 +44,8 @@ export function SessionRow({
         </span>
       </span>
       {pr && (
-        <span data-cds="Icon" title={`PR ${pr}`} className="shrink-0" style={{ color: PR_COLOR[pr], fontSize: "0.8125rem" }}>
-          {PR_ICON}
+        <span title={`PR ${pr}`} className="flex shrink-0">
+          <Icon glyph={PR_ICON} size="sm" style={{ color: PR_COLOR[pr] }} />
         </span>
       )}
     </a>
