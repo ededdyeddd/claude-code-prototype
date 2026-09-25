@@ -203,13 +203,10 @@ export function DockFrame({
       {/* The header is inset like the text inside the option rows: the same distance from the top, left and right edges.
           The icon buttons' own padding makes up the difference on the right. */}
       <div className="flex items-start gap-sm ps-1.5 pe-1">
-        <div className="flex min-w-0 flex-1 flex-col gap-sm pt-0.5">
-          <p className="text-body font-medium text-primary">
-            {title}
-            {tag && <span className="ms-sm text-footnote font-normal">{tag}</span>}
-          </p>
-          {lead}
-        </div>
+        <p className="min-w-0 flex-1 pt-0.5 text-body font-medium text-primary">
+          {title}
+          {tag && <span className="ms-sm text-footnote font-normal">{tag}</span>}
+        </p>
         <div className="flex shrink-0 items-center gap-0.5 text-footnote tabular-nums text-muted">
           {nav.count > 1 && (
             <>
@@ -233,6 +230,8 @@ export function DockFrame({
       </div>
       {!nav.collapsed && (
         <>
+          {/* What the question is about: the full width under the header, not squeezed beside its controls in a narrow chat. */}
+          {lead && <div className="mt-sm ps-1.5 pe-1">{lead}</div>}
           <div className="-mx-1 mt-lg flex min-h-0 flex-col gap-md overflow-y-auto px-1">{children}</div>
           <div className="mt-md flex flex-wrap items-center justify-end gap-xs">
             {/* Ghost button: its text, not its box, lines up with the options' text. */}

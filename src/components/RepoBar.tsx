@@ -10,8 +10,9 @@ const fmt = (n: number) => n.toLocaleString("en-US");
 export function RepoBar({ repo }: { repo: NonNullable<Session["repo"]> }) {
   return (
     <div className="mb-xs flex h-[var(--cds-h-control--lg)] items-center gap-sm rounded-lg bg-alpha-1 ps-md pe-xs text-body">
-      <span className="text-secondary">{repo.name}</span>
-      <span className="text-muted">{repo.branch}</span>
+      {/* In a narrow chat the names shorten instead of wrapping. */}
+      <span className="shrink-0 truncate text-secondary">{repo.name}</span>
+      <span className="min-w-0 truncate text-muted">{repo.branch}</span>
       <span className="ms-auto flex items-center gap-1.5 rounded-sm bg-alpha-1 px-1.5 font-mono text-footnote leading-5">
         <span className="text-git-added">+{fmt(repo.added)}</span>
         <span className="text-git-removed">−{fmt(repo.removed)}</span>
