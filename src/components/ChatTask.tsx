@@ -221,17 +221,17 @@ export function BriefView({ view }: { view: ChatTaskView }) {
       .map((p) => `\`${p.path}\``)
       .join(", ");
   return (
-    <div className={cx("flex flex-col gap-[var(--cds-gap-xl)]", PANE_BODY, CODE)}>
-      <section className="flex flex-col gap-md">
+    <div className={cx("flex flex-col gap-[var(--cds-gap-lg)]", PANE_BODY, CODE)}>
+      <section className="flex flex-col gap-sm">
         <SectionTitle>How I understood the task</SectionTitle>
         <p className="text-body text-primary">
           <Inline text={brief.understanding} />
         </p>
       </section>
 
-      <section className="flex flex-col gap-md">
+      <section className="flex flex-col gap-sm">
         <SectionTitle aside={view.unmarked.length ? `${view.unmarked.length} to confirm` : "all confirmed"}>Assumptions</SectionTitle>
-        <ul className="flex flex-col gap-sm">
+        <ul className="flex flex-col gap-xs">
           {risky.map((a) =>
             view.rejected.has(a.id) ? <SafeAssumption key={a.id} view={view} a={a} /> : <AssumptionState key={a.id} view={view} a={a} />,
           )}
@@ -239,7 +239,7 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         {safe.length > 0 && (
           <div className="flex flex-col gap-xs">
             <span className="text-footnote text-muted">Checked or reversible</span>
-            <ul className="flex flex-col gap-sm">
+            <ul className="flex flex-col gap-xs">
               {safe.map((a) => (
                 <SafeAssumption key={a.id} view={view} a={a} />
               ))}
@@ -248,9 +248,9 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         )}
       </section>
 
-      <section className="flex flex-col gap-md">
+      <section className="flex flex-col gap-sm">
         <SectionTitle>What I won't touch</SectionTitle>
-        <ul className="flex flex-col gap-sm">
+        <ul className="flex flex-col gap-xs">
           {brief.boundaries.map((b) => (
             <li key={b} className="flex items-start gap-sm text-body text-secondary">
               <span className="mt-[5px] flex">
@@ -275,9 +275,9 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         </p>
       </section>
 
-      <section className="flex flex-col gap-md">
+      <section className="flex flex-col gap-sm">
         <SectionTitle>Done when</SectionTitle>
-        <ul className="flex flex-col gap-sm">
+        <ul className="flex flex-col gap-xs">
           {[
             ...brief.doneWhen.map((c) => ({ ...c, mine: false })),
             ...view.criteria.map((text, i) => ({ id: `mine-${i}`, text, locked: true, mine: true })),
@@ -633,7 +633,13 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
   const spent = done.reduce((n, p) => n + (p.work ? costRange(p.work.cost).min : 0), 0);
   const ahead = view.live.stages.filter((st) => st.steps.some((p) => p.status !== "done") || st.gate?.status === "current");
   const t = totals(view);
-  const row = "flex items-baseline gap-sm text-footnote";
+  // Typeset like the rest of the reply: body text in the feed, footnote inside the Inbox card. Each cost follows its
+  // item's text, so nothing floats at the far edge of a wide column.
+  const size = inFeed ? "text-body" : "text-footnote";
+  const mark = inFeed ? "mt-[5px]" : "mt-[3px]";
+  const heading = cx(size, "font-medium text-primary");
+  const aside = (text: ReactNode) => <span className="font-normal tabular-nums text-muted"> · {text}</span>;
+  const row = cx("flex items-start gap-sm", size);
   return (
     <div className={cx("flex flex-col gap-md", !inFeed && "border-t border-alpha-2 pt-md")}>
       {view.task.levelReason && !inFeed && (
@@ -642,55 +648,80 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
         </p>
       )}
       {done.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <span className="text-footnote text-muted">Done so far · ${spent.toFixed(2)}</span>
-          {done.map((p) => (
-            <div key={p.id} className={row}>
-              <StatusMark status="done" />
-              <span className="min-w-0 flex-1 text-secondary">
-                <Inline text={p.title} />
-              </span>
-              <span className="shrink-0 tabular-nums text-muted">{p.work?.cost}</span>
-            </div>
-          ))}
-        </div>
+        <section className="flex flex-col gap-xs">
+          <h3 className={heading}>Done so far{aside(`$${spent.toFixed(2)}`)}</h3>
+          <ul className="flex flex-col gap-0.5">
+            {done.map((p) => (
+              <li key={p.id} className={row}>
+                <span className={cx("flex", mark)}>
+                  <StatusMark status="done" />
+                </span>
+                <span className="min-w-0 text-secondary">
+                  <Inline text={p.title} />
+                  {p.work && <span className="tabular-nums text-muted"> · {p.work.cost}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
-      <div className="flex flex-col gap-1">
-        <span className="text-footnote text-muted">
-          What I propose{inFeed && ` · ~${money(t.min, t.max)} of the $${view.envelope.limit} limit`}
-        </span>
-        {ahead.map((st) => (
-          <div key={st.id} className="flex flex-col gap-1">
-            <span className="text-footnote text-primary">{st.title}</span>
-            {st.steps
-              .filter((p) => p.status !== "done")
-              .map((p) => (
-                <div key={p.id} className={cx(row, "ps-md")}>
-                  <TaskDot state="ahead" />
-                  <span className="min-w-0 flex-1 text-secondary">
-                    <Inline text={p.title} />
-                  </span>
-                  {p.work && (
-                    <Hint text={`Forecast · ${p.work.basis ?? "the agent's estimate"}`} className="shrink-0 tabular-nums text-muted">
-                      {p.work.cost}
-                    </Hint>
-                  )}
-                </div>
-              ))}
-            {st.gate && (
-              <div className={cx(row, "ps-md")}>
-                <TaskDot state="ahead" />
-                <span className="text-secondary">{gateText(st.gate)}</span>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+      <section className="flex flex-col gap-sm">
+        <h3 className={heading}>
+          What I propose{inFeed && aside(`~${money(t.min, t.max)} of the $${view.envelope.limit} limit`)}
+        </h3>
+        {ahead.map((st) => {
+          const steps = st.steps.filter((p) => p.status !== "done");
+          const r = steps.reduce(
+            (n, p) => (p.work ? { min: n.min + costRange(p.work.cost).min, max: n.max + costRange(p.work.cost).max } : n),
+            { min: 0, max: 0 },
+          );
+          return (
+            <div key={st.id} className="flex flex-col gap-xs">
+              <span className={cx(size, "text-primary")}>
+                {st.title}
+                <span className="tabular-nums text-muted">
+                  {" — "}
+                  {steps.length} {steps.length === 1 ? "step" : "steps"}
+                  {r.max > 0 && `, ~${money(r.min, r.max)}`}
+                </span>
+              </span>
+              <ul className="flex flex-col gap-0.5">
+                {steps.map((p) => (
+                  <li key={p.id} className={row}>
+                    <span className={cx("flex", mark)}>
+                      <TaskDot state="ahead" />
+                    </span>
+                    <span className="min-w-0 text-secondary">
+                      <Inline text={p.title} />
+                      {p.work && (
+                        <span className="text-muted">
+                          {" · "}
+                          <Hint text={`Forecast · ${p.work.basis ?? "the agent's estimate"}`} className="tabular-nums">
+                            {p.work.cost}
+                          </Hint>
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                ))}
+                {st.gate && (
+                  <li className={row}>
+                    <span className={cx("flex", mark)}>
+                      <TaskDot state="ahead" />
+                    </span>
+                    <span className="text-secondary">{gateText(st.gate)}</span>
+                  </li>
+                )}
+              </ul>
+            </div>
+          );
+        })}
+      </section>
       {esc && (
-        <div className="flex flex-col gap-1">
-          <span className="text-footnote text-muted">If you finish as is</span>
-          <p className="text-footnote text-secondary">{esc.afterDecline}</p>
-        </div>
+        <section className="flex flex-col gap-xs">
+          <h3 className={heading}>If you finish as is</h3>
+          <p className={cx(size, "text-secondary")}>{esc.afterDecline}</p>
+        </section>
       )}
     </div>
   );

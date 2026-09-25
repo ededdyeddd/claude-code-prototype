@@ -506,10 +506,10 @@ function PaneMeta({ task, answers }: { task: Task; answers: Record<string, strin
 
 /** Padding of a side pane's body (Inbox task pane, the chat's Brief and Plan panes): one left edge and top offset. */
 export const PANE_BODY = "px-[var(--cds-gap-lg)] pt-xs pb-[var(--cds-gap-xl)]";
-/** Room between sections of a pane (plan stages, rules, brief sections); a stage header adds its own pad-xs. */
-export const SECTION_GAP = "pb-[var(--cds-gap-xl)]";
+/** Room between sections of a pane (plan stages, rules, brief sections): one gap-lg, like a document. */
+export const SECTION_GAP = "pb-[var(--cds-gap-lg)]";
 /** Room between steps; the last step of a stage has none, the stage's own room follows. */
-const STEP_GAP = "pb-[var(--cds-gap-lg)]";
+const STEP_GAP = "pb-[var(--cds-gap-sm)]";
 
 /**
  * The plan of a task, with open questions expanded on their steps. One component for the Inbox side pane
@@ -838,7 +838,7 @@ export function PlanPane({
             <li key={stage.id} className={cx("flex flex-col", isCollapsed ? "pb-md" : (si < stages.length - 1 || hasTail) && SECTION_GAP)}>
               {/* One stage: a plain "Plan" heading; several: numbered, collapsible stages. */}
               {single && (
-                <div className="sticky top-0 z-[2] flex items-baseline gap-sm bg-[var(--plan-surface,var(--cds-surface-2))] py-xs mb-[var(--cds-gap-md)]">
+                <div className="sticky top-0 z-[2] flex items-baseline gap-sm bg-[var(--plan-surface,var(--cds-surface-2))] py-xs mb-[var(--cds-gap-xs)]">
                   <h3 className="text-body font-medium text-primary">Plan</h3>
                   <span className="ms-auto shrink-0 text-footnote tabular-nums text-muted">{stageMeta}</span>
                 </div>
@@ -851,7 +851,7 @@ export function PlanPane({
                   className={cx(
                     // Sticky while its steps scroll by, so you always know which stage you are in.
                     "group/stage sticky top-0 z-[2] flex w-full items-baseline gap-sm bg-[var(--plan-surface,var(--cds-surface-2))] py-xs text-left outline-none focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]",
-                    !isCollapsed && "pb-[var(--cds-gap-md)]",
+                    !isCollapsed && "pb-[var(--cds-gap-xs)]",
                   )}
                 >
                   <span className="text-body font-medium text-primary">
