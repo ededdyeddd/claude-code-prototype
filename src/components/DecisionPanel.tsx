@@ -202,7 +202,7 @@ export function DockFrame({
     >
       {/* The header is inset like the text inside the option rows: the same distance from the top, left and right edges.
           The icon buttons' own padding makes up the difference on the right. */}
-      <div className="flex items-start gap-sm ps-[var(--cds-gap-sm)] pe-1.5 pt-xs">
+      <div className="flex items-start gap-sm ps-[var(--cds-gap-sm)] pe-1.5">
         <div className="flex min-w-0 flex-1 flex-col gap-sm pt-0.5">
           <p className="text-body font-medium text-primary">
             {title}
@@ -235,7 +235,8 @@ export function DockFrame({
         <>
           <div className="-mx-1 mt-lg flex min-h-0 flex-col gap-md overflow-y-auto px-1">{children}</div>
           <div className="mt-md flex flex-wrap items-center justify-end gap-xs">
-            {left && <span className="me-auto flex items-center">{left}</span>}
+            {/* Ghost button: its text, not its box, lines up with the options' text. */}
+            {left && <span className="me-auto ms-0.5 flex items-center">{left}</span>}
             <Button size="sm" variant="secondary" onClick={nav.skip}>
               Skip
             </Button>

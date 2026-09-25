@@ -884,17 +884,19 @@ function GateDecision({ view, nav, setTab, toAssumption }: { view: ChatTaskView;
       pick={setPicked}
       canSubmit={picked === 1 || (picked === 0 && left === 0)}
       onSubmit={submit}
+      lead={
+        <p className="flex flex-wrap items-baseline gap-x-1 text-footnote text-muted">
+          {view.edits.length > 0 ? "Your edits are in the" : "See the"}
+          {view.tabs.includes("brief") && (
+            <>
+              <TextLink onClick={() => setTab("brief")}>brief</TextLink>
+              and
+            </>
+          )}
+          <TextLink onClick={() => setTab("plan")}>plan</TextLink>
+        </p>
+      }
     >
-      <p className="flex flex-wrap items-baseline gap-x-1 text-footnote text-muted">
-        {view.edits.length > 0 ? "Your edits are in the" : "See the"}
-        {view.tabs.includes("brief") && (
-          <>
-            <TextLink onClick={() => setTab("brief")}>brief</TextLink>
-            and
-          </>
-        )}
-        <TextLink onClick={() => setTab("plan")}>plan</TextLink>
-      </p>
       <OptionList label={title}>
         <OptionRow
           n={1}
@@ -935,8 +937,8 @@ function EscalationChoice({ view, nav }: { view: ChatTaskView; nav: DockNav }) {
       pick={setPicked}
       canSubmit={picked !== null}
       onSubmit={() => picked !== null && escalate(view.id, picked === 0)}
+      lead={<p className="text-footnote text-muted">The details are in my message above.</p>}
     >
-      <p className="text-footnote text-muted">The details are in my message above.</p>
       <OptionList label={`Split it into ${stages} stages?`}>
         <OptionRow
           n={1}
@@ -975,8 +977,8 @@ function ResultDecision({ view, nav }: { view: ChatTaskView; nav: DockNav }) {
       pick={setPicked}
       canSubmit={picked !== null}
       onSubmit={() => (picked === 0 ? accept(view.id) : picked === 1 && (focusComposer(), nav.toggle()))}
+      lead={<p className="text-footnote text-muted">What I did and how I checked it is in my message above.</p>}
     >
-      <p className="text-footnote text-muted">What I did and how I checked it is in my message above.</p>
       <OptionList label="Accept the result?">
         <OptionRow
           n={1}

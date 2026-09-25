@@ -265,6 +265,7 @@ export function QuestionCard({
         canSubmit={custom ? custom.ready : otherOn ? !!draft.trim() : !!picked}
         onSubmit={submit}
         submitLabel={custom ? "Apply" : "Submit"}
+        lead={question.context && <p className="text-footnote text-muted">{question.context}</p>}
         left={
           custom ? (
             <Button
@@ -288,7 +289,6 @@ export function QuestionCard({
           )
         }
       >
-        {question.context && <p className="text-footnote text-muted">{question.context}</p>}
         {thread$}
         {mode === "ask" && (
           <input
