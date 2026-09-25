@@ -157,7 +157,10 @@ export function ProjectNav() {
                 onToggle={() => setCollapsed((c) => ({ ...c, [g.key]: !isCollapsed }))}
                 actions={
                   showDot ? (
-                    <span role="img" aria-label="A task here is waiting for you" className="me-1.5 size-[6px] shrink-0 rounded-full bg-clay" />
+                    // Centered in a box the size of the "+" button, so the dot sits in the same column as the "+" icons.
+                    <span role="img" aria-label="A task here is waiting for you" className="flex size-[var(--cds-h-control--xs)] shrink-0 items-center justify-center">
+                      <span className="size-[6px] rounded-full bg-clay" />
+                    </span>
                   ) : (
                     <>
                       {canCreate(g) && (
