@@ -89,12 +89,6 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
                         label: view.tabs.includes("brief") ? "Brief and plan" : "Plan",
                         open: !!panel,
                         changed: view.changed.length > 0,
-                        // Where the task stands: waiting for approval, or the stage that runs. Nothing before the gate.
-                        status: view.atGate
-                          ? { text: "To approve" }
-                          : view.launched && view.live.stage
-                            ? { text: view.live.stage, running: true }
-                            : undefined,
                         // Opens on the brief while it waits for approval, on the plan once the task runs.
                         onToggle: () => setPanel(panel ? null : view.tabs.includes("brief") && view.atGate ? "brief" : "plan"),
                       }

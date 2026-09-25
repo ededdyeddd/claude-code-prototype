@@ -76,7 +76,7 @@ export function OptionRow({
         }
       }}
       className={cx(
-        "flex items-center gap-md rounded px-1.5 py-sm text-left outline-none transition-colors duration-fast focus-visible:shadow-focus",
+        "flex items-center gap-md rounded px-2.5 py-2.5 text-left outline-none transition-colors duration-fast focus-visible:shadow-focus",
         disabled
           ? "bg-alpha-1 opacity-disabled"
           : cx("cursor-[var(--cds-cursor-interactive)]", selected ? "bg-alpha-2 shadow-[inset_0_0_0_1px_var(--cds-alpha-5)]" : "bg-alpha-1 hover:bg-alpha-2"),
@@ -202,7 +202,7 @@ export function DockFrame({
     >
       {/* The header is inset like the text inside the option rows: the same distance from the top, left and right edges.
           The icon buttons' own padding makes up the difference on the right. */}
-      <div className="flex items-start gap-sm ps-1.5 pe-1">
+      <div className="flex items-start gap-sm ps-2.5 pe-2">
         <p className="min-w-0 flex-1 pt-0.5 text-body font-medium text-primary">
           {title}
           {tag && <span className="ms-sm text-footnote font-normal">{tag}</span>}
@@ -231,11 +231,11 @@ export function DockFrame({
       {!nav.collapsed && (
         <>
           {/* What the question is about: the full width under the header, not squeezed beside its controls in a narrow chat. */}
-          {lead && <div className="mt-sm ps-1.5 pe-1">{lead}</div>}
+          {lead && <div className="mt-sm ps-2.5 pe-2">{lead}</div>}
           <div className="-mx-1 mt-lg flex min-h-0 flex-col gap-md overflow-y-auto px-1">{children}</div>
           <div className="mt-md flex flex-wrap items-center justify-end gap-xs">
             {/* Ghost button: its text, not its box, lines up with the options' text. */}
-            {left && <span className="me-auto ms-0.5 flex items-center">{left}</span>}
+            {left && <span className="me-auto ms-1 flex items-center">{left}</span>}
             <Button size="sm" variant="secondary" onClick={nav.skip}>
               Skip
             </Button>

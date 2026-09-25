@@ -1,6 +1,5 @@
 import type { Session } from "../data/sessions";
 import { Button, Icon } from "../ui";
-import { TaskDot } from "./StatusMark";
 
 const LAPTOP = "\uE093";
 const CHEVRON_DOWN = "\uE027";
@@ -13,13 +12,11 @@ const TASK = "\uE041";
 
 /**
  * The toggle of the task pane on the right of the chat: "Brief and plan" (level 3) or "Plan" (level 2).
- * `status` is where the task stands: "To approve" at the gate, the current stage once it runs (`running`).
  */
 export type TaskPaneToggle = {
   label: string;
   open: boolean;
   changed?: boolean;
-  status?: { text: string; running?: boolean };
   onToggle: () => void;
 };
 
@@ -62,11 +59,12 @@ export function EpitaxyTitlebar({ chat, taskPane }: { chat?: Session; taskPane?:
 }
 
 /**
- * The task's artifact in the chrome: a bordered chip (icon, name, where the task stands), not one more grey
- * icon toggle, so it reads as the thing this task produced. A narrow chat drops the status, then the name. Same icon as the tile in the feed. No clay:
- * the gate itself asks in the dock over the composer. Open = pressed fill; grey dot = changed since last open.
+ * The task's artifact in the chrome: its icon and name, lighter than a chip, set apart from the grey icon toggles
+ * by the label. A narrow chat drops the name. Same icon as the tile in the feed. No clay: the gate itself asks in
+ * the dock over the composer. Open = pressed fill; grey dot = changed since last open.
  */
-function TaskPaneChip({ label, open, changed, status, onToggle }: TaskPaneToggle) {
+function TaskPaneChip({ label, open, changed, onToggle }: TaskPaneToggle) {
+  // Light: an icon and a label, no frame and no status; the icon ties it to the tile in the feed.
   return (
     <button
       type="button"
@@ -75,21 +73,12 @@ function TaskPaneChip({ label, open, changed, status, onToggle }: TaskPaneToggle
       aria-label={label}
       onClick={onToggle}
       className={
-        "me-1.5 flex h-[var(--cds-h-control--xs)] items-center gap-1.5 rounded-sm border px-1.5 text-body @[400px]/titlebar:pe-sm text-primary outline-none transition-colors duration-fast focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)] " +
-        (open ? "border-alpha-3 bg-alpha-2" : "border-alpha-2 hover:bg-alpha-1")
+        "me-1 flex h-[var(--cds-h-control--xs)] items-center gap-1.5 rounded-sm px-1.5 text-body outline-none transition-colors duration-fast focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)] " +
+        (open ? "bg-alpha-2 text-primary" : "text-secondary hover:bg-alpha-1 hover:text-primary")
       }
     >
-      <Icon glyph={TASK} size="sm" className="!text-secondary" />
+      <Icon glyph={TASK} size="sm" className="!text-current" />
       <span className="hidden whitespace-nowrap @[400px]/titlebar:inline">{label}</span>
-      {status && (
-        <>
-          <span aria-hidden className="hidden h-3 w-px bg-alpha-3 @[560px]/titlebar:block" />
-          <span className="hidden items-center gap-1 whitespace-nowrap text-muted @[560px]/titlebar:flex">
-            {status.running && <TaskDot state="running" className="-mx-0.5" />}
-            {status.text}
-          </span>
-        </>
-      )}
       {changed && !open && <span aria-label="Changed" className="block size-[6px] rounded-full bg-muted" />}
     </button>
   );
