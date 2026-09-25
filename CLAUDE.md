@@ -9,6 +9,9 @@ React prototype of the Claude Code desktop app (Vite + React 19 + TS + Tailwind 
 - Icons: Anthropicons private-use glyphs via `<Icon glyph={"\uE0xx"} />`; the catalog is at `/tokens#icons`.
 - Token reference: `docs/DESIGN_TOKENS.md`, `src/design-system/tokens.json`, and the live `/tokens` page.
 
+## Inbox section
+- `/inbox` and its task pane are specified in `docs/INBOX.md` (PRD + design doc: principles, structure, architecture, decision log). Read it before changing the section; update it when a decision changes.
+
 ## Don't
 - Don't edit `src/styles/design-system.css` (the original compiled CSS). Import order in `main.tsx` matters: design-system.css first, then tailwind.css.
 - Don't "fix" literal `&amp;` inside class strings in `src/components`: the original has them too, and fixing them changes layout.
