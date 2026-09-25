@@ -70,7 +70,7 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
   // The live row names the plan step in progress, so the feed and the plan say the same thing; the file stays as its target.
   const running = (view ? planProgress(view.live) : undefined)?.running;
   const liveBase = chat?.running ? LIVE_STATUS[chat.id] : undefined;
-  const live = liveBase && running ? { ...liveBase, step: running.title } : liveBase;
+  const live = liveBase && running ? { ...liveBase, step: running.title, planStep: true } : liveBase;
 
   const send = (text: string) => {
     if (view) return sendMessage(view.id, text);
