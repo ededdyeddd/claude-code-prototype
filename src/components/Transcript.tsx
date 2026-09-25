@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import type { Block, Diff, LiveStatus, Turn, TurnStep } from "../data/transcripts";
 import { Button, Icon } from "../ui";
 import { Irregular_radiating_starburst } from "./icons/Irregular_radiating_starburst";
-import { TaskBlock } from "./ChatTask";
+import { ChatTaskContext, TaskBlock } from "./ChatTask";
+import { TaskDot } from "./StatusMark";
 
 const CHEVRON = "";
 const COPY = "\uE056"; // two overlapping squares, as in the app
@@ -283,6 +284,31 @@ function MessageActions({ time }: { time?: string }) {
 }
 
 /** Chat transcript: user bubbles, assistant turns with status, prose answer and actions. */
+/**
+ * What a task chat is doing now, as a step of its plan: the plan's "running" dot, its place in the plan, the step,
+ * the file as a note. Opens the plan, so the link between the feed and the plan is explicit.
+ */
+function PlanStepRow({ live, planStep }: { live: LiveStatus; planStep: { n: number; of: number } }) {
+  const { setTab } = useContext(ChatTaskContext);
+  return (
+    <button
+      type="button"
+      onClick={() => setTab("plan")}
+      className="group/step -ms-1 flex w-fit max-w-full items-center gap-sm rounded-sm px-1 text-left text-body outline-none hover:bg-fill-ghost-hover focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
+    >
+      <TaskDot state="running" />
+      <span className="min-w-0 truncate">
+        <span className="text-muted">
+          Plan · step {planStep.n} of {planStep.of} ·{" "}
+        </span>
+        <span className="text-secondary">{live.step}</span>
+        {live.target && <span className="text-footnote text-muted"> · {live.target}</span>}
+      </span>
+      <Icon glyph={CHEVRON} size="sm" className="!text-muted" />
+    </button>
+  );
+}
+
 export function Transcript({ turns, live }: { turns: Turn[]; live?: LiveStatus }) {
   return (
     // Everything in the feed (status rows, file cards, task cards) is built with text-body; here it reads at the
@@ -306,11 +332,7 @@ export function Transcript({ turns, live }: { turns: Turn[]; live?: LiveStatus }
       {/* Running: current step row, then a pulsing spark with stats. Finished: a static spark only. */}
       {live &&
         (live.planStep ? (
-          // A task chat: the step of the plan leads, so the feed and the plan name the same thing; the file is a note.
-          <p className="text-body text-secondary">
-            {live.step}
-            {live.target && <span className="text-footnote text-muted"> · {live.target}</span>}
-          </p>
+          <PlanStepRow live={live} planStep={live.planStep} />
         ) : (
           <TurnStatus label={live.step} target={live.target} />
         ))}
