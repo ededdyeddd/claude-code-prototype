@@ -431,7 +431,28 @@ function Forecast({
 const DIFF_WORD: Record<PlanDiff["kind"], string> = { add: "New", change: "Changes", remove: "Removed", gate: "New" };
 
 function DiffChip({ kind }: { kind: PlanDiff["kind"] }) {
-  return <span className="shrink-0 rounded-sm bg-alpha-3 px-1.5 text-footnote leading-5 text-secondary">{DIFF_WORD[kind]}</span>;
+  return (
+    <span className="ml-sm inline-block rounded-sm bg-alpha-3 px-1.5 text-footnote leading-5 text-secondary">{DIFF_WORD[kind]}</span>
+  );
+}
+
+/** Agent name shown on hover: out of flow so it takes no width from the title; over the title's end, which fades out under it. */
+const HOVER_AGENT =
+  "pointer-events-none absolute right-full top-0 whitespace-nowrap pl-[var(--cds-gap-lg)] bg-[linear-gradient(to_right,transparent,var(--cds-surface-2)_var(--cds-gap-lg))] opacity-0 transition-opacity duration-fast group-hover/step:opacity-100";
+
+/** Text followed by its chip; the chip is glued to the last word so a wrapped title never leaves it alone on a line. */
+function WithChip({ text, kind }: { text: string; kind?: PlanDiff["kind"] }) {
+  if (!kind) return <>{text}</>;
+  const cut = text.lastIndexOf(" ") + 1;
+  return (
+    <>
+      {text.slice(0, cut)}
+      <span className="whitespace-nowrap">
+        {text.slice(cut)}
+        <DiffChip kind={kind} />
+      </span>
+    </>
+  );
 }
 
 /** "Yes, form is isolated" → "reversible": the short form fits on the option row; the full text shows once it is picked. */
@@ -857,19 +878,13 @@ function PlanPane({ task, answers, onTaskDone }: { task: Task; answers: Record<s
             <TaskDot state="ahead" />
           </span>
           <span className="flex min-w-0 flex-1 items-baseline justify-between gap-md">
-            <span className="flex min-w-0 items-baseline gap-sm">
-              <span className={cx("text-body", item.preview ? "text-primary" : "text-secondary")}>{item.text}</span>
-              {item.preview && <DiffChip kind="add" />}
+            <span className={cx("min-w-0 text-body", item.preview ? "text-primary" : "text-secondary")}>
+              <WithChip text={item.text} kind={item.preview ? "add" : undefined} />
             </span>
             {item.diff.time && (
-              <span className="shrink-0 text-footnote tabular-nums text-secondary">
+              <span className="relative shrink-0 text-footnote tabular-nums text-secondary">
                 {item.diff.agent && (
-                  <span
-                    className={cx(
-                      "text-muted",
-                      !newAgent.has(item.key) && "opacity-0 transition-opacity duration-fast group-hover/step:opacity-100",
-                    )}
-                  >
+                  <span className={cx("text-muted", !newAgent.has(item.key) && HOVER_AGENT)}>
                     {item.diff.agent} ·{" "}
                   </span>
                 )}
@@ -945,35 +960,27 @@ function PlanPane({ task, answers, onTaskDone }: { task: Task; answers: Record<s
                 />
               </button>
             ) : (
-              <span className="flex min-w-0 items-baseline gap-sm">
+              <span className="min-w-0">
                 <span
                   className={cx("text-body", removing ? "text-muted line-through" : status === "ahead" ? "text-secondary" : "text-primary")}
                 >
-                  {step.title}
+                  <WithChip text={step.title} kind={removing ? "remove" : undefined} />
                 </span>
-                {removing && <DiffChip kind="remove" />}
               </span>
             )}
             {work && (
               // Done steps keep their cost on hover; for steps ahead it is a forecast that informs the answer, so it stays visible.
               <span
                 className={cx(
-                  "shrink-0 text-footnote tabular-nums",
+                  "relative shrink-0 text-footnote tabular-nums",
                   status === "done"
                     ? cx("text-muted transition-opacity duration-fast", !expanded && "opacity-0 group-hover/step:opacity-100")
                     : "text-secondary",
                   removing && "text-muted line-through",
                 )}
               >
-                {/* Agent: always where it changes, on hover everywhere else (the text keeps its place, numbers do not shift). */}
-                <span
-                  className={cx(
-                    "text-muted",
-                    status !== "done" &&
-                      !newAgent.has(step.id) &&
-                      "opacity-0 transition-opacity duration-fast group-hover/step:opacity-100",
-                  )}
-                >
+                {/* Agent: always where it changes, on hover everywhere else (overlaid, so nothing shifts and the title keeps its width). */}
+                <span className={cx("text-muted", status !== "done" && !newAgent.has(step.id) && HOVER_AGENT)}>
                   {work.agent} ·{" "}
                 </span>
                 <Forecast cost={work.cost} time={work.time} basis={work.basis} model={task.model} />
@@ -981,9 +988,8 @@ function PlanPane({ task, answers, onTaskDone }: { task: Task; answers: Record<s
             )}
           </div>
           {changed && (
-            <span className="flex items-baseline gap-sm text-footnote text-secondary">
-              {changed.text}
-              {changed.preview && <DiffChip kind="change" />}
+            <span className="text-footnote text-secondary">
+              <WithChip text={changed.text} kind={changed.preview ? "change" : undefined} />
             </span>
           )}
           {expanded && result && <StepResultView result={result} />}
