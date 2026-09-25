@@ -358,7 +358,7 @@ export function QuestionCard({
     <section
       id={questionAnchor(task.id, question.id)}
       aria-label={question.text}
-      className="flex scroll-mt-[var(--cds-gap-xl)] flex-col gap-lg rounded-lg border border-alpha-2 p-lg"
+      className="flex scroll-mt-[var(--cds-gap-xl)] flex-col gap-lg rounded-lg border border-alpha-2 p-lg transition-colors duration-fast data-[linked]:border-alpha-5"
     >
       <div className="flex flex-col gap-xs">
         <div className="flex min-h-5 items-center justify-between gap-sm">
@@ -595,14 +595,19 @@ function PaneMeta({ task, answers }: { task: Task; answers: Record<string, strin
   const spentTime = task.stages
     .flatMap((st) => st.steps)
     .reduce((n, x) => n + minutes(x.work?.time ?? "0m"), 0);
+  const target = () => (open[0] ? document.getElementById(questionAnchor(task.id, open[0].id)) : null);
+  const link = (on: boolean) => target()?.toggleAttribute("data-linked", on);
   return (
     <p className="text-footnote text-muted">
       {open.length > 0 ? (
         <button
           type="button"
-          onClick={() =>
-            document.getElementById(questionAnchor(task.id, open[0].id))?.scrollIntoView({ behavior: "smooth", block: "start" })
-          }
+          onClick={() => target()?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          // Hovering lights up the question it leads to, so the link reads even when the card is already in view.
+          onMouseEnter={() => link(true)}
+          onMouseLeave={() => link(false)}
+          onFocus={() => link(true)}
+          onBlur={() => link(false)}
           className="-mx-1 rounded-sm px-1 text-secondary outline-none transition-colors duration-fast hover:bg-fill-ghost-hover hover:text-primary focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
         >
           {open.length} {plural(open.length, "question", "questions")}
@@ -855,7 +860,7 @@ export function PlanPane({
             // A blocking question is open elsewhere in the task: this one folds into a line so it does not compete.
             <div
               id={questionAnchor(task.id, q.id)}
-              className="flex scroll-mt-[var(--cds-gap-xl)] items-baseline justify-between gap-md rounded bg-alpha-1 py-xs ps-md pe-xs"
+              className="flex scroll-mt-[var(--cds-gap-xl)] items-baseline justify-between gap-md rounded bg-alpha-1 py-xs ps-md pe-xs transition-colors duration-fast data-[linked]:bg-alpha-3"
             >
               <span className="min-w-0 truncate text-footnote">
                 <span className="text-muted">Can wait · </span>
