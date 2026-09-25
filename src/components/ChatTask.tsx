@@ -830,13 +830,23 @@ function AssumptionDecision({ view, a, nav }: { view: ChatTaskView; a: Assumptio
     else if (picked === 1 && draft.trim()) markAssumption(view.id, a.id, { ok: false, note: draft.trim() });
   };
   return (
-    <DockFrame nav={nav} title="Confirm this assumption?" count={2} pick={pick} canSubmit={ready} onSubmit={submit}>
-      <div className="flex flex-col gap-0.5">
-        <p className="text-body text-primary">
-          <Inline text={a.text} />
-        </p>
-        {a.why && <p className="text-footnote text-muted">{a.why}</p>}
-      </div>
+    <DockFrame
+      nav={nav}
+      title="Confirm this assumption?"
+      count={2}
+      pick={pick}
+      canSubmit={ready}
+      onSubmit={submit}
+      // The assumption is what the question is about: right under it, before the options.
+      lead={
+        <div className={cx("flex flex-col gap-0.5", CODE)}>
+          <p className="text-body text-primary">
+            <Inline text={a.text} />
+          </p>
+          {a.why && <p className="text-footnote text-muted">{a.why}</p>}
+        </div>
+      }
+    >
       <OptionList label="Confirm this assumption?">
         <OptionRow n={1} title="Confirm" selected={picked === 0} onSelect={() => pick(0)} description="I'll build on it as written" />
         <OptionRow n={2} title="Correct it" selected={picked === 1} onSelect={() => pick(1)}>

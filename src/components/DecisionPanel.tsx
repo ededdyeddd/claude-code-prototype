@@ -79,7 +79,7 @@ export function OptionRow({
         "flex items-center gap-md rounded px-md py-sm text-left outline-none transition-colors duration-fast focus-visible:shadow-focus",
         disabled
           ? "bg-alpha-1 opacity-disabled"
-          : cx("cursor-[var(--cds-cursor-interactive)]", selected ? "bg-alpha-3" : "bg-alpha-1 hover:bg-alpha-2"),
+          : cx("cursor-[var(--cds-cursor-interactive)]", selected ? "bg-alpha-2 shadow-[inset_0_0_0_1px_var(--cds-alpha-5)]" : "bg-alpha-1 hover:bg-alpha-2"),
       )}
     >
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -148,10 +148,13 @@ export function DockFrame({
   onSubmit,
   submitLabel = "Submit",
   left,
+  lead,
   children,
 }: {
   nav: DockNav;
   title: ReactNode;
+  /** What the question is about, right under it (e.g. the assumption itself), before the options. */
+  lead?: ReactNode;
   /** Next to the question: "Blocking" in clay (it needs you), "Can wait" muted. */
   tag?: ReactNode;
   /** Options that number keys can pick, 1 to count. */
@@ -198,10 +201,14 @@ export function DockFrame({
       className="not-prose mb-xs flex max-h-[min(60vh,560px)] flex-col rounded-lg border border-alpha-2 bg-surface-2 p-md"
     >
       <div className="flex items-start gap-sm">
-        <p className="min-w-0 flex-1 pt-0.5 text-body font-medium text-primary">
-          {title}
-          {tag && <span className="ms-sm text-footnote font-normal">{tag}</span>}
-        </p>
+        {/* Optically aligned with the text inside the option rows (their horizontal padding), not with the rows' edges. */}
+        <div className="flex min-w-0 flex-1 flex-col gap-sm ps-[var(--cds-gap-sm)] pt-0.5">
+          <p className="text-body font-medium text-primary">
+            {title}
+            {tag && <span className="ms-sm text-footnote font-normal">{tag}</span>}
+          </p>
+          {lead}
+        </div>
         <div className="-me-xs -mt-0.5 flex shrink-0 items-center gap-0.5 text-footnote tabular-nums text-muted">
           {nav.count > 1 && (
             <>
@@ -225,7 +232,7 @@ export function DockFrame({
       </div>
       {!nav.collapsed && (
         <>
-          <div className="-mx-1 mt-md flex min-h-0 flex-col gap-md overflow-y-auto px-1">{children}</div>
+          <div className="-mx-1 mt-lg flex min-h-0 flex-col gap-md overflow-y-auto px-1">{children}</div>
           <div className="mt-md flex flex-wrap items-center justify-end gap-xs">
             {left && <span className="me-auto flex items-center">{left}</span>}
             <Button size="sm" variant="secondary" onClick={nav.skip}>
