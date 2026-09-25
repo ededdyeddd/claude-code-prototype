@@ -156,7 +156,7 @@ function OptionEffects({ task, diff, flush }: { task: Task; diff: PlanDiff[]; /*
 
 /**
  * The only place to answer a question: pick an option, or give your own answer, which comes back as a plan
- * change to apply. "Ask" is a thread about the question; it never answers it.
+ * change to apply. "Ask about it" is a thread about the question; it never answers it.
  */
 export function QuestionCard({
   task,
@@ -283,7 +283,7 @@ export function QuestionCard({
             </Button>
           ) : (
             <Button size="sm" onClick={() => (setDraft(""), setMode("ask"))}>
-              Ask
+              Ask about it
             </Button>
           )
         }
@@ -477,7 +477,7 @@ export function QuestionCard({
         ) : mode === "choose" ? (
           <>
             <Button size="sm" className="me-auto" onClick={() => (setDraft(""), setMode("ask"))}>
-              Ask
+              Ask about it
             </Button>
             <Button size="sm" variant="secondary" onClick={() => (setDraft(""), setMode("other"))}>
               Other answer…

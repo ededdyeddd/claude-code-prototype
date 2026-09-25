@@ -220,7 +220,7 @@ export function DockFrame({
             onClick={nav.toggle}
             className={cx("text-muted [&>[data-cds=Icon]]:transition-transform [&>[data-cds=Icon]]:duration-fast", nav.collapsed && "[&>[data-cds=Icon]]:rotate-180")}
           />
-          <Button size="xs" icon={CLOSE} aria-label="Close" onClick={nav.close} className="text-muted" />
+          <Button size="xs" icon={CLOSE} aria-label="Hide" title="Hide" onClick={nav.close} className="text-muted" />
         </div>
       </div>
       {!nav.collapsed && (
