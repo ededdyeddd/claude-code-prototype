@@ -86,6 +86,7 @@ export const TASK_TRANSCRIPTS: Record<string, Turn[]> = {
         { icon: RUN, label: "Translated the UI strings" },
       ],
       blocks: [
+        { type: "brief-card" },
         { type: "p", text: "Строки интерфейса вынесены и переведены. Сейчас перевожу карточки товаров, потом письма." },
         { type: "p", text: "Вычитка носителем по плану около 17:30." },
       ],

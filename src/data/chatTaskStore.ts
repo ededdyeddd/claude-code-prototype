@@ -151,7 +151,12 @@ export function deriveTask(task: Task, s: TaskState = EMPTY) {
   // Chat edits reach the plan the same way answers do: as plan changes (struck through, "Removed").
   const planEdits: PlanDiff[] = applied.flatMap((e) => (e.removes ?? []).map((step) => ({ kind: "remove" as const, step, text: e.reply })));
   const risky = (task.brief?.assumptions ?? []).filter((a) => a.risky && !rejected.has(a.id));
-  const unmarked = risky.filter((a) => !s.marks[a.id]);
+  // Assumptions confirmed when the brief was approved come marked; marks made in this session win.
+  const marks: Record<string, Mark> = {
+    ...Object.fromEntries(risky.filter((a) => a.confirmed).map((a) => [a.id, { ok: true } as Mark])),
+    ...s.marks,
+  };
+  const unmarked = risky.filter((a) => !marks[a.id]);
   // Level goes up only with the person's consent; it never goes down on its own. Inbox tasks without a level are full tasks.
   const level: Level = s.escalation === "agreed" && task.escalation ? task.escalation.to : task.level ?? 3;
   // A large task has its brief and plan as tabs from the start: to read. Every decision on them happens in the chat.
@@ -162,6 +167,7 @@ export function deriveTask(task: Task, s: TaskState = EMPTY) {
   const resultPending = level === 1 && !!task.result && !s.accepted;
   return {
     ...s,
+    marks,
     live: liveTask(task, s),
     level,
     tabs,
@@ -173,7 +179,7 @@ export function deriveTask(task: Task, s: TaskState = EMPTY) {
     atGate,
     escalationPending,
     resultPending,
-    envelope: s.envelope ?? DEFAULT_ENVELOPE,
+    envelope: s.envelope ?? task.envelope ?? DEFAULT_ENVELOPE,
   };
 }
 
