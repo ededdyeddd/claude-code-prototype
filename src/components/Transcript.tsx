@@ -284,8 +284,8 @@ function MessageActions({ time }: { time?: string }) {
 
 /** Chat transcript: user bubbles, assistant turns with status, prose answer and actions. */
 /**
- * What a task chat is doing now, as a card like the Plan tile: the step in progress, and under it "In progress",
- * its place in the plan and the file. Opens the plan, so the link between the feed and the plan is explicit.
+ * What a task chat is doing now, as a card like the Plan tile and titled the same: under "Plan", the step in progress,
+ * the whole plan's steps done and the file. Opens the plan, so the link between the feed and the plan is explicit.
  */
 function PlanStepRow({ live, planStep }: { live: LiveStatus; planStep: { done: number; of: number } }) {
   const { setTab } = useContext(ChatTaskContext);
@@ -293,10 +293,10 @@ function PlanStepRow({ live, planStep }: { live: LiveStatus; planStep: { done: n
     <div className="not-prose">
       <ArtifactTile
         icon={TASK_ICON}
-        title={<span className="truncate">{live.step}</span>}
+        title="Plan"
         // Said in words: a pulsing dot alone did not read as progress. The count is the whole plan's, the same as on
         // the Plan chip and in the plan's header ("3 of 6"), not the step's number, which read as a mismatch.
-        meta={["In progress", `Plan: ${planStep.done} of ${planStep.of} steps done`, live.target].filter(Boolean).join(" · ")}
+        meta={[`In progress: ${live.step}`, `${planStep.done} of ${planStep.of} steps done`, live.target].filter(Boolean).join(" · ")}
         onOpen={() => setTab("plan")}
       />
     </div>
