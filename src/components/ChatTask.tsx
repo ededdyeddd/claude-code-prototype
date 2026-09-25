@@ -523,7 +523,6 @@ function EscalationDecision({
 
 /* ------------------------------------------------------- Blocks in the feed */
 
-const CARD = CODE + " not-prose flex flex-col gap-sm rounded-lg border border-alpha-2 p-md";
 
 /**
  * The brief in the feed: the agent's words and where the full brief and plan are. The decisions on them
@@ -549,15 +548,13 @@ function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) 
       </div>
     );
   return (
-    <div className={cx(CARD, "!flex-row items-center gap-md")}>
-      <span className="flex min-w-0 flex-1 items-center gap-sm text-body text-secondary">
-        <StatusMark status="done" />
-        You approved the brief and plan
-      </span>
-      <Button size="sm" variant="secondary" onClick={() => setTab("brief")}>
+    <p className="not-prose flex flex-wrap items-center gap-x-sm pt-sm text-body text-secondary">
+      <StatusMark status="done" />
+      You approved the brief and plan
+      <Button size="xs" variant="secondary" onClick={() => setTab("brief")}>
         Open brief
       </Button>
-    </div>
+    </p>
   );
 }
 
@@ -566,7 +563,7 @@ function ResultCard({ view }: { view: ChatTaskView }) {
   const claims = view.task.result?.claims ?? [];
   const review = view.task.result?.review;
   return (
-    <div className={CARD}>
+    <div className={cx("not-prose flex flex-col gap-sm pt-sm", CODE)}>
       <span className="text-footnote text-muted">What I checked</span>
       <ul className="flex flex-col gap-sm">
         {claims.map((c) => (
@@ -601,7 +598,8 @@ function ResultCard({ view }: { view: ChatTaskView }) {
         <button
           type="button"
           onClick={() => openReview("changes")}
-          className="flex w-full items-center gap-md rounded-lg bg-alpha-1 px-md py-sm text-left outline-none hover:bg-alpha-2 focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
+          // Concentric corners: the tile's radius is the icon box's radius plus the padding around it.
+          className="mt-xs flex w-full items-center gap-md rounded-[calc(var(--cds-radius)+var(--cds-gap-sm))] bg-alpha-1 p-[var(--cds-gap-sm)] pe-md text-left outline-none hover:bg-alpha-2 focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
         >
           <span className="flex size-8 shrink-0 items-center justify-center rounded bg-alpha-2">
             <Icon glyph={FILES} className="!text-secondary" />
@@ -721,7 +719,7 @@ function EscalationCard({ view, setTab }: { view: ChatTaskView; setTab: (t: Task
     );
   const stages = view.task.stages.length;
   return (
-    <div className={CARD}>
+    <div className={cx("not-prose flex flex-col gap-sm pt-sm", CODE)}>
       <p className="text-body text-primary">{esc.text}</p>
       {view.escalation === "agreed" ? (
         <div className="flex items-center justify-between gap-md">
