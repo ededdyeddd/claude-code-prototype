@@ -544,6 +544,28 @@ function AutoDecisions({ task }: { task: Task }) {
 
 const fmtNum = (n: number) => n.toLocaleString("en-US");
 
+/** The agent's intent for a step ahead: marked as a plan, since the work will find its own way. */
+function StepPlanView({ what }: { what: string }) {
+  return (
+    <div className="flex flex-col gap-xs pt-xs">
+      <span className="text-footnote text-muted">Plan, may change</span>
+      <p className="text-body text-secondary">{what}</p>
+    </div>
+  );
+}
+
+/**
+ * Which done-criteria a step ahead gets the task to, as a quiet line under its title: the one part of a
+ * step's plan that holds however the step is done. A step that covers them all says so instead of listing.
+ */
+function servesLine(task: Task, ids: string[] | undefined) {
+  const all = task.brief?.doneWhen ?? [];
+  const list = all.filter((c) => ids?.includes(c.id));
+  if (!list.length) return null;
+  if (all.length > 1 && list.length === all.length) return "For: all done criteria";
+  return `For: ${list.map((c) => c.text).join(" · ")}`;
+}
+
 /** What a finished step produced: summary, the agent's own decisions, and changed files with diff stats as in chats. */
 function StepResultView({ result }: { result: StepResult }) {
   return (
@@ -784,9 +806,12 @@ export function PlanPane({
     const work = step.work;
     const removing = effectOn(step.id, "remove");
     const changed = effectOn(step.id, "change");
-    // Finished steps open to show what they produced.
+    // Finished steps open to show what they produced; steps ahead, what they will do.
     const result = status === "done" ? step.result : undefined;
-    const expanded = !!result && !!openSteps[step.id];
+    const stepPlan = status !== "done" && !removing ? step.plan : undefined;
+    const serves = stepPlan && servesLine(task, stepPlan.serves);
+    const canOpen = !!result || !!stepPlan?.what;
+    const expanded = canOpen && !!openSteps[step.id];
     return (
       <li key={item.key} className={cx("group/step relative flex items-start gap-md", !last && STEP_GAP)}>
         {rail}
@@ -807,14 +832,14 @@ export function PlanPane({
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-sm">
           <div className="flex items-baseline justify-between gap-md">
-            {result ? (
+            {canOpen ? (
               <button
                 type="button"
                 aria-expanded={expanded}
                 onClick={() => setOpenSteps((o) => ({ ...o, [step.id]: !expanded }))}
                 className="flex min-w-0 items-baseline gap-sm rounded-sm text-left outline-none focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
               >
-                <span className="text-body text-primary">{step.title}</span>
+                <span className={cx("text-body", status === "ahead" ? "text-secondary" : "text-primary")}>{step.title}</span>
                 <Icon
                   glyph={I.chevronRight}
                   size="sm"
@@ -850,12 +875,14 @@ export function PlanPane({
               </span>
             )}
           </div>
+          {serves && <span className="-mt-xs text-footnote text-muted">{serves}</span>}
           {changed && (
             <span className="text-footnote text-secondary">
               <WithChip text={changed.text} kind={changed.preview ? "change" : undefined} />
             </span>
           )}
           {expanded && result && <StepResultView result={result} />}
+          {expanded && stepPlan?.what && <StepPlanView what={stepPlan.what} />}
           {q && !picked && !q.blocking && hasBlocking && !openQs[q.id] && (
             // A blocking question is open elsewhere in the task: this one folds into a line so it does not compete.
             <div

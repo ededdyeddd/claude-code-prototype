@@ -105,8 +105,26 @@ const ONE_CLICK: Task = {
       id: "scope",
       title: "Scope",
       steps: [
-        { id: "read", status: "done", title: "Прочитать чекаут и интеграцию со Stripe", work: { agent: "planner", cost: "$0.40", time: "6m" } },
-        { id: "brief", status: "done", title: "Бриф и план", work: { agent: "planner", cost: "$0.30", time: "3m" } },
+        {
+          id: "read",
+          status: "done",
+          title: "Прочитать чекаут и интеграцию со Stripe",
+          work: { agent: "planner", cost: "$0.40", time: "6m" },
+          result: {
+            summary: "Stripe подключён: ключ и вебхуки в server/payments/stripe.ts, платёж идёт через PaymentIntent. Карты сейчас не сохраняются, Stripe Customer не создаётся.",
+            decisions: ["3-D Secure уже обрабатывает handleNextAction — переиспользую", "Повторный заказ собирается в OrderHistory, туда и встанет кнопка"],
+          },
+        },
+        {
+          id: "brief",
+          status: "done",
+          title: "Бриф и план",
+          work: { agent: "planner", cost: "$0.30", time: "3m" },
+          result: {
+            summary: "Записал, как понял задачу, 4 допущения, границы и критерии готовности. План — 3 этапа, прогноз по 23 похожим задачам.",
+            decisions: ["Согласие на сохранение карты вынес в допущение: это решение за тобой"],
+          },
+        },
       ],
       gate: { title: "the brief and plan", mine: true, status: "current" },
     },
@@ -114,17 +132,61 @@ const ONE_CLICK: Task = {
       id: "build",
       title: "Build",
       steps: [
-        { id: "save-card", status: "ahead", title: "Сохранение карты в Stripe Customer по согласию", work: { agent: "payments-engineer", cost: "~$1–3", basis: "23 similar tasks" } },
-        { id: "pick-card", status: "ahead", title: "Выбор сохранённой карты в чекауте", work: { agent: "payments-engineer", cost: "~$2–3", basis: "14 similar tasks" } },
-        { id: "3ds", status: "ahead", title: "3-D Secure для повторной оплаты", work: { agent: "payments-engineer", cost: "~$1–2", basis: "size M, the agent's estimate" } },
-        { id: "wallets", status: "ahead", title: "Apple Pay и Google Pay через Payment Request", work: { agent: "payments-engineer", cost: "~$1–2", basis: "6 similar tasks" } },
+        {
+          id: "save-card",
+          status: "ahead",
+          title: "Сохранение карты в Stripe Customer по согласию",
+          work: { agent: "payments-engineer", cost: "~$1–3", basis: "23 similar tasks" },
+          plan: {
+            what: "Галочка «Запомнить карту» в форме оплаты. С ней платёж создаёт Stripe Customer и сохраняет карту; у нас остаются токен и последние 4 цифры.",
+            serves: ["no-consent"],
+          },
+        },
+        {
+          id: "pick-card",
+          status: "ahead",
+          title: "Выбор сохранённой карты в чекауте",
+          work: { agent: "payments-engineer", cost: "~$2–3", basis: "14 similar tasks" },
+          plan: {
+            what: "Кнопка «Оплатить картой •• 4242» в повторном заказе: карта выбрана заранее, CVC не спрашиваем. Другую карту можно выбрать из списка.",
+            serves: ["one-click"],
+          },
+        },
+        {
+          id: "3ds",
+          status: "ahead",
+          title: "3-D Secure для повторной оплаты",
+          work: { agent: "payments-engineer", cost: "~$1–2", basis: "size M, the agent's estimate" },
+          plan: {
+            serves: ["3ds"],
+          },
+        },
+        {
+          id: "wallets",
+          status: "ahead",
+          title: "Apple Pay и Google Pay через Payment Request",
+          work: { agent: "payments-engineer", cost: "~$1–2", basis: "6 similar tasks" },
+          plan: {
+            serves: ["one-click"],
+          },
+        },
       ],
       gate: { title: "checkout tests pass", status: "ahead" },
     },
     {
       id: "verify",
       title: "Verify",
-      steps: [{ id: "e2e", status: "ahead", title: "E2E: повторная оплата в тестовом режиме", work: { agent: "test-fixer", cost: "~$1", basis: "31 similar tasks" } }],
+      steps: [
+        {
+          id: "e2e",
+          status: "ahead",
+          title: "E2E: повторная оплата в тестовом режиме",
+          work: { agent: "test-fixer", cost: "~$1", basis: "31 similar tasks" },
+          plan: {
+            serves: ["one-click", "3ds", "no-consent", "tests"],
+          },
+        },
+      ],
       gate: { title: "the result", mine: true, status: "ahead" },
     },
   ],
