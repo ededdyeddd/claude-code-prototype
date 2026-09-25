@@ -502,7 +502,8 @@
 
   /* Typography */
   --font-sans: var(--cds-font-sans);
-  --font-serif: var(--cds-font-serif);
+  /* The design system has no --cds-font-serif; the UI serif (anthropic-serif, as in the logo) is --font-ui-serif. */
+  --font-serif: var(--font-ui-serif);
   --font-mono: var(--cds-font-mono);
   --text-caption: var(--cds-font-size-caption);
   --text-caption--line-height: var(--cds-leading-caption);

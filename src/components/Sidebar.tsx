@@ -13,11 +13,13 @@ import { Contents } from "./Contents";
 import { UserMenuButton } from "./UserMenuButton";
 import { NavigationEntry } from "./NavigationEntry";
 import { SidebarContents } from "./SidebarContents";
+import { useInbox } from "../data/inboxStore";
 
-export function Sidebar() {
+export function Sidebar(resize: { width: number; min: number; max: number; defaultWidth: number; onResize: (w: number) => void }) {
+  const { blocked } = useInbox();
   return (
     <aside className="dframe-sidebar df-hub-rail" data-variant="web" data-density="comfortable">
-      <ResizeHandle />
+      <ResizeHandle {...resize} />
       <div className="df-titlebar draggable h-11 shrink-0 flex items-center px-2">
         <div className="draggable-none static-composer-boot-fade flex shrink-0 justify-center w-[32px]">
           <div className="df-sidebar-hover-reveal flex">
@@ -71,6 +73,7 @@ export function Sidebar() {
           </div>
           <div className="dframe-nav-scroll relative flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden pl-1 pt-1 pb-2 -ml-1 -mt-1 -mr-2 pr-[max(0px,calc(8px-var(--df-nav-scrollbar-lane,0px)))] [scrollbar-gutter:stable]">
             <div data-testid="nav-pin-rows" className="-mt-1">
+              <NavigationRow label="Inbox" icon={"\uE0C9"} variant="standard" to="/inbox" count={blocked.length} />
               <NavigationEntry />
               <NavigationRow label="Routines" icon="" variant="standard" to="/routines" />
               <NavigationRow label="Customize" icon="" variant="standard" />

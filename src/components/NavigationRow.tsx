@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 
-export function NavigationRow({ label, icon, variant = "standard", to }: { label: string; icon: string; variant?: string; to?: string }) {
+export function NavigationRow({ label, icon, variant = "standard", to, count }: { label: string; icon: string; variant?: string; to?: string; count?: number }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const active = to != null && pathname.startsWith(to);
@@ -45,6 +45,9 @@ export function NavigationRow({ label, icon, variant = "standard", to }: { label
       <span className="flex min-w-0 flex-1 items-center">
         <span className="min-w-0 truncate">{label}</span>
       </span>
+      {count ? (
+        <span role="img" aria-label={`${count} waiting`} className="me-1.5 size-[6px] shrink-0 rounded-full bg-clay" />
+      ) : null}
     </a>
   );
 }

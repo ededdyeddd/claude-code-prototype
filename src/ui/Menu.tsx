@@ -38,6 +38,7 @@ export function Menu({
   placement = "bottom-end",
   children,
   minWidth = 200,
+  density = "comfortable",
 }: {
   anchor: RefObject<HTMLElement | null>;
   open: boolean;
@@ -45,6 +46,8 @@ export function Menu({
   placement?: Placement;
   children: ReactNode;
   minWidth?: number;
+  /** Match the surface the menu opens from: compact pages get compact menus. */
+  density?: "comfortable" | "compact";
 }) {
   const { pos, menuRef } = useAnchoredPosition(anchor, open, placement);
 
@@ -74,7 +77,7 @@ export function Menu({
         role="menu"
         className="cds-root fixed z-popover flex flex-col rounded-lg bg-surface-popover p-1 text-body text-primary shadow-popover"
         data-mode="dark"
-        data-density="comfortable"
+        data-density={density}
         data-font="anthropic"
         style={{
           top: pos?.top ?? -9999,

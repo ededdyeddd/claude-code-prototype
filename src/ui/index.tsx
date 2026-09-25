@@ -160,6 +160,7 @@ export function Button({
 }
 
 export { Tabs } from "./Tabs";
+export { Hint } from "./Hint";
 export { PageHeader } from "./PageHeader";
 export { EmptyState, StopwatchIllustration } from "./EmptyState";
 export { WavyDivider } from "./WavyDivider";

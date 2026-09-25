@@ -11,6 +11,7 @@ import { LIVE_STATUS } from "../data/transcripts";
 import type { Turn } from "../data/transcripts";
 import type { Session } from "../data/sessions";
 import { RepoBar } from "./RepoBar";
+import { AnswerInPlanBar } from "./AnswerInPlanBar";
 import { ContextUsage } from "./icons/Blue_dot_right_edge";
 
 // Rough context estimate for the mock: characters in the transcript vs. a small window,
@@ -62,7 +63,10 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
           </div>
           <span role="status" className="sr-only select-none" />
           {hasContent ? (
-            chat?.repo && <RepoBar repo={chat.repo} />
+            <>
+              {chat && <AnswerInPlanBar taskId={chat.id} />}
+              {chat?.repo && <RepoBar repo={chat.repo} />}
+            </>
           ) : (
             <div className="flex flex-wrap gap-xs pb-xs pr-[96px]">
               <EnvironmentPill dataId="0" />
