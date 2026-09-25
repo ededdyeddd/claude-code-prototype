@@ -651,10 +651,10 @@ function PaneMeta({ task, answers }: { task: Task; answers: Record<string, strin
 
 /** Padding of a side pane's body (Inbox task pane, the chat's Brief and Plan panes): one left edge and top offset. */
 export const PANE_BODY = "px-[var(--cds-gap-lg)] pt-xs pb-[var(--cds-gap-xl)]";
-/** Room between sections of a pane (plan stages, rules, brief sections): one gap-lg, like a document. */
-export const SECTION_GAP = "pb-[var(--cds-gap-lg)]";
+/** Room between plan stages (and before the plan rules). */
+export const SECTION_GAP = "pb-[var(--cds-gap-md)]";
 /** Room between steps; the last step of a stage has none, the stage's own room follows. */
-const STEP_GAP = "pb-[var(--cds-gap-sm)]";
+const STEP_GAP = "pb-[var(--cds-gap-xs)]";
 
 /**
  * The plan of a task, with open questions expanded on their steps. One component for the Inbox side pane
