@@ -464,7 +464,7 @@ export function PlanPane({
   onTaskDone,
   edits = [],
   header,
-  gateAction,
+  gateCard,
 }: {
   task: Task;
   answers: Record<string, string>;
@@ -473,8 +473,8 @@ export function PlanPane({
   edits?: PlanDiff[];
   /** Replaces the summary and meta line at the top (the chat shows the total against its envelope). */
   header?: ReactNode;
-  /** Next to the gate the plan stands at, e.g. "Open brief" or "Open task". */
-  gateAction?: ReactNode;
+  /** The decision at the gate the plan stands at, opened right on it (like a question card on its step). */
+  gateCard?: ReactNode;
 }) {
   const open = openQuestions(task, answers).sort((a, b) => Number(b.blocking) - Number(a.blocking));
   const afterAnswer = () => {
@@ -581,19 +581,19 @@ export function PlanPane({
             {/* Gates are the one place with ◆ (you approve) / ◇ (a check the agent can't skip); passed ones get ✓. */}
             <GateMark gate={item.gate} />
           </span>
-          <span className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-md gap-y-xs">
-            <span className={cx("text-body", item.gate.status === "current" ? "text-primary" : "text-secondary")}>{gateText(item.gate)}</span>
-            {item.gate.status === "current" ? (
-              <span className="flex shrink-0 items-baseline gap-sm">
-                <span className="text-footnote text-clay">{item.gate.mine ? "waiting for you" : "running"}</span>
-                {gateAction}
-              </span>
-            ) : item.gate.eta ? (
-              <span className="shrink-0 text-footnote tabular-nums text-secondary">
-                <Hint text={whenHint(item.gate.etaSource)}>{item.gate.eta}</Hint>
-              </span>
-            ) : null}
-          </span>
+          <div className="flex min-w-0 flex-1 flex-col gap-sm">
+            <span className="flex flex-wrap items-baseline justify-between gap-x-md gap-y-xs">
+              <span className={cx("text-body", item.gate.status === "current" ? "text-primary" : "text-secondary")}>{gateText(item.gate)}</span>
+              {item.gate.status === "current" ? (
+                <span className="shrink-0 text-footnote text-clay">{item.gate.mine ? "waiting for you" : "running"}</span>
+              ) : item.gate.eta ? (
+                <span className="shrink-0 text-footnote tabular-nums text-secondary">
+                  <Hint text={whenHint(item.gate.etaSource)}>{item.gate.eta}</Hint>
+                </span>
+              ) : null}
+            </span>
+            {item.gate.status === "current" && gateCard}
+          </div>
         </li>
       );
     const step = item.step;

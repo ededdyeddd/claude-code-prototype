@@ -87,7 +87,7 @@ export function TaskTabsBar({ view, tab, onTab }: { view: ChatTaskView; tab: Tas
           value: t,
           label: TAB_LABEL[t],
           badge:
-            t === "brief" && view.atGate && view.unmarked.length > 0 ? (
+            t === "chat" && tab !== "chat" && view.atGate && view.unmarked.length > 0 ? (
               <CountBadge n={view.unmarked.length} />
             ) : view.changed.includes(t) && tab !== t ? (
               <ChangedDot />
@@ -126,7 +126,7 @@ function Chip({ children }: { children: ReactNode }) {
 }
 
 /** Risky assumption: "Right" / "Fix…" until marked; an unmarked one is the accent of the brief. */
-function RiskyAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
+function RiskyAssumption({ view, a, bare }: { view: ChatTaskView; a: Assumption; /** Inside another card: no own frame. */ bare?: boolean }) {
   const mark = view.marks[a.id];
   const [fixing, setFixing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -162,7 +162,7 @@ function RiskyAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
     );
 
   return (
-    <li className="flex flex-col gap-sm rounded-lg border border-alpha-2 p-md">
+    <li className={cx("flex flex-col gap-sm", !bare && "rounded-lg border border-alpha-2 p-md")}>
       <div className="flex flex-col gap-0.5">
         <span className="text-footnote text-clay">Can't check this myself</span>
         <p className="text-body text-primary">
@@ -231,7 +231,7 @@ function SafeAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
 }
 
 /** "Brief" tab: how I understood it, assumptions, what I won't touch, done when. */
-export function BriefView({ view }: { view: ChatTaskView }) {
+export function BriefView({ view, inFeed }: { view: ChatTaskView; /** In the chat feed, inside the brief card (before it is accepted). */ inFeed?: boolean }) {
   const brief = view.task.brief;
   const [draft, setDraft] = useState("");
   if (!brief) return null;
@@ -250,7 +250,7 @@ export function BriefView({ view }: { view: ChatTaskView }) {
   };
 
   return (
-    <div className={cx("flex flex-col gap-xl pt-lg pb-xl", CODE)}>
+    <div className={cx("flex flex-col", inFeed ? "gap-lg" : "gap-xl pt-lg pb-xl", CODE)}>
       <section className="flex flex-col gap-sm">
         <SectionTitle>How I understood the task</SectionTitle>
         <p className="text-body text-primary">
@@ -369,6 +369,72 @@ export function PlanView({ view }: { view: ChatTaskView }) {
   );
 }
 
+/* -------------------------------------------------------------- Gate card */
+
+/**
+ * The decision at a gate, opened on its row in the plan: in the Inbox pane and in the chat's Plan tab.
+ * Mark the risky assumptions and start, right here; the full brief is a link for context, not a step.
+ * An escalation offer takes the same place: split the task into stages, or finish it as is.
+ */
+export function GateCard({ view, onOpenBrief, onDone }: { view: ChatTaskView; onOpenBrief?: () => void; onDone?: () => void }) {
+  const esc = view.task.escalation;
+  if (view.escalationPending && esc)
+    return (
+      <section className={cx("flex flex-col gap-md rounded-lg border border-alpha-2 p-lg", CODE)}>
+        <div className="flex flex-col gap-xs">
+          <span className="text-footnote text-clay">Bigger than it looked</span>
+          <p className="text-body text-primary">{esc.text}</p>
+        </div>
+        <div className="flex justify-end gap-xs">
+          <Button size="sm" variant="secondary" onClick={() => (escalate(view.id, false), onDone?.())}>
+            Finish as is
+          </Button>
+          <Button size="sm" variant="primary" onClick={() => escalate(view.id, true)}>
+            Split into stages
+          </Button>
+        </div>
+      </section>
+    );
+  if (!view.atGate) return null;
+  const left = view.unmarked.length;
+  const t = totals(view);
+  return (
+    <section className={cx("flex flex-col gap-md rounded-lg border border-alpha-2 p-lg", CODE)}>
+      {view.task.brief && (
+        <p className="text-body text-secondary">
+          <Inline text={view.task.brief.understanding} />
+        </p>
+      )}
+      {view.risky.length > 0 && (
+        <ul className="flex flex-col gap-md">
+          {view.risky.map((a) => (
+            <RiskyAssumption key={a.id} view={view} a={a} bare />
+          ))}
+        </ul>
+      )}
+      <div className="flex flex-wrap items-center gap-sm">
+        {onOpenBrief && (
+          <Button size="sm" className="me-auto" onClick={onOpenBrief}>
+            Full brief in chat
+          </Button>
+        )}
+        <span className={cx("ms-auto text-footnote", t.over ? "text-clay" : "text-muted")}>
+          ≈ {money(t.min, t.max)} of ${view.envelope.limit}
+        </span>
+        <Button
+          size="sm"
+          variant="primary"
+          disabled={left > 0}
+          title={left > 0 ? "Mark the assumptions first" : undefined}
+          onClick={() => (launch(view.id), onDone?.())}
+        >
+          Pass the gate and start
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 /* --------------------------------------------------------------- Gate bar */
 
 /** Pinned over the composer while a gate waits; visible from every tab. */
@@ -401,23 +467,35 @@ export function GateBar({ view, onOpenBrief }: { view: ChatTaskView; onOpenBrief
 
 const CARD = CODE + " not-prose flex flex-col gap-sm rounded-lg border border-alpha-2 p-md";
 
+/** Anchor of the brief card in the feed, for "N assumptions left to mark". */
+export const briefAnchor = (id: string) => `brief-${id}`;
+
+/**
+ * The brief in the feed. Until the gate is passed it is here in full: assumptions are marked and edits land
+ * right in it. Once accepted it folds into one line and the brief moves to its tab.
+ */
 function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) => void }) {
-  const left = view.unmarked.length;
+  if (view.atGate)
+    return (
+      <div id={briefAnchor(view.id)} className={cx(CARD, "scroll-mt-[var(--cds-gap-xl)] gap-lg p-lg")}>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-body font-medium text-primary">Brief and plan</span>
+          <span className="text-footnote text-muted">Mark what I can't check myself, then pass the gate below. The plan is in its tab.</span>
+        </div>
+        <BriefView view={view} inFeed />
+      </div>
+    );
   return (
     <div className={cx(CARD, "!flex-row items-center gap-md")}>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <span className="text-body text-primary">Put together a brief and plan</span>
-        <span className="text-footnote text-muted">
-          {left > 0 && view.atGate ? (
-            <span className="text-clay">{left === 1 ? "1 assumption I can't check myself" : `${left} assumptions I can't check myself`}</span>
-          ) : (
-            "Assumptions marked"
-          )}
-        </span>
-      </div>
-      <Button size="sm" variant="secondary" onClick={() => setTab("brief")}>
-        Open brief
-      </Button>
+      <span className="flex min-w-0 flex-1 items-center gap-sm text-body text-secondary">
+        <StatusMark status="done" />
+        Brief accepted
+      </span>
+      {view.tabs.includes("brief") && (
+        <Button size="sm" variant="secondary" onClick={() => setTab("brief")}>
+          Open brief
+        </Button>
+      )}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { usePersistentWidth } from "../data/usePersistentWidth";
 import { AWAY, TASKS } from "../data/inbox";
 import { currentGate, gateText, type Task } from "../data/task";
 import { PlanPane, whenHint } from "../components/PlanPane";
+import { GateCard } from "../components/ChatTask";
 import { deriveTask, type TaskState } from "../data/chatTaskStore";
 import { answer, answerKey, openQuestions, setAttention, unanswer, useInbox, type Attention } from "../data/inboxStore";
 
@@ -474,16 +475,15 @@ export function InboxPage() {
             answers={answers}
             onTaskDone={openNext}
             edits={session?.planEdits}
-            gateAction={
-              // A gate of a task chat is passed in the chat, next to its brief: the pane points there.
+            gateCard={
+              // A gate of a task chat is decided right here, like a question; the full brief stays a link.
+              session &&
               selected.level !== undefined && (
-                <Button
-                  size="xs"
-                  variant="secondary"
-                  onClick={() => navigate(`/code/${selected.id}${session?.tabs.includes("brief") ? "?tab=brief" : ""}`)}
-                >
-                  {session?.tabs.includes("brief") ? "Open brief" : "Open task"}
-                </Button>
+                <GateCard
+                  view={{ id: selected.id, task: selected, ...session }}
+                  onOpenBrief={selected.brief ? () => navigate(`/code/${selected.id}`) : undefined}
+                  onDone={openNext}
+                />
               )
             }
           />

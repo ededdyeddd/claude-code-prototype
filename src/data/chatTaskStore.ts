@@ -158,7 +158,9 @@ export function deriveTask(task: Task, s: TaskState = EMPTY) {
   const unmarked = risky.filter((a) => !s.marks[a.id]);
   // Level goes up only with the person's consent; it never goes down on its own. Inbox tasks without a level are full tasks.
   const level: Level = s.escalation === "agreed" && task.escalation ? task.escalation.to : task.level ?? 3;
-  const tabs: TaskTab[] = task.level === undefined ? [] : level >= 3 ? ["chat", "brief", "plan"] : level === 2 ? ["chat", "plan"] : [];
+  // Until the person accepts it, the brief lives in the chat feed; once the gate is passed it moves to its own tab.
+  const tabs: TaskTab[] =
+    task.level === undefined ? [] : level >= 3 ? (s.launched ? ["chat", "brief", "plan"] : ["chat", "plan"]) : level === 2 ? ["chat", "plan"] : [];
   // A gate waits for the person until they pass it: the brief gate right away, the escalation's after consent.
   const atGate = task.level !== undefined && level >= 2 && !s.launched && currentGate(task)?.mine === true;
   const escalationPending = !!task.escalation && !s.escalation;

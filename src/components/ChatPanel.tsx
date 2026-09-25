@@ -19,7 +19,7 @@ import { Button } from "../ui";
 import { NEW_CHAT, seeTab, sendMessage, useChatTask, type TaskTab } from "../data/chatTaskStore";
 import { ONE_CLICK_PROMPT, guessLevel } from "../data/chatTasks";
 import { useInbox } from "../data/inboxStore";
-import { BriefView, ChatTaskContext, GateBar, PlanView, TaskTabsBar } from "./ChatTask";
+import { BriefView, ChatTaskContext, GateBar, PlanView, TaskTabsBar, briefAnchor } from "./ChatTask";
 
 // Rough context estimate for the mock: characters in the transcript vs. a small window,
 // so a long chat fills the ring noticeably more than a short one.
@@ -119,7 +119,15 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
           <span role="status" className="sr-only select-none" />
           {hasContent ? (
             <>
-              {view && <GateBar view={view} onOpenBrief={() => setTab("brief")} />}
+              {view && (
+                <GateBar
+                  view={view}
+                  onOpenBrief={() => {
+                    setTab("chat");
+                    window.setTimeout(() => document.getElementById(briefAnchor(view.id))?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+                  }}
+                />
+              )}
               {chat && <AnswerInPlanBar taskId={chat.id} />}
               {chat?.repo && <RepoBar repo={chat.repo} />}
             </>
