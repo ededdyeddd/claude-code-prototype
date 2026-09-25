@@ -146,6 +146,29 @@ const ONE_CLICK: Task = {
   },
 };
 
+/** Level 1 in progress: a small fix the agent just does, with no plan; the result card comes at the end. */
+const BIRTH_DATE: Task = {
+  id: "birth-date",
+  title: "Дата рождения сдвигается на день",
+  summary: "В профиле дата рождения показывается на день раньше у пользователей западнее UTC. Чиню разбор даты.",
+  project: "astrology-app",
+  stage: "Fix",
+  now: "Fix · parsing the date without a time zone",
+  agent: "ui-engineer",
+  model: "Opus 5.5",
+  spent: "$0.12",
+  tokens: "40K",
+  level: 1,
+  stages: [
+    {
+      id: "fix",
+      title: "Fix",
+      steps: [{ id: "fix", status: "running", title: "Разбирать дату рождения без часового пояса", work: { agent: "ui-engineer", cost: "~$0.30", time: "~8m" } }],
+    },
+  ],
+  autoDecisions: [],
+};
+
 /** Level 1 that turned out bigger: the agent offers stages and a gate before the migration. */
 const LOYALTY: Task = {
   id: "loyalty",
@@ -216,7 +239,7 @@ const LOYALTY: Task = {
   autoDecisions: [],
 };
 
-export const CHAT_TASK_LIST: Task[] = [ONE_CLICK, LOYALTY];
+export const CHAT_TASK_LIST: Task[] = [ONE_CLICK, BIRTH_DATE, LOYALTY];
 
 export const CHAT_TASKS: Record<string, Task> = Object.fromEntries(CHAT_TASK_LIST.map((t) => [t.id, t]));
 
@@ -239,6 +262,22 @@ export const CHAT_TASK_TRANSCRIPTS: Record<string, Turn[]> = {
       blocks: [
         { type: "p", text: "Stripe уже подключён, карты можно хранить в Stripe Customer — своих таблиц не понадобится." },
         { type: "brief-card" },
+      ],
+    },
+  ],
+  "birth-date": [
+    { role: "user", text: "У некоторых пользователей в профиле дата рождения на день раньше, чем они ввели. Почини." },
+    {
+      role: "assistant",
+      steps: [
+        { icon: READ, label: "Read ProfileScreen.tsx" },
+        { icon: SEARCH, label: "Searched for new Date(", detail: "4 matches" },
+      ],
+      blocks: [
+        {
+          type: "p",
+          text: "Дату «1990-05-12» разбирают через `new Date()`: она считается полночью по UTC, и западнее UTC показывается предыдущий день. Разбираю её как календарную дату, без часового пояса, и добавлю тест на UTC−5.",
+        },
       ],
     },
   ],

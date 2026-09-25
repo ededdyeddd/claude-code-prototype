@@ -170,4 +170,5 @@ export const TASK_LIVE_STATUS: Record<string, LiveStatus> = {
   i18n: { step: "Translating product cards", target: "locales/es/products.json", stats: "20m · 860K tokens" },
   flaky: { step: "Pinning the time zone in tests", target: "houses.test.ts", stats: "6m · 95K tokens" },
   "chart-pdf": { step: "Running e2e on staging", stats: "4m · 320K tokens" },
+  "birth-date": { step: "Adding a test for UTC−5", target: "profile.test.ts", stats: "3m · 40K tokens" },
 };
