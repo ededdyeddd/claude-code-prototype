@@ -546,9 +546,23 @@ export function PlanPane({
     return agent ?? prev;
   }, undefined);
 
-  const renderItem = (item: Item, last: boolean) => {
+  /** One line through the whole plan: `last` ends it (last item of the last stage), `lastInStage` carries it over the stage gap, `firstInStage` picks it up after a stage heading. */
+  const renderItem = (item: Item, last: boolean, lastInStage = last, firstInStage = false) => {
     // The line runs from under this mark to the next one; the mark sits on a pane-colored backing so the line never shows through it.
-    const rail = !last && <span aria-hidden="true" className="absolute top-[18px] bottom-[-2px] left-[5.5px] w-px bg-alpha-3" />;
+    const rail = (
+      <>
+        {firstInStage && <span aria-hidden="true" className="absolute top-0 h-[6px] left-[5.5px] w-px bg-alpha-3" />}
+        {!last && (
+          <span
+            aria-hidden="true"
+            className={cx(
+              "absolute top-[18px] left-[5.5px] w-px bg-alpha-3",
+              lastInStage ? "bottom-[calc(-2px-var(--cds-gap-lg))]" : "bottom-[-2px]",
+            )}
+          />
+        )}
+      </>
+    );
     if (item.kind === "added")
       return (
         <li key={item.key} className="group/step relative flex items-start gap-md pb-[var(--cds-gap-lg)]">
@@ -776,7 +790,11 @@ export function PlanPane({
           const isCollapsed = !single && collapsed[stage.id];
           return (
             // Room comes after an open stage; collapsed stages stack tightly, like the Inbox groups.
-            <li key={stage.id} className={cx("flex flex-col", isCollapsed ? "pb-md" : si < stages.length - 1 && "pb-lg")}>
+            <li key={stage.id} className={cx("relative flex flex-col", isCollapsed ? "pb-md" : si < stages.length - 1 && "pb-lg")}>
+              {/* The plan line runs on through a folded stage to the next one. */}
+              {isCollapsed && si < stages.length - 1 && (
+                <span aria-hidden="true" className="absolute bottom-0 left-[5.5px] h-[var(--cds-gap-md)] w-px bg-alpha-3" />
+              )}
               {/* One stage: a plain "Plan" heading; several: numbered, collapsible stages. */}
               {single && (
                 <div className="sticky top-0 z-[2] flex items-baseline gap-sm bg-[var(--plan-surface,var(--cds-surface-2))] py-xs mb-[var(--cds-gap-md)]">
@@ -791,10 +809,18 @@ export function PlanPane({
                   onClick={() => setCollapsed((c) => ({ ...c, [stage.id]: !isCollapsed }))}
                   className={cx(
                     // Sticky while its steps scroll by, so you always know which stage you are in.
-                    "group/stage sticky top-0 z-[2] flex w-full items-baseline gap-sm bg-[var(--plan-surface,var(--cds-surface-2))] py-xs text-left outline-none focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]",
+                    // Title in the column of step titles, so the plan line passes by it on the left.
+                    "group/stage sticky top-0 z-[2] flex w-full items-baseline gap-sm bg-[var(--plan-surface,var(--cds-surface-2))] py-xs ps-[calc(12px+var(--cds-gap-md))] text-left outline-none focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]",
                     !isCollapsed && "pb-[var(--cds-gap-md)]",
                   )}
                 >
+                  {/* The plan line through the heading: from the stage above; the first stage starts it at a folded heading. */}
+                  {(si > 0 || isCollapsed) && (
+                    <span
+                      aria-hidden="true"
+                      className={cx("absolute bottom-0 left-[5.5px] w-px bg-alpha-3", si > 0 ? "top-0" : "top-1/2", si === stages.length - 1 && isCollapsed && "bottom-1/2")}
+                    />
+                  )}
                   <span className="text-body font-medium text-primary">
                     <span className="tabular-nums">{si + 1}</span>
                     {" · "}
@@ -812,7 +838,9 @@ export function PlanPane({
                   <span className="ms-auto shrink-0 text-footnote tabular-nums text-muted">{stageMeta}</span>
                 </button>
               )}
-              {!isCollapsed && <ol className="flex flex-col">{list.map((item, idx) => renderItem(item, idx === list.length - 1))}</ol>}
+              {!isCollapsed && <ol className="flex flex-col">{list.map((item, idx) =>
+                    renderItem(item, si === stages.length - 1 && idx === list.length - 1, idx === list.length - 1, si > 0 && idx === 0),
+                  )}</ol>}
             </li>
           );
         })}

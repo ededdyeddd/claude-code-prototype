@@ -18,6 +18,7 @@ import { StatusMark, TaskDot } from "./StatusMark";
 import { Inline } from "./Transcript";
 
 const LOCK = "";
+const CHEVRON = "\uE02A";
 const PEN = "";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
@@ -231,7 +232,7 @@ function SafeAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
 }
 
 /** "Brief" tab: how I understood it, assumptions, what I won't touch, done when. */
-export function BriefView({ view, inFeed }: { view: ChatTaskView; /** In the chat feed, inside the brief card (before it is accepted). */ inFeed?: boolean }) {
+export function BriefView({ view, inFeed }: { view: ChatTaskView; /** In the chat feed, as part of the agent's reply (before it is accepted). */ inFeed?: boolean }) {
   const brief = view.task.brief;
   const [draft, setDraft] = useState("");
   if (!brief) return null;
@@ -291,6 +292,7 @@ export function BriefView({ view, inFeed }: { view: ChatTaskView; /** In the cha
             </li>
           ))}
         </ul>
+        {!inFeed && (
         <p className="text-footnote text-muted">
           <Inline
             text={[
@@ -302,6 +304,7 @@ export function BriefView({ view, inFeed }: { view: ChatTaskView; /** In the cha
               .join(" · ")}
           />
         </p>
+        )}
       </section>
 
       <section className="flex flex-col gap-sm">
@@ -325,6 +328,7 @@ export function BriefView({ view, inFeed }: { view: ChatTaskView; /** In the cha
             </li>
           ))}
         </ul>
+        {!inFeed && (
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -333,6 +337,7 @@ export function BriefView({ view, inFeed }: { view: ChatTaskView; /** In the cha
           aria-label="Add a criterion"
           className={fieldClass}
         />
+        )}
       </section>
     </div>
   );
@@ -343,6 +348,12 @@ export function BriefView({ view, inFeed }: { view: ChatTaskView; /** In the cha
 /** "Plan" tab: the same plan as in the Inbox pane, headed by what is left against the envelope. */
 export function PlanView({ view }: { view: ChatTaskView }) {
   const { answers } = useInbox();
+  const { setTab } = useContext(ChatTaskContext);
+  // The brief is accepted in the chat, under it; here the gate only points there.
+  const toBrief = () => {
+    setTab("chat");
+    window.setTimeout(() => document.getElementById(briefAnchor(view.id))?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  };
   const t = totals(view);
   const spent = view.live.stages.flatMap((st) => st.steps).reduce((n, p) => n + (p.status === "done" && p.work ? costRange(p.work.cost).min : 0), 0);
   return (
@@ -351,6 +362,15 @@ export function PlanView({ view }: { view: ChatTaskView }) {
         task={view.live}
         answers={answers}
         edits={view.planEdits}
+        gateCard={
+          view.atGate && (
+            <span>
+              <Button size="xs" variant="secondary" onClick={toBrief}>
+                Go to the brief
+              </Button>
+            </span>
+          )
+        }
         header={
           <header className="flex flex-col gap-0.5">
             <p className="text-heading text-primary">
@@ -378,6 +398,7 @@ export function PlanView({ view }: { view: ChatTaskView }) {
  */
 export function GateCard({ view, onOpenBrief, onDone }: { view: ChatTaskView; onOpenBrief?: () => void; onDone?: () => void }) {
   const esc = view.task.escalation;
+  const [open, setOpen] = useState(false);
   if (view.escalationPending && esc)
     return (
       <section className={cx("flex flex-col gap-md rounded-lg border border-alpha-2 p-lg", CODE)}>
@@ -385,7 +406,9 @@ export function GateCard({ view, onOpenBrief, onDone }: { view: ChatTaskView; on
           <span className="text-footnote text-clay">Bigger than it looked</span>
           <p className="text-body text-primary">{esc.text}</p>
         </div>
+        {open && <EscalationDetails view={view} />}
         <div className="flex justify-end gap-xs">
+          <DetailsToggle open={open} onToggle={() => setOpen(!open)} />
           <Button size="sm" variant="secondary" onClick={() => (escalate(view.id, false), onDone?.())}>
             Finish as is
           </Button>
@@ -435,54 +458,47 @@ export function GateCard({ view, onOpenBrief, onDone }: { view: ChatTaskView; on
   );
 }
 
-/* --------------------------------------------------------------- Gate bar */
+/* ------------------------------------------------------- Blocks in the feed */
 
-/** Pinned over the composer while a gate waits; visible from every tab. */
-export function GateBar({ view, onOpenBrief }: { view: ChatTaskView; onOpenBrief: () => void }) {
-  const gate = currentGate(view.live);
-  if (!view.atGate || !gate) return null;
+const CARD = CODE + " not-prose flex flex-col gap-sm rounded-lg border border-alpha-2 p-md";
+
+/** Accepting the brief, right under it in the feed: why it can't be started yet, or what it will cost; then start. */
+function GateActions({ view, onOpenPlan }: { view: ChatTaskView; onOpenPlan: () => void }) {
   const left = view.unmarked.length;
   const t = totals(view);
   return (
-    <div className="mb-xs flex h-[var(--cds-h-control--lg)] items-center gap-sm rounded-lg bg-alpha-1 ps-md pe-xs text-body">
-      <StatusMark status="myGate" className="!text-clay" />
-      <span className="shrink-0 text-primary">{gateText(gate)}</span>
+    <div className="flex flex-wrap items-center gap-sm">
       {left > 0 ? (
-        <button type="button" onClick={onOpenBrief} className="min-w-0 truncate rounded-sm text-clay outline-none hover:underline focus-visible:shadow-focus">
-          {left === 1 ? "1 assumption left to mark" : `${left} assumptions left to mark`}
-        </button>
+        <span className="text-footnote text-clay">{left === 1 ? "1 assumption left to mark" : `${left} assumptions left to mark`}</span>
       ) : (
-        <span className={cx("min-w-0 truncate", t.over ? "text-clay" : "text-secondary")}>
-          ≈ {money(t.min, t.max)} of ${view.envelope.limit}
+        <span className={cx("text-footnote", t.over ? "text-clay" : "text-muted")}>
+          ≈ {money(t.min, t.max)} of the ${view.envelope.limit} limit
         </span>
       )}
-      <Button size="xs" variant="primary" className="ms-auto" disabled={left > 0} onClick={() => launch(view.id)}>
+      <Button size="sm" variant="secondary" className="ms-auto" onClick={onOpenPlan}>
+        Open plan
+      </Button>
+      <Button size="sm" variant="primary" disabled={left > 0} onClick={() => launch(view.id)}>
         Pass the gate and start
       </Button>
     </div>
   );
 }
 
-/* ------------------------------------------------------- Blocks in the feed */
-
-const CARD = CODE + " not-prose flex flex-col gap-sm rounded-lg border border-alpha-2 p-md";
-
 /** Anchor of the brief card in the feed, for "N assumptions left to mark". */
 export const briefAnchor = (id: string) => `brief-${id}`;
 
 /**
- * The brief in the feed. Until the gate is passed it is here in full: assumptions are marked and edits land
- * right in it. Once accepted it folds into one line and the brief moves to its tab.
+ * The brief in the feed. Until the gate is passed it is the agent's reply itself: assumptions are marked
+ * right in it, edits typed in the chat change it in place. Once accepted it folds into one line and moves to its tab.
  */
 function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) => void }) {
   if (view.atGate)
     return (
-      <div id={briefAnchor(view.id)} className={cx(CARD, "scroll-mt-[var(--cds-gap-xl)] gap-lg p-lg")}>
-        <div className="flex flex-col gap-0.5">
-          <span className="text-body font-medium text-primary">Brief and plan</span>
-          <span className="text-footnote text-muted">Mark what I can't check myself, then pass the gate below. The plan is in its tab.</span>
-        </div>
+      // Part of the agent's reply, not a card: only the risky assumptions are controls.
+      <div id={briefAnchor(view.id)} className="not-prose flex scroll-mt-[var(--cds-gap-xl)] flex-col gap-lg pt-sm">
         <BriefView view={view} inFeed />
+        <GateActions view={view} onOpenPlan={() => setTab("plan")} />
       </div>
     );
   return (
@@ -537,16 +553,102 @@ function ResultCard({ view }: { view: ChatTaskView }) {
   );
 }
 
+/**
+ * What stands behind an escalation offer, folded by default: why the task grew, what is already done,
+ * the stages and gates it would get, the forecast against the envelope, and what "Finish as is" means.
+ */
+function EscalationDetails({ view }: { view: ChatTaskView }) {
+  const esc = view.task.escalation;
+  const done = view.live.stages.flatMap((st) => st.steps).filter((p) => p.status === "done");
+  const spent = done.reduce((n, p) => n + (p.work ? costRange(p.work.cost).min : 0), 0);
+  const ahead = view.live.stages.filter((st) => st.steps.some((p) => p.status !== "done") || st.gate?.status === "current");
+  const t = totals(view);
+  const row = "flex items-baseline gap-sm text-footnote";
+  return (
+    <div className="flex flex-col gap-md border-t border-alpha-2 pt-md">
+      {view.task.levelReason && (
+        <p className="text-footnote text-secondary">
+          Why: <Inline text={view.task.levelReason} />
+        </p>
+      )}
+      {done.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-footnote text-muted">Done so far · ${spent.toFixed(2)}</span>
+          {done.map((p) => (
+            <div key={p.id} className={row}>
+              <StatusMark status="done" />
+              <span className="min-w-0 flex-1 text-secondary">
+                <Inline text={p.title} />
+              </span>
+              <span className="shrink-0 tabular-nums text-muted">{p.work?.cost}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-col gap-1">
+        <span className="text-footnote text-muted">
+          What I propose · ≈ {money(t.min, t.max)} of the ${view.envelope.limit} limit
+        </span>
+        {ahead.map((st) => (
+          <div key={st.id} className="flex flex-col gap-1">
+            <span className="text-footnote text-primary">{st.title}</span>
+            {st.steps
+              .filter((p) => p.status !== "done")
+              .map((p) => (
+                <div key={p.id} className={cx(row, "ps-md")}>
+                  <TaskDot state="ahead" />
+                  <span className="min-w-0 flex-1 text-secondary">
+                    <Inline text={p.title} />
+                  </span>
+                  {p.work && (
+                    <Hint text={`Forecast · ${p.work.basis ?? "the agent's estimate"}`} className="shrink-0 tabular-nums text-muted">
+                      {p.work.cost}
+                    </Hint>
+                  )}
+                </div>
+              ))}
+            {st.gate && (
+              <div className={cx(row, "ps-md")}>
+                <StatusMark status={st.gate.mine ? "myGate" : "gate"} />
+                <span className="text-secondary">{gateText(st.gate)}</span>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {esc && (
+        <p className="text-footnote text-secondary">
+          <span className="text-muted">If you finish as is: </span>
+          {esc.afterDecline}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** "Details" toggle for a card: chevron after the label, turned when open (as on plan steps). */
+function DetailsToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  return (
+    <Button size="sm" className="me-auto" aria-expanded={open} onClick={onToggle}>
+      Details
+      <Icon glyph={CHEVRON} size="sm" className={cx("ms-1 !text-muted transition-transform duration-fast", open && "rotate-90")} />
+    </Button>
+  );
+}
+
 function EscalationCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) => void }) {
   const esc = view.task.escalation;
+  const [open, setOpen] = useState(false);
   if (!esc) return null;
   const stages = view.task.stages.length;
   return (
     <div className={CARD}>
       {!view.escalation && <span className="text-footnote text-clay">Bigger than it looked</span>}
       <p className="text-body text-primary">{esc.text}</p>
+      {!view.escalation && open && <EscalationDetails view={view} />}
       {!view.escalation ? (
         <div className="flex justify-end gap-xs">
+          <DetailsToggle open={open} onToggle={() => setOpen(!open)} />
           <Button size="sm" variant="secondary" onClick={() => escalate(view.id, false)}>
             Finish as is
           </Button>
