@@ -5,19 +5,30 @@ import { Sidebar } from "./components/Sidebar";
 import { ChatShell } from "./components/ChatShell";
 import { TokensPage } from "./pages/TokensPage";
 import { RoutinesPage } from "./pages/RoutinesPage";
+import { InboxPage } from "./pages/InboxPage";
 import { TRANSCRIPTS } from "./data/transcripts";
 import { SESSIONS } from "./data/sessions";
+import { usePersistentWidth } from "./data/usePersistentWidth";
+import { taskState, useInbox } from "./data/inboxStore";
 
 /** Content of the main pane: switches with the sidebar navigation. */
 function MainContent() {
   const { pathname } = useLocation();
   if (pathname.startsWith("/routines")) return <RoutinesPage />;
+  if (pathname.startsWith("/inbox")) return <InboxPage />;
   const chatId = pathname.match(/^\/code\/([^/]+)/)?.[1];
-  const chat = SESSIONS.find((s) => s.id === chatId);
+  const needs = useInbox();
+  const session = SESSIONS.find((s) => s.id === chatId);
+  // Task chats follow "Inbox": blocked means the agent is not working right now.
+  const live = session && taskState(session.id, needs);
+  const chat = session && live ? { ...session, running: live.running } : session;
   return <ChatShell name="Eduard" chat={chat} transcript={chatId ? TRANSCRIPTS[chatId] : undefined} />;
 }
 
+const SIDEBAR = { default: 288, min: 256, max: 480 };
+
 export function AppContent() {
+  const [sidebarWidth, setSidebarWidth] = usePersistentWidth("cc:sidebar-width", SIDEBAR.default);
   return (
     <>
         <div id="desktop-boot-drag-strip" className="sf-hidden" />
@@ -58,7 +69,7 @@ export function AppContent() {
                     style={{
                       fontSize: "var(--cds-font-size-body)",
                       "--cds-page-bg": "var(--cds-surface-1)",
-                      "--df-sidebar-width": "288px",
+                      "--df-sidebar-width": `${sidebarWidth}px`,
                       "--df-traffic-light-spacer": "0px",
                       "--df-drag-ghost-z": "9001",
                     }}
@@ -73,7 +84,7 @@ export function AppContent() {
                         "--cds-page-bg": "var(--cds-surface-1)",
                       }}
                     >
-                      <Sidebar />
+                      <Sidebar width={sidebarWidth} min={SIDEBAR.min} max={SIDEBAR.max} defaultWidth={SIDEBAR.default} onResize={setSidebarWidth} />
                     </div>
                     <main className="dframe-content">
                       <div
@@ -267,6 +278,7 @@ export function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/code" replace />} />
         <Route path="/tokens" element={<TokensPage />} />
+        <Route path="/needs-you" element={<Navigate to="/inbox" replace />} />
         <Route path="*" element={<AppContent />} />
       </Routes>
     </BrowserRouter>

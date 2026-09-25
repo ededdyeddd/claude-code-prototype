@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { SectionLabel } from "./SectionLabel";
 import { SessionEntry } from "./SessionEntry";
 import { buildGroups, DEFAULT_FILTERS, SESSIONS } from "../data/sessions";
+import { taskState, useInbox } from "../data/inboxStore";
 import type { NavFilters, NavGroup } from "../data/sessions";
 import { Button, Menu, MenuCheckboxItem, MenuSelectItem, MenuSeparator } from "../ui";
 
@@ -16,14 +17,24 @@ function GroupHeader({
   collapsed,
   onToggle,
   actions,
+  compact = false,
 }: {
   label: string;
   collapsed: boolean;
+  /** Follows a collapsed group: drop the section gap so collapsed groups stack like rows. */
+  compact?: boolean;
   onToggle: () => void;
   actions?: ReactNode;
 }) {
   return (
-    <div className="group/labelrow df-label-inset flex w-full items-center gap-[var(--df-row-gap)] pt-[var(--df-group-pt)] pr-[calc((var(--df-row-h)-24px)/2)] pb-1 text-[length:var(--df-group-font)] leading-4 min-h-[calc(var(--df-group-pt)+(var(--df-row-h)-8px)+4px)] text-muted">
+    <div
+      className={
+        "group/labelrow df-label-inset flex w-full items-center gap-[var(--df-row-gap)] pr-[calc((var(--df-row-h)-24px)/2)] pb-1 text-[length:var(--df-group-font)] leading-4 text-muted " +
+        (compact
+          ? "pt-1 min-h-[var(--df-row-h)]"
+          : "pt-[var(--df-group-pt)] min-h-[calc(var(--df-group-pt)+(var(--df-row-h)-8px)+4px)]")
+      }
+    >
       <SectionLabel label={label} collapsed={collapsed} onClick={onToggle} />
       {actions && <div className="flex items-center gap-1">{actions}</div>}
     </div>
@@ -102,9 +113,6 @@ function NavFilterButton({
         <MenuCheckboxItem checked={filters.showEmptyGroups} onChange={(v) => set("showEmptyGroups", v)}>
           Show empty groups
         </MenuCheckboxItem>
-        <MenuCheckboxItem checked={filters.showPrStatus} onChange={(v) => set("showPrStatus", v)}>
-          Show PR status
-        </MenuCheckboxItem>
       </Menu>
     </>
   );
@@ -119,6 +127,7 @@ export function ProjectNav() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const groups = useMemo(() => buildGroups(SESSIONS, filters), [filters]);
+  const needs = useInbox();
 
   const canCreate = (g: NavGroup) => g.kind === "project" || g.kind === "none";
 
@@ -126,10 +135,12 @@ export function ProjectNav() {
     <div className="flex flex-col">
       {groups.map((g, i) => {
         const isCollapsed = !!collapsed[g.key];
+        const afterCollapsed = i > 0 && !!collapsed[groups[i - 1].key];
         return (
           <div
             key={g.key}
-            className="group/section flex flex-col gap-px"
+            // design-system.css adds a 10px gap between sections; the header's top padding is enough.
+            className="group/section flex flex-col gap-px mt-0!"
             {...(hovered === g.key ? { "data-hover-within": "" } : {})}
             onMouseEnter={() => setHovered(g.key)}
             onMouseLeave={() => setHovered(null)}
@@ -138,6 +149,7 @@ export function ProjectNav() {
               <GroupHeader
                 label={g.label}
                 collapsed={isCollapsed}
+                compact={afterCollapsed}
                 onToggle={() => setCollapsed((c) => ({ ...c, [g.key]: !isCollapsed }))}
                 actions={
                   <>
@@ -154,8 +166,8 @@ export function ProjectNav() {
                 <SessionEntry
                   key={s.id}
                   title={s.title}
-                  running={s.running}
-                  pr={filters.showPrStatus ? s.pr : undefined}
+                  running={taskState(s.id, needs)?.running ?? s.running}
+                  waiting={taskState(s.id, needs)?.waiting}
                   selected={pathname === `/code/${s.id}`}
                   onOpen={() => navigate(`/code/${s.id}`)}
                 />
