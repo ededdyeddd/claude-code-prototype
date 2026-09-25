@@ -11,7 +11,7 @@ export function SessionEntry({
 }: {
   title: string;
   running?: boolean;
-  waiting?: "blocked" | "canWait";
+  waiting?: "blocked" | "canWait" | "result";
   pr?: "open" | "merged" | "draft";
   selected?: boolean;
   onOpen?: () => void;

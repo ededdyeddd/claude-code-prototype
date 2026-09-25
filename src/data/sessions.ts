@@ -37,6 +37,10 @@ export const SESSIONS: Session[] = [
   { id: "chart-pdf", title: "PDF натальной карты", project: "astrology-app", repo: { name: "astrology-app", branch: "feat/chart-pdf", added: 612, removed: 38 }, status: "active", env: "cloud", lastActivity: 4, created: 900, running: true, pr: "draft" },
   { id: "ephemeris-api", title: "Выбор API эфемерид", project: "astrology-app", status: "active", env: "cloud", lastActivity: 2400, created: 2600 },
   { id: "astrology", title: "Astrology app plan", project: "astrology-app", status: "active", env: "cloud", lastActivity: 3000, created: 3500 },
+  // storefront: chat levels (chatTasks.ts): a large task at its first gate, a small one with a result, one that grew.
+  { id: "one-click-pay", title: "Оплата в один клик", project: "storefront", repo: { name: "storefront", branch: "feat/one-click-pay", added: 0, removed: 0 }, status: "active", env: "local", lastActivity: 1, created: 1 },
+  { id: "reorder-button", title: "Кнопка «Повторить заказ» на мобильном", project: "storefront", repo: { name: "storefront", branch: "fix/reorder-mobile", added: 6, removed: 2 }, status: "active", env: "local", lastActivity: 3, created: 9 },
+  { id: "loyalty", title: "Скидка постоянным покупателям", project: "storefront", repo: { name: "storefront", branch: "feat/loyalty-discount", added: 84, removed: 5 }, status: "active", env: "local", lastActivity: 8, created: 25 },
   // storefront: three tasks from "Inbox" and a merged one.
   { id: "checkout", title: "Новый чекаут", project: "storefront", repo: { name: "storefront", branch: "feat/checkout", added: 1240, removed: 310 }, status: "active", env: "local", lastActivity: 32, created: 600 },
   { id: "search", title: "Поиск по каталогу", project: "storefront", repo: { name: "storefront", branch: "feat/search", added: 86, removed: 4 }, status: "active", env: "local", lastActivity: 70, created: 300, running: true },

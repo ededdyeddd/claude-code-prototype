@@ -10,7 +10,11 @@ export type Block =
   /** Inline step row inside an answer, optionally with diff stats ("Edited X, ran a command +14 -1"). */
   | { type: "status"; label: string; target?: string; diff?: Diff }
   /** Card listing changed files; rows beyond `visible` hide behind "Show N more". */
-  | { type: "files"; title: string; diff: Diff; files: { name: string; diff: Diff }[]; visible?: number };
+  | { type: "files"; title: string; diff: Diff; files: { name: string; diff: Diff }[]; visible?: number }
+  /** Task chats (chatTasks.ts): pointer to the brief, result card, escalation offer; their content comes from the task. */
+  | { type: "brief-card" | "result-card" | "escalation-card" }
+  /** One-line note that an edit changed the brief or plan ("Removed Apple Pay, the plan is one task shorter"). */
+  | { type: "edit-note"; text: string };
 
 export type Diff = { added: number; removed: number };
 
@@ -34,10 +38,12 @@ export type LiveStatus = { step: string; target?: string; stats: string };
 
 import { YANGO_TRANSCRIPTS } from "./yangoTranscripts";
 import { TASK_LIVE_STATUS, TASK_TRANSCRIPTS } from "./taskTranscripts";
+import { CHAT_TASK_TRANSCRIPTS } from "./chatTasks";
 
 export const TRANSCRIPTS: Record<string, Turn[]> = {
   ...YANGO_TRANSCRIPTS,
   ...TASK_TRANSCRIPTS,
+  ...CHAT_TASK_TRANSCRIPTS,
   astrology: [
     {
       role: "user",

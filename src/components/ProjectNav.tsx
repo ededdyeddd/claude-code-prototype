@@ -5,6 +5,7 @@ import { SectionLabel } from "./SectionLabel";
 import { SessionEntry } from "./SessionEntry";
 import { buildGroups, DEFAULT_FILTERS, SESSIONS } from "../data/sessions";
 import { taskState, useInbox } from "../data/inboxStore";
+import { useChatTaskStatus } from "../data/chatTaskStore";
 import type { NavFilters, NavGroup } from "../data/sessions";
 import { Button, Menu, MenuCheckboxItem, MenuSelectItem, MenuSeparator } from "../ui";
 
@@ -128,6 +129,12 @@ export function ProjectNav() {
   const { pathname } = useLocation();
   const groups = useMemo(() => buildGroups(SESSIONS, filters), [filters]);
   const needs = useInbox();
+  // Chats with task levels (chatTasks.ts): a gate waiting is "blocked"; a small task's result waits for acceptance.
+  const chatStatus = useChatTaskStatus();
+  const waitingOf = (id: string) => {
+    const w = taskState(id, needs)?.waiting ?? chatStatus(id);
+    return w === "running" ? undefined : w;
+  };
 
   const canCreate = (g: NavGroup) => g.kind === "project" || g.kind === "none";
 
@@ -136,7 +143,7 @@ export function ProjectNav() {
       {groups.map((g, i) => {
         const isCollapsed = !!collapsed[g.key];
         // A collapsed project still signals: one clay dot if a task inside is blocked on you, however many.
-        const blockedInside = isCollapsed && g.sessions.some((sess) => taskState(sess.id, needs)?.waiting === "blocked");
+        const blockedInside = isCollapsed && g.sessions.some((sess) => waitingOf(sess.id) === "blocked");
         // The dot holds the actions' place until the header is hovered, like the dot on the Inbox row.
         const showDot = blockedInside && hovered !== g.key;
         const afterCollapsed = i > 0 && !!collapsed[groups[i - 1].key];
@@ -177,8 +184,8 @@ export function ProjectNav() {
                 <SessionEntry
                   key={s.id}
                   title={s.title}
-                  running={taskState(s.id, needs)?.running ?? s.running}
-                  waiting={taskState(s.id, needs)?.waiting}
+                  running={taskState(s.id, needs)?.running ?? (chatStatus(s.id) === "running" || s.running)}
+                  waiting={waitingOf(s.id)}
                   selected={pathname === `/code/${s.id}`}
                   onOpen={() => navigate(`/code/${s.id}`)}
                 />
