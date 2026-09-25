@@ -256,6 +256,9 @@ function CodeBlock({ code }: { code: string }) {
   );
 }
 
+// Muted by default, bright on hover of the button itself (as in the app).
+const ACTION = "!text-secondary hover:!text-primary";
+
 /** Actions under an assistant reply, revealed on hover: copy, fork, pin, read aloud, and the reply time. */
 function MessageActions({ time }: { time?: string }) {
   return (
@@ -263,10 +266,10 @@ function MessageActions({ time }: { time?: string }) {
       data-cds="MessageActions"
       className="-ms-1.5 flex items-center gap-0.5 opacity-0 transition-opacity duration-fast group-hover/message-row:opacity-100 focus-within:opacity-100"
     >
-      <Button size="xs" icon={COPY} aria-label="Copy" />
-      <Button size="xs" icon={FORK} aria-label="Fork from here" />
-      <Button size="xs" icon={PIN} aria-label="Pin" />
-      <Button size="xs" icon={SPEAKER} aria-label="Read aloud" />
+      <Button size="xs" icon={COPY} aria-label="Copy" className={ACTION} />
+      <Button size="xs" icon={FORK} aria-label="Fork from here" className={ACTION} />
+      <Button size="xs" icon={PIN} aria-label="Pin" className={ACTION} />
+      <Button size="xs" icon={SPEAKER} aria-label="Read aloud" className={ACTION} />
       {time && <span className="ms-1.5 text-footnote text-muted">{time}</span>}
     </div>
   );
