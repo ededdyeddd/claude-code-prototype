@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import type { Block } from "../data/transcripts";
 import { costRange, currentGate, gateText, money, type Assumption, type Question, type ReviewTab } from "../data/task";
 import { useInbox } from "../data/inboxStore";
-import { PlanPane, QuestionCard, answerLabel, type CustomAnswer } from "./PlanPane";
+import { PANE_BODY, PlanPane, QuestionCard, answerLabel, type CustomAnswer } from "./PlanPane";
 import { TASKS } from "../data/inbox";
 import { answerKey, openQuestions, unanswer } from "../data/inboxStore";
 import {
@@ -210,7 +210,7 @@ function RiskyAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
 function AssumptionState({ view, a }: { view: ChatTaskView; a: Assumption }) {
   const mark = view.marks[a.id];
   return (
-    <li className="flex items-start gap-sm py-0.5">
+    <li className="flex items-start gap-sm">
       <span className="mt-[5px] flex">{mark ? <StatusMark status="done" /> : <TaskDot state="blocked" />}</span>
       <div className="flex min-w-0 flex-col">
         <p className={cx("text-body", mark && !mark.ok ? "text-muted line-through" : "text-primary")}>
@@ -230,7 +230,7 @@ function AssumptionState({ view, a }: { view: ChatTaskView; a: Assumption }) {
 function SafeAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
   const note = view.rejected.get(a.id);
   return (
-    <li className="flex items-start gap-sm py-0.5">
+    <li className="flex items-start gap-sm">
       <span className="mt-[5px] flex">
         <TaskDot state="ahead" />
       </span>
@@ -262,15 +262,15 @@ export function BriefView({ view }: { view: ChatTaskView }) {
       .map((p) => `\`${p.path}\``)
       .join(", ");
   return (
-    <div className={cx("flex flex-col gap-xl pt-lg pb-xl", CODE)}>
-      <section className="flex flex-col gap-sm">
+    <div className={cx("flex flex-col gap-[var(--cds-gap-xl)]", PANE_BODY, CODE)}>
+      <section className="flex flex-col gap-md">
         <SectionTitle>How I understood the task</SectionTitle>
         <p className="text-body text-primary">
           <Inline text={brief.understanding} />
         </p>
       </section>
 
-      <section className="flex flex-col gap-sm">
+      <section className="flex flex-col gap-md">
         <SectionTitle aside={view.unmarked.length ? `${view.unmarked.length} to confirm` : "all confirmed"}>Assumptions</SectionTitle>
         <ul className="flex flex-col gap-sm">
           {risky.map((a) =>
@@ -278,20 +278,20 @@ export function BriefView({ view }: { view: ChatTaskView }) {
           )}
         </ul>
         {safe.length > 0 && (
-          <>
-            <span className="pt-xs text-footnote text-muted">Checked or reversible</span>
-            <ul className="flex flex-col">
+          <div className="flex flex-col gap-xs">
+            <span className="text-footnote text-muted">Checked or reversible</span>
+            <ul className="flex flex-col gap-sm">
               {safe.map((a) => (
                 <SafeAssumption key={a.id} view={view} a={a} />
               ))}
             </ul>
-          </>
+          </div>
         )}
       </section>
 
-      <section className="flex flex-col gap-sm">
+      <section className="flex flex-col gap-md">
         <SectionTitle>What I won't touch</SectionTitle>
-        <ul className="flex flex-col gap-0.5">
+        <ul className="flex flex-col gap-sm">
           {brief.boundaries.map((b) => (
             <li key={b} className="flex items-start gap-sm text-body text-secondary">
               <span className="mt-[5px] flex">
@@ -316,24 +316,25 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         </p>
       </section>
 
-      <section className="flex flex-col gap-sm">
+      <section className="flex flex-col gap-md">
         <SectionTitle>Done when</SectionTitle>
-        <ul className="flex flex-col gap-0.5">
+        <ul className="flex flex-col gap-sm">
           {[
             ...brief.doneWhen.map((c) => ({ ...c, mine: false })),
             ...view.criteria.map((text, i) => ({ id: `mine-${i}`, text, locked: true, mine: true })),
           ].map((c) => (
             <li key={c.id} className="flex items-start gap-sm text-body text-primary">
               <span aria-hidden="true" className="mt-[4px] block size-3 shrink-0 rounded-[3px] border border-alpha-5" />
-              <span className="min-w-0 flex-1">
+              {/* The lock sits right after its criterion, not at the far edge of the pane. */}
+              <span className="min-w-0">
                 <Inline text={c.text} />
                 {c.mine && <span className="text-footnote text-muted"> · added by you</span>}
+                {c.locked && (
+                  <Hint text="Locked: I can't loosen or skip this" className="ms-xs inline-flex align-[-2px] text-muted">
+                    <Icon glyph={LOCK} size="sm" className="!text-muted" />
+                  </Hint>
+                )}
               </span>
-              {c.locked && (
-                <Hint text="Locked: I can't loosen or skip this" className="flex shrink-0 items-center gap-1 text-footnote text-muted">
-                  <Icon glyph={LOCK} size="sm" className="!text-muted" />
-                </Hint>
-              )}
             </li>
           ))}
         </ul>
@@ -350,7 +351,7 @@ export function PlanView({ view }: { view: ChatTaskView }) {
   const t = totals(view);
   const spent = view.live.stages.flatMap((st) => st.steps).reduce((n, p) => n + (p.status === "done" && p.work ? costRange(p.work.cost).min : 0), 0);
   return (
-    <div className={cx("-mx-[var(--cds-gap-lg)] pt-md [--plan-surface:var(--cds-surface-1)]", CODE)}>
+    <div className={CODE}>
       <PlanPane
         task={view.live}
         answers={answers}

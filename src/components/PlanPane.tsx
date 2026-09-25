@@ -504,6 +504,13 @@ function PaneMeta({ task, answers }: { task: Task; answers: Record<string, strin
   );
 }
 
+/** Padding of a side pane's body (Inbox task pane, the chat's Brief and Plan panes): one left edge and top offset. */
+export const PANE_BODY = "px-[var(--cds-gap-lg)] pt-xs pb-[var(--cds-gap-xl)]";
+/** Room between sections of a pane (plan stages, rules, brief sections); a stage header adds its own pad-xs. */
+export const SECTION_GAP = "pb-[var(--cds-gap-xl)]";
+/** Room between steps; the last step of a stage has none, the stage's own room follows. */
+const STEP_GAP = "pb-[var(--cds-gap-lg)]";
+
 /**
  * The plan of a task, with open questions expanded on their steps. One component for the Inbox side pane
  * and the chat's Plan tab: questions are answered only here, in their plan row.
@@ -532,6 +539,8 @@ export function PlanPane({
     if (open.length <= 1) onTaskDone?.();
   };
   const single = task.stages.length === 1;
+  // Auto decisions or rules follow the last stage: it keeps the room after it, like the stages before.
+  const hasTail = task.autoDecisions.length > 0 || !!task.rules;
 
   // Picked option per question (recommended first). The plan previews it before you answer.
   const questions = task.stages.flatMap((st) => st.steps.flatMap((x) => (x.question ? [x.question] : [])));
@@ -601,7 +610,7 @@ export function PlanPane({
     const rail = !last && <span aria-hidden="true" className="absolute top-[18px] bottom-[-2px] left-[5.5px] w-px bg-alpha-3" />;
     if (item.kind === "added")
       return (
-        <li key={item.key} className="group/step relative flex items-start gap-md pb-[var(--cds-gap-lg)]">
+        <li key={item.key} className={cx("group/step relative flex items-start gap-md", !last && STEP_GAP)}>
           {rail}
           <span className="relative mt-[4px] flex bg-[var(--plan-surface,var(--cds-surface-2))]">
             <TaskDot state="ahead" />
@@ -625,7 +634,7 @@ export function PlanPane({
       );
     if (item.kind === "gate")
       return (
-        <li key={item.key} className="relative flex items-start gap-md pb-[var(--cds-gap-lg)]">
+        <li key={item.key} className={cx("relative flex items-start gap-md", !last && STEP_GAP)}>
           {rail}
           <span className="relative mt-[4px] flex bg-[var(--plan-surface,var(--cds-surface-2))]">
             {/* Gates take the same dots as steps: who approves is said by the text ("You approve …" / "Check: …"). */}
@@ -657,7 +666,7 @@ export function PlanPane({
     const result = status === "done" ? step.result : undefined;
     const expanded = !!result && !!openSteps[step.id];
     return (
-      <li key={item.key} className="group/step relative flex items-start gap-md pb-[var(--cds-gap-lg)]">
+      <li key={item.key} className={cx("group/step relative flex items-start gap-md", !last && STEP_GAP)}>
         {rail}
         <span className="relative mt-[4px] flex bg-[var(--plan-surface,var(--cds-surface-2))]">
           <TaskDot
@@ -772,7 +781,7 @@ export function PlanPane({
   };
 
   return (
-    <div className="flex flex-col gap-[var(--cds-gap-lg)] px-[var(--cds-gap-lg)] pt-xs pb-[var(--cds-gap-xl)]">
+    <div className={cx("flex flex-col gap-[var(--cds-gap-lg)]", PANE_BODY)}>
       {/* Under the title: the summary as a subtitle, then one quiet meta line. */}
       {header ?? (
         <div className="flex flex-col gap-xs">
@@ -826,7 +835,7 @@ export function PlanPane({
           const isCollapsed = !single && collapsed[stage.id];
           return (
             // Room comes after an open stage; collapsed stages stack tightly, like the Inbox groups.
-            <li key={stage.id} className={cx("flex flex-col", isCollapsed ? "pb-md" : si < stages.length - 1 && "pb-lg")}>
+            <li key={stage.id} className={cx("flex flex-col", isCollapsed ? "pb-md" : (si < stages.length - 1 || hasTail) && SECTION_GAP)}>
               {/* One stage: a plain "Plan" heading; several: numbered, collapsible stages. */}
               {single && (
                 <div className="sticky top-0 z-[2] flex items-baseline gap-sm bg-[var(--plan-surface,var(--cds-surface-2))] py-xs mb-[var(--cds-gap-md)]">
@@ -872,7 +881,7 @@ export function PlanPane({
           </li>
         )}
         {task.rules && (
-          <li className="flex flex-col gap-0.5 border-t border-alpha-2 pt-md text-footnote">
+          <li className="flex flex-col gap-xs border-t border-alpha-2 pt-md text-footnote">
             <span className="text-muted">Plan rules</span>
             <span className="text-secondary">
               I'll change on my own: {task.rules.self}. I'll ask first about: {task.rules.ask}.
