@@ -65,6 +65,14 @@ export type StepResult = {
   files?: { name: string; added: number; removed: number }[];
 };
 
+/** What a step ahead will do: in a sentence, where in the code, and which done-criteria of the brief it serves. */
+export type StepPlan = {
+  what: string;
+  where?: string[];
+  /** Ids of `Brief.doneWhen` criteria this step is how the task gets to. */
+  serves?: string[];
+};
+
 export type PlanStep = {
   id: string;
   status: Status;
@@ -72,6 +80,8 @@ export type PlanStep = {
   note?: string;
   question?: Question;
   work?: StepWork;
+  /** Opens under the step while it is ahead or running. */
+  plan?: StepPlan;
   result?: StepResult;
 };
 

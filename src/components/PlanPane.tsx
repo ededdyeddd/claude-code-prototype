@@ -13,6 +13,7 @@ import {
   type PlanStep,
   type Question,
   type Stage,
+  type StepPlan,
   type StepResult,
   type Status,
   type Task,
@@ -544,6 +545,40 @@ function AutoDecisions({ task }: { task: Task }) {
 
 const fmtNum = (n: number) => n.toLocaleString("en-US");
 
+/** What a step ahead will do: the work in a sentence, where in the code, and the done-criteria it gets the task to. */
+function StepPlanView({ plan, task }: { plan: StepPlan; task: Task }) {
+  const criteria = (plan.serves ?? []).flatMap((id) => task.brief?.doneWhen.filter((c) => c.id === id) ?? []);
+  return (
+    <div className="flex flex-col gap-md pt-xs">
+      <p className="text-body text-secondary">{plan.what}</p>
+      {plan.where && plan.where.length > 0 && (
+        <div className="flex flex-col gap-xs">
+          <span className="text-footnote text-muted">Works in</span>
+          <ul className="flex flex-col gap-0.5">
+            {plan.where.map((w) => (
+              <li key={w} className="truncate font-mono text-footnote text-secondary">
+                {w}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {criteria.length > 0 && (
+        <div className="flex flex-col gap-xs">
+          <span className="text-footnote text-muted">Gets the task to</span>
+          <ul className="flex flex-col gap-0.5">
+            {criteria.map((c) => (
+              <li key={c.id} className="text-footnote text-secondary">
+                {c.text}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** What a finished step produced: summary, the agent's own decisions, and changed files with diff stats as in chats. */
 function StepResultView({ result }: { result: StepResult }) {
   return (
@@ -784,9 +819,11 @@ export function PlanPane({
     const work = step.work;
     const removing = effectOn(step.id, "remove");
     const changed = effectOn(step.id, "change");
-    // Finished steps open to show what they produced.
+    // Finished steps open to show what they produced; steps ahead, what they will do.
     const result = status === "done" ? step.result : undefined;
-    const expanded = !!result && !!openSteps[step.id];
+    const stepPlan = status !== "done" && !removing ? step.plan : undefined;
+    const canOpen = !!result || !!stepPlan;
+    const expanded = canOpen && !!openSteps[step.id];
     return (
       <li key={item.key} className={cx("group/step relative flex items-start gap-md", !last && STEP_GAP)}>
         {rail}
@@ -807,14 +844,14 @@ export function PlanPane({
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-sm">
           <div className="flex items-baseline justify-between gap-md">
-            {result ? (
+            {canOpen ? (
               <button
                 type="button"
                 aria-expanded={expanded}
                 onClick={() => setOpenSteps((o) => ({ ...o, [step.id]: !expanded }))}
                 className="flex min-w-0 items-baseline gap-sm rounded-sm text-left outline-none focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
               >
-                <span className="text-body text-primary">{step.title}</span>
+                <span className={cx("text-body", status === "ahead" ? "text-secondary" : "text-primary")}>{step.title}</span>
                 <Icon
                   glyph={I.chevronRight}
                   size="sm"
@@ -856,6 +893,7 @@ export function PlanPane({
             </span>
           )}
           {expanded && result && <StepResultView result={result} />}
+          {expanded && stepPlan && <StepPlanView plan={stepPlan} task={task} />}
           {q && !picked && !q.blocking && hasBlocking && !openQs[q.id] && (
             // A blocking question is open elsewhere in the task: this one folds into a line so it does not compete.
             <div
