@@ -90,8 +90,8 @@ export function AttentionOptions({
           <div key={a.value} className="flex flex-col">
             <button type="button" role="menuitemradio" aria-checked={on} className={menuRow} onClick={() => pick(a.value)}>
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-body text-primary">{a.value === "busy" ? busyLabel(busyUntil) : a.label}</span>
-                <span className="text-footnote text-muted">{a.note}</span>
+                <span className="text-footnote text-primary">{a.value === "busy" ? busyLabel(busyUntil) : a.label}</span>
+                <span className="text-caption text-muted">{a.note}</span>
               </span>
               <Icon glyph={I.check} className={cx("mt-0.5 !text-accent", !on && "invisible")} />
             </button>
@@ -107,7 +107,7 @@ export function AttentionOptions({
                       aria-checked={sel}
                       onClick={() => pick("busy", t)}
                       className={cx(
-                        "h-[var(--cds-h-control--xs)] rounded-sm px-sm text-footnote outline-none transition-colors duration-fast focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]",
+                        "h-[var(--cds-h-control--xs)] rounded-sm px-sm text-caption outline-none transition-colors duration-fast focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]",
                         sel ? "bg-alpha-2 text-primary" : "bg-alpha-1 text-secondary hover:bg-fill-ghost-hover hover:text-primary",
                       )}
                     >
