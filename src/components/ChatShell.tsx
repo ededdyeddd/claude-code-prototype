@@ -3,9 +3,36 @@ import { NextHeader } from "./NextHeader";
 import { ChatPanel } from "./ChatPanel";
 import type { Turn } from "../data/transcripts";
 import type { Session } from "../data/sessions";
+import { useRef } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useChatTask } from "../data/chatTaskStore";
+import type { ReviewTab } from "../data/task";
+import { usePersistentWidth } from "../data/usePersistentWidth";
+import { ReviewPane } from "./ReviewPane";
+import { SIDE_PANE } from "./SidePane";
 
 export function ChatShell({ name, transcript, chat }: { name: string; transcript?: Turn[]; chat?: Session }) {
+  // A review artifact opens on the right of the chat (?review=changes|screens|checks), like the task pane in the Inbox.
+  const [params, setParams] = useSearchParams();
+  const view = useChatTask(chat?.id);
+  const reviewTab = params.get("review") as ReviewTab | null;
+  const review = view?.task.result?.review && reviewTab ? reviewTab : null;
+  const setReview = (t: ReviewTab | null) =>
+    setParams(
+      (p) => {
+        const next = new URLSearchParams(p);
+        if (t) next.set("review", t);
+        else next.delete("review");
+        return next;
+      },
+      { replace: true },
+    );
+  const [paneWidth, setPaneWidth] = usePersistentWidth("cc:review-pane-width", SIDE_PANE.default);
+  const root = useRef<HTMLDivElement>(null);
+  const paneMax = (root.current?.clientWidth ?? 1200) - 400;
   return (
+    <div ref={root} className={"absolute inset-0 flex gap-[var(--tiles-gap,12px)]" + (review ? " pe-[var(--tiles-padding,8px)]" : "")}>
+    <div className="relative min-w-0 flex-1">
     <div
       className="tiles-shell"
       data-tile-overflow-anchor="left"
@@ -45,6 +72,19 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
           </div>
         </div>
       </div>
+    </div>
+    </div>
+    {review && view && (
+      <ReviewPane
+        view={view}
+        tab={review}
+        onTab={setReview}
+        onClose={() => setReview(null)}
+        width={Math.min(paneWidth, Math.max(SIDE_PANE.min, paneMax))}
+        maxWidth={paneMax}
+        onResize={setPaneWidth}
+      />
+    )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
 import type { Block } from "../data/transcripts";
-import { costRange, currentGate, gateText, money, type Assumption } from "../data/task";
+import { costRange, currentGate, gateText, money, type Assumption, type ReviewTab } from "../data/task";
 import { useInbox } from "../data/inboxStore";
 import { PlanPane, QuestionCard, answerLabel, type CustomAnswer } from "./PlanPane";
 import { TASKS } from "../data/inbox";
@@ -22,6 +22,7 @@ import { Inline } from "./Transcript";
 const LOCK = "";
 const CHEVRON = "\uE02A";
 const CHEVRON_LEFT = "\uE029";
+const FILES = "\uE02D";
 const PEN = "";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
@@ -34,7 +35,13 @@ const fieldClass =
 
 /** The task of the open chat and a way to switch its tabs, for blocks rendered deep in the transcript. */
 /** `chatId` is set for every chat, `view` only for chats with a task level. */
-export const ChatTaskContext = createContext<{ chatId?: string; view?: ChatTaskView; setTab: (t: TaskTab) => void }>({ setTab: () => {} });
+export const ChatTaskContext = createContext<{
+  chatId?: string;
+  view?: ChatTaskView;
+  setTab: (t: TaskTab) => void;
+  /** Opens the review artifact of a result next to the chat. */
+  openReview?: (t: ReviewTab) => void;
+}>({ setTab: () => {} });
 
 /* ------------------------------------------------------------ Derived plan */
 
@@ -570,7 +577,9 @@ function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) 
 }
 
 function ResultCard({ view }: { view: ChatTaskView }) {
+  const { openReview } = useContext(ChatTaskContext);
   const claims = view.task.result?.claims ?? [];
+  const review = view.task.result?.review;
   return (
     <div className={CARD}>
       <span className="text-footnote text-muted">Result · check before accepting</span>
@@ -584,13 +593,44 @@ function ResultCard({ view }: { view: ChatTaskView }) {
               <span className="text-body text-primary">
                 <Inline text={c.text} />
               </span>
-              <span className="text-footnote text-muted">
-                <Inline text={c.evidence} />
-              </span>
+              {/* Each piece of evidence opens where it can be seen: the diff, the screenshots, the checks. */}
+              {review && openReview ? (
+                <button
+                  type="button"
+                  onClick={() => openReview(c.show)}
+                  className="w-fit rounded-sm text-left text-footnote text-muted underline decoration-alpha-4 underline-offset-2 outline-none hover:text-primary focus-visible:shadow-focus"
+                >
+                  <Inline text={c.evidence} />
+                </button>
+              ) : (
+                <span className="text-footnote text-muted">
+                  <Inline text={c.evidence} />
+                </span>
+              )}
             </div>
           </li>
         ))}
       </ul>
+      {review && openReview && (
+        // The artifact: one tile that opens the whole review next to the chat.
+        <button
+          type="button"
+          onClick={() => openReview("changes")}
+          className="flex w-full items-center gap-md rounded-lg bg-alpha-1 px-md py-sm text-left outline-none hover:bg-alpha-2 focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center rounded bg-alpha-2">
+            <Icon glyph={FILES} className="!text-secondary" />
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-body text-primary">Review the change</span>
+            <span className="text-footnote text-muted">
+              {review.files.length} {review.files.length === 1 ? "file" : "files"} · {review.screens.length * 2} screenshots ·{" "}
+              {review.checks.length} checks
+            </span>
+          </span>
+          <Icon glyph={CHEVRON} size="sm" className="!text-muted" />
+        </button>
+      )}
       <div className="flex items-center justify-end gap-xs">
         {view.accepted ? (
           <span className="flex items-center gap-1.5 text-footnote text-muted">
@@ -771,7 +811,9 @@ export function QuestionDock({ chatId }: { chatId: string }) {
   if (open.length === 0) return null;
   const i = Math.min(index, open.length - 1);
   const q = open[i];
-  const choice = choices[q.id] ?? q.options.find((o) => o.recommended)?.id ?? q.options[0].id;
+  // Keyed by task and question: question ids repeat across tasks ("q1").
+  const key = answerKey(task.id, q.id);
+  const choice = choices[key] ?? q.options.find((o) => o.recommended)?.id ?? q.options[0].id;
   return (
     <div className="mb-xs flex max-h-[min(60vh,520px)] flex-col gap-sm overflow-y-auto rounded-lg bg-surface-2 p-lg shadow-panel-sm dark:outline dark:outline-1 dark:outline-alpha-2">
       {open.length > 1 && (
@@ -788,9 +830,9 @@ export function QuestionDock({ chatId }: { chatId: string }) {
         task={task}
         question={q}
         choice={choice}
-        setChoice={(id) => setChoices((c) => ({ ...c, [q.id]: id }))}
-        custom={customs[q.id]}
-        setCustom={(c) => setCustoms((m) => ({ ...m, [q.id]: c }))}
+        setChoice={(id) => setChoices((c) => ({ ...c, [key]: id }))}
+        custom={customs[key]}
+        setCustom={(c) => setCustoms((m) => ({ ...m, [key]: c }))}
         onAnswered={() => {}}
         showChanges
         bare

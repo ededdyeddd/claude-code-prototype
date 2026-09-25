@@ -134,7 +134,21 @@ export type ChatEdit = {
   reply: string;
 };
 
-export type ResultClaim = { text: string; evidence: string };
+/** Where the review artifact opens for a claim's evidence. */
+export type ReviewTab = "changes" | "screens" | "checks";
+
+export type ResultClaim = { text: string; evidence: string; show: ReviewTab };
+
+/**
+ * The review artifact of a result: what changed, how it looks, what was checked.
+ * Diff lines start with "+", "-", " " or "@@" (hunk header), as in a unified diff.
+ */
+export type Review = {
+  files: { name: string; added: number; removed: number; lines: string[] }[];
+  /** Screen widths shot before and after the change. */
+  screens: number[];
+  checks: { label: string; result: string; items: string[] }[];
+};
 
 /* ------------------------------------------------------------------- Task */
 
@@ -167,7 +181,7 @@ export type Task = {
   rules?: { self: string; ask: string };
   edits?: ChatEdit[];
   /** Level 1: the result card at the end of the chat. */
-  result?: { claims: ResultClaim[] };
+  result?: { claims: ResultClaim[]; review?: Review };
   /** Escalation offered in the feed: the level goes up to `to` once the person agrees. */
   escalation?: { to: Level; text: string; afterAgree: Turn[]; afterDecline: string };
   /** Agent message after the current gate is passed. */

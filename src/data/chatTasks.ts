@@ -169,10 +169,48 @@ const REORDER_BUTTON: Task = {
   autoDecisions: [],
   result: {
     claims: [
-      { text: "Кнопка «Повторить заказ» видна на экранах от 320px", evidence: "Screenshots 320 / 375 / 768 before and after" },
-      { text: "Остальные брейкпоинты не изменились", evidence: "0 changed visual snapshots out of 42" },
-      { text: "Поведение кнопки не менялось", evidence: "`order-history.test.ts` · 12 passed" },
+      { text: "Кнопка «Повторить заказ» видна на экранах от 320px", evidence: "Screenshots 320 / 375 / 768 before and after", show: "screens" },
+      { text: "Остальные брейкпоинты не изменились", evidence: "0 changed visual snapshots out of 42", show: "checks" },
+      { text: "Поведение кнопки не менялось", evidence: "`order-history.test.ts` · 12 passed", show: "checks" },
     ],
+    review: {
+      files: [
+        {
+          name: "src/orders/OrderRow.tsx",
+          added: 5,
+          removed: 3,
+          lines: [
+            "@@ -41,9 +41,11 @@ export function OrderRow({ order }: Props) {",
+            "   return (",
+            '-    <div className="order-row whitespace-nowrap">',
+            '+    <div className="order-row flex flex-wrap items-center gap-2">',
+            '       <span className="order-number">#{order.number}</span>',
+            '       <span className="order-date">{formatDate(order.date)}</span>',
+            '-      <span className="order-total">{formatMoney(order.total)}</span>',
+            "-      <ReorderButton order={order} />",
+            '+      <div className="ml-auto flex flex-col items-end gap-1 sm:flex-row sm:items-center">',
+            '+        <span className="order-total">{formatMoney(order.total)}</span>',
+            "+        <ReorderButton order={order} />",
+            "+      </div>",
+            "     </div>",
+            "   );",
+          ],
+        },
+      ],
+      screens: [320, 375, 768],
+      checks: [
+        {
+          label: "Visual snapshots",
+          result: "42 compared · 0 changed",
+          items: ["order-history · 320, 375, 768, 1280", "checkout · 4 widths", "cart · 4 widths", "…and 30 more"],
+        },
+        {
+          label: "order-history.test.ts",
+          result: "12 passed",
+          items: ["reorder adds all items to the cart", "reorder skips items out of stock", "button is hidden for cancelled orders", "…and 9 more"],
+        },
+      ],
+    },
   },
 };
 

@@ -77,7 +77,22 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
   };
 
   return (
-    <ChatTaskContext.Provider value={{ chatId: chat?.id, view, setTab }}>
+    <ChatTaskContext.Provider
+      value={{
+        chatId: chat?.id,
+        view,
+        setTab,
+        openReview: (t) =>
+          setParams(
+            (p) => {
+              const next = new URLSearchParams(p);
+              next.set("review", t);
+              return next;
+            },
+            { replace: true },
+          ),
+      }}
+    >
     <ContextUsage.Provider value={contextUsage(transcript)}>
     <div className="contents">
       {view && view.tabs.length > 0 && (

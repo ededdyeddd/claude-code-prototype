@@ -153,7 +153,8 @@ export function QuestionCard({
   /** Inside a frame of its own (the question dock of the chat): no border or padding here. */
   bare?: boolean;
 }) {
-  const chosen = question.options.find((o) => o.id === choice)!;
+  // A stale choice (another question, another task) falls back to the first option instead of breaking the card.
+  const chosen = question.options.find((o) => o.id === choice) ?? question.options[0];
   const recommended = question.options.find((o) => o.recommended);
   const [mode, setMode] = useState<"choose" | "other" | "ask">("choose");
   const [draft, setDraft] = useState("");
