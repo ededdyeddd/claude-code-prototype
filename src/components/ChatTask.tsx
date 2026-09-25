@@ -1,14 +1,13 @@
 import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
 import type { Block } from "../data/transcripts";
-import { costRange, currentGate, gateText, money, type Assumption, type ReviewTab } from "../data/task";
+import { costRange, currentGate, gateText, money, type Assumption, type Question, type ReviewTab } from "../data/task";
 import { useInbox } from "../data/inboxStore";
 import { PlanPane, QuestionCard, answerLabel, type CustomAnswer } from "./PlanPane";
 import { TASKS } from "../data/inbox";
 import { answerKey, openQuestions, unanswer } from "../data/inboxStore";
 import {
   accept,
-  addCriterion,
   escalate,
   launch,
   markAssumption,
@@ -93,7 +92,7 @@ export function TaskTabsBar({ view, tab, onTab }: { view: ChatTaskView; tab: Tas
           value: t,
           label: TAB_LABEL[t],
           badge:
-            t === "chat" && tab !== "chat" && view.atGate && view.unmarked.length > 0 ? (
+            t === "chat" && tab !== "chat" && (view.atGate || view.escalationPending) ? (
               <CountBadge n={view.unmarked.length} />
             ) : view.changed.includes(t) && tab !== t ? (
               <ChangedDot />
@@ -207,6 +206,26 @@ function RiskyAssumption({ view, a, bare }: { view: ChatTaskView; a: Assumption;
   );
 }
 
+/** A risky assumption in the Brief tab, read only: marked with your words, or waiting for you in the chat. */
+function AssumptionState({ view, a }: { view: ChatTaskView; a: Assumption }) {
+  const mark = view.marks[a.id];
+  return (
+    <li className="flex items-start gap-sm py-0.5">
+      <span className="mt-[5px] flex">{mark ? <StatusMark status="done" /> : <TaskDot state="blocked" />}</span>
+      <div className="flex min-w-0 flex-col">
+        <p className={cx("text-body", mark && !mark.ok ? "text-muted line-through" : "text-primary")}>
+          <Inline text={a.text} />
+        </p>
+        {mark ? (
+          <p className="text-footnote text-secondary">you: {"note" in mark ? mark.note : "right"}</p>
+        ) : (
+          <p className="text-footnote text-clay">Waiting for you in the chat{a.why && <span className="text-muted"> · {a.why}</span>}</p>
+        )}
+      </div>
+    </li>
+  );
+}
+
 /** Safe assumption: just listed; struck through with the person's words once an edit rejected it. */
 function SafeAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
   const note = view.rejected.get(a.id);
@@ -231,9 +250,8 @@ function SafeAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
 }
 
 /** "Brief" tab: how I understood it, assumptions, what I won't touch, done when. */
-export function BriefView({ view, inFeed }: { view: ChatTaskView; /** In the chat feed, as part of the agent's reply (before it is accepted). */ inFeed?: boolean }) {
+export function BriefView({ view }: { view: ChatTaskView }) {
   const brief = view.task.brief;
-  const [draft, setDraft] = useState("");
   if (!brief) return null;
   const risky = brief.assumptions.filter((a) => a.risky);
   const safe = brief.assumptions.filter((a) => !a.risky);
@@ -243,14 +261,8 @@ export function BriefView({ view, inFeed }: { view: ChatTaskView; /** In the cha
       .filter((p) => p.access === access)
       .map((p) => `\`${p.path}\``)
       .join(", ");
-  const add = () => {
-    if (!draft.trim()) return;
-    addCriterion(view.id, draft.trim());
-    setDraft("");
-  };
-
   return (
-    <div className={cx("flex flex-col", inFeed ? "gap-lg" : "gap-xl pt-lg pb-xl", CODE)}>
+    <div className={cx("flex flex-col gap-xl pt-lg pb-xl", CODE)}>
       <section className="flex flex-col gap-sm">
         <SectionTitle>How I understood the task</SectionTitle>
         <p className="text-body text-primary">
@@ -262,7 +274,7 @@ export function BriefView({ view, inFeed }: { view: ChatTaskView; /** In the cha
         <SectionTitle aside={view.unmarked.length ? `${view.unmarked.length} to mark` : "all marked"}>Assumptions</SectionTitle>
         <ul className="flex flex-col gap-sm">
           {risky.map((a) =>
-            view.rejected.has(a.id) ? <SafeAssumption key={a.id} view={view} a={a} /> : <RiskyAssumption key={a.id} view={view} a={a} />,
+            view.rejected.has(a.id) ? <SafeAssumption key={a.id} view={view} a={a} /> : <AssumptionState key={a.id} view={view} a={a} />,
           )}
         </ul>
         {safe.length > 0 && (
@@ -291,7 +303,6 @@ export function BriefView({ view, inFeed }: { view: ChatTaskView; /** In the cha
             </li>
           ))}
         </ul>
-        {!inFeed && (
         <p className="text-footnote text-muted">
           <Inline
             text={[
@@ -303,7 +314,6 @@ export function BriefView({ view, inFeed }: { view: ChatTaskView; /** In the cha
               .join(" · ")}
           />
         </p>
-        )}
       </section>
 
       <section className="flex flex-col gap-sm">
@@ -327,16 +337,6 @@ export function BriefView({ view, inFeed }: { view: ChatTaskView; /** In the cha
             </li>
           ))}
         </ul>
-        {!inFeed && (
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && add()}
-          placeholder="Add your criterion — the agent can't weaken it"
-          aria-label="Add a criterion"
-          className={fieldClass}
-        />
-        )}
       </section>
     </div>
   );
@@ -347,12 +347,6 @@ export function BriefView({ view, inFeed }: { view: ChatTaskView; /** In the cha
 /** "Plan" tab: the same plan as in the Inbox pane, headed by what is left against the envelope. */
 export function PlanView({ view }: { view: ChatTaskView }) {
   const { answers } = useInbox();
-  const { setTab } = useContext(ChatTaskContext);
-  // The brief is accepted in the chat, under it; here the gate only points there.
-  const toBrief = () => {
-    setTab("chat");
-    window.setTimeout(() => document.getElementById(briefAnchor(view.id))?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
-  };
   const t = totals(view);
   const spent = view.live.stages.flatMap((st) => st.steps).reduce((n, p) => n + (p.status === "done" && p.work ? costRange(p.work.cost).min : 0), 0);
   return (
@@ -361,15 +355,6 @@ export function PlanView({ view }: { view: ChatTaskView }) {
         task={view.live}
         answers={answers}
         edits={view.planEdits}
-        gateCard={
-          view.atGate && (
-            <span>
-              <Button size="xs" variant="secondary" onClick={toBrief}>
-                Go to the brief
-              </Button>
-            </span>
-          )
-        }
         header={
           <header className="flex flex-col gap-0.5">
             <p className="text-heading text-primary">
@@ -453,7 +438,9 @@ function DecisionCard({
   meta,
   actions,
   children,
+  bare,
 }: {
+  bare?: boolean;
   label: string;
   title: ReactNode;
   context?: ReactNode;
@@ -463,7 +450,7 @@ function DecisionCard({
   children?: ReactNode;
 }) {
   return (
-    <section className={cx("not-prose flex flex-col gap-lg rounded-lg border border-alpha-2 p-lg", CODE)}>
+    <section className={cx("not-prose flex flex-col gap-lg", !bare && "rounded-lg border border-alpha-2 p-lg", CODE)}>
       <div className="flex flex-col gap-xs">
         <span className="text-footnote text-clay">{label}</span>
         <p className="text-body font-medium text-primary">{title}</p>
@@ -522,43 +509,27 @@ function EscalationDecision({
 
 const CARD = CODE + " not-prose flex flex-col gap-sm rounded-lg border border-alpha-2 p-md";
 
-/** Accepting the brief, right under it in the feed (the brief above is the card's body here): why it can't be started yet, or what it will cost; then start. */
-function GateActions({ view, onOpenPlan }: { view: ChatTaskView; onOpenPlan: () => void }) {
-  const left = view.unmarked.length;
-  const t = totals(view);
-  return (
-    <div className="flex flex-wrap items-center gap-sm">
-      {left > 0 ? (
-        <span className="text-footnote text-clay">{left === 1 ? "1 assumption left to mark" : `${left} assumptions left to mark`}</span>
-      ) : (
-        <span className={cx("text-footnote", t.over ? "text-clay" : "text-muted")}>
-          ≈ {money(t.min, t.max)} of the ${view.envelope.limit} limit
-        </span>
-      )}
-      <Button size="sm" variant="secondary" className="ms-auto" onClick={onOpenPlan}>
-        Open plan
-      </Button>
-      <Button size="sm" variant="primary" disabled={left > 0} onClick={() => launch(view.id)}>
-        Pass the gate and start
-      </Button>
-    </div>
-  );
-}
-
-/** Anchor of the brief card in the feed, for "N assumptions left to mark". */
-export const briefAnchor = (id: string) => `brief-${id}`;
-
 /**
- * The brief in the feed. Until the gate is passed it is the agent's reply itself: assumptions are marked
- * right in it, edits typed in the chat change it in place. Once accepted it folds into one line and moves to its tab.
+ * The brief in the feed: the agent's words and where the full brief and plan are. The decisions on them
+ * (assumptions, the gate) are asked in the dock over the composer.
  */
 function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) => void }) {
-  if (view.atGate)
+  const brief = view.task.brief;
+  if (view.atGate && brief)
     return (
-      // Part of the agent's reply, not a card: only the risky assumptions are controls.
-      <div id={briefAnchor(view.id)} className="not-prose flex scroll-mt-[var(--cds-gap-xl)] flex-col gap-lg pt-sm">
-        <BriefView view={view} inFeed />
-        <GateActions view={view} onOpenPlan={() => setTab("plan")} />
+      <div className={cx("not-prose flex flex-col gap-sm pt-sm", CODE)}>
+        <p className="text-body text-primary">
+          <Inline text={brief.understanding} />
+        </p>
+        <p className="flex flex-wrap items-center gap-x-xs text-body text-secondary">
+          Собрал бриф и план — они во вкладках:
+          <Button size="xs" variant="secondary" onClick={() => setTab("brief")}>
+            Brief
+          </Button>
+          <Button size="xs" variant="secondary" onClick={() => setTab("plan")}>
+            Plan
+          </Button>
+        </p>
       </div>
     );
   return (
@@ -567,11 +538,9 @@ function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) 
         <StatusMark status="done" />
         Brief accepted
       </span>
-      {view.tabs.includes("brief") && (
-        <Button size="sm" variant="secondary" onClick={() => setTab("brief")}>
-          Open brief
-        </Button>
-      )}
+      <Button size="sm" variant="secondary" onClick={() => setTab("brief")}>
+        Open brief
+      </Button>
     </div>
   );
 }
@@ -732,20 +701,12 @@ function DetailsToggle({ open, onToggle }: { open: boolean; onToggle: () => void
 function EscalationCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) => void }) {
   const esc = view.task.escalation;
   if (!esc) return null;
-  // In the chat the offer is the agent's reply itself, with its context in full; buttons under it, as under the brief.
+  // In the chat the offer is the agent's reply itself, with its context in full; the decision is in the dock.
   if (!view.escalation)
     return (
       <div className={cx("not-prose flex flex-col gap-lg pt-sm", CODE)}>
         <p className="text-body text-primary">{esc.text}</p>
         <EscalationDetails view={view} inFeed />
-        <div className="flex flex-wrap items-center justify-end gap-xs">
-          <Button size="sm" variant="secondary" onClick={() => escalate(view.id, false)}>
-            Finish as is
-          </Button>
-          <Button size="sm" variant="primary" onClick={() => (escalate(view.id, true), setTab("plan"))}>
-            Split into stages
-          </Button>
-        </div>
       </div>
     );
   const stages = view.task.stages.length;
@@ -796,11 +757,69 @@ function QuestionLine({ chatId, questionId }: { chatId: string; questionId: stri
   );
 }
 
+/** A risky assumption as a decision in the dock: right, or fix it in your words. */
+function AssumptionDecision({ view, a }: { view: ChatTaskView; a: Assumption }) {
+  const [fixing, setFixing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const save = () => draft.trim() && markAssumption(view.id, a.id, { ok: false, note: draft.trim() });
+  return (
+    <DecisionCard
+      bare
+      label="Can't check this myself"
+      title={<Inline text={a.text} />}
+      context={a.why}
+      actions={
+        fixing ? (
+          <>
+            <Button size="sm" variant="secondary" onClick={() => setFixing(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" variant="primary" disabled={!draft.trim()} onClick={save}>
+              Save
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button size="sm" variant="secondary" onClick={() => (setDraft(""), setFixing(true))}>
+              Fix…
+            </Button>
+            <Button size="sm" variant="primary" onClick={() => markAssumption(view.id, a.id, { ok: true })}>
+              Right
+            </Button>
+          </>
+        )
+      }
+    >
+      {fixing && (
+        <input
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") save();
+            if (e.key === "Escape") setFixing(false);
+          }}
+          placeholder="How it should be, in your words"
+          aria-label="Your correction"
+          className={fieldClass}
+        />
+      )}
+    </DecisionCard>
+  );
+}
+
+type Decision =
+  | { key: string; kind: "escalation" }
+  | { key: string; kind: "assumption"; a: Assumption }
+  | { key: string; kind: "gate" }
+  | { key: string; kind: "question"; q: Question };
+
 /**
- * The agent's open questions, docked over the composer one at a time (blocking first), as Claude asks:
- * the same QuestionCard and answer state as on the plan step in the Inbox. Answering moves on to the next.
+ * Every decision of the chat, docked over the composer one at a time, as Claude asks: an escalation offer,
+ * then the risky assumptions, then the gate on the brief and plan, then the agent's questions (blocking first).
+ * The Brief and Plan tabs are to read; this is the one place to decide. Answering moves on to the next.
  */
-export function QuestionDock({ chatId }: { chatId: string }) {
+export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: ChatTaskView; setTab: (t: TaskTab) => void }) {
   const { answers } = useInbox();
   const [index, setIndex] = useState(0);
   const [choices, setChoices] = useState<Record<string, string>>({});
@@ -808,27 +827,79 @@ export function QuestionDock({ chatId }: { chatId: string }) {
   const task = TASKS.find((t) => t.id === chatId);
   if (!task) return null;
   const open = openQuestions(task, answers).sort((a, b) => Number(b.blocking) - Number(a.blocking));
-  if (open.length === 0) return null;
-  const i = Math.min(index, open.length - 1);
-  const q = open[i];
-  // Keyed by task and question: question ids repeat across tasks ("q1").
-  const key = answerKey(task.id, q.id);
-  const choice = choices[key] ?? q.options.find((o) => o.recommended)?.id ?? q.options[0].id;
-  return (
-    <div className="mb-xs flex max-h-[min(60vh,520px)] flex-col gap-sm overflow-y-auto rounded-lg bg-surface-2 p-lg shadow-panel-sm dark:outline dark:outline-1 dark:outline-alpha-2">
-      {open.length > 1 && (
-        <div className="-mb-xs flex items-center justify-end gap-0.5 text-footnote tabular-nums text-muted">
-          <span className="me-xs">
-            {i + 1} of {open.length}
+  const items: Decision[] = [
+    ...(view?.escalationPending ? [{ key: "escalation", kind: "escalation" as const }] : []),
+    ...(view?.atGate ? view.unmarked.map((a) => ({ key: `a:${a.id}`, kind: "assumption" as const, a })) : []),
+    ...(view?.atGate ? [{ key: "gate", kind: "gate" as const }] : []),
+    ...open.map((q) => ({ key: `q:${q.id}`, kind: "question" as const, q })),
+  ];
+  if (items.length === 0) return null;
+  const i = Math.min(index, items.length - 1);
+  const item = items[i];
+
+  let body: ReactNode = null;
+  if (item.kind === "escalation" && view) {
+    const t = totals(view);
+    body = (
+      <DecisionCard
+        bare
+        label="Bigger than it looked"
+        title={`Split it into ${view.task.stages.length} stages?`}
+        context="The details are in my message above."
+        meta={`≈ ${money(t.min, t.max)} of $${view.envelope.limit}`}
+        actions={
+          <>
+            <Button size="sm" variant="secondary" onClick={() => escalate(view.id, false)}>
+              Finish as is
+            </Button>
+            <Button size="sm" variant="primary" onClick={() => escalate(view.id, true)}>
+              Split into stages
+            </Button>
+          </>
+        }
+      />
+    );
+  } else if (item.kind === "assumption" && view) {
+    body = <AssumptionDecision key={item.a.id} view={view} a={item.a} />;
+  } else if (item.kind === "gate" && view) {
+    const gate = currentGate(view.live);
+    const t = totals(view);
+    const left = view.unmarked.length;
+    body = (
+      <DecisionCard
+        bare
+        label="Your gate"
+        title={`Approve ${gate?.title ?? "the plan"}?`}
+        context={left > 0 ? `Mark ${left === 1 ? "1 assumption" : `${left} assumptions`} first.` : "Edits you typed in the chat are in the brief and plan."}
+        aside={
+          <span className="flex gap-xs">
+            {view.tabs.includes("brief") && (
+              <Button size="sm" onClick={() => setTab("brief")}>
+                Brief
+              </Button>
+            )}
+            <Button size="sm" onClick={() => setTab("plan")}>
+              Plan
+            </Button>
           </span>
-          <Button size="xs" icon={CHEVRON_LEFT} aria-label="Previous question" disabled={i === 0} onClick={() => setIndex(i - 1)} />
-          <Button size="xs" icon={CHEVRON} aria-label="Next question" disabled={i === open.length - 1} onClick={() => setIndex(i + 1)} />
-        </div>
-      )}
+        }
+        meta={<span className={t.over ? "text-clay" : undefined}>≈ {money(t.min, t.max)} of ${view.envelope.limit}</span>}
+        actions={
+          <Button size="sm" variant="primary" disabled={left > 0} onClick={() => launch(view.id)}>
+            Pass the gate and start
+          </Button>
+        }
+      />
+    );
+  } else if (item.kind === "question") {
+    // Keyed by task and question: question ids repeat across tasks ("q1").
+    const key = answerKey(task.id, item.q.id);
+    const choice = choices[key] ?? item.q.options.find((o) => o.recommended)?.id ?? item.q.options[0].id;
+    body = (
       <QuestionCard
-        key={q.id}
+        key={key}
         task={task}
-        question={q}
+        question={item.q}
         choice={choice}
         setChoice={(id) => setChoices((c) => ({ ...c, [key]: id }))}
         custom={customs[key]}
@@ -837,6 +908,21 @@ export function QuestionDock({ chatId }: { chatId: string }) {
         showChanges
         bare
       />
+    );
+  }
+
+  return (
+    <div className="mb-xs flex max-h-[min(60vh,520px)] flex-col gap-sm overflow-y-auto rounded-lg bg-surface-2 p-lg shadow-panel-sm dark:outline dark:outline-1 dark:outline-alpha-2">
+      {items.length > 1 && (
+        <div className="-mb-xs flex items-center justify-end gap-0.5 text-footnote tabular-nums text-muted">
+          <span className="me-xs">
+            {i + 1} of {items.length}
+          </span>
+          <Button size="xs" icon={CHEVRON_LEFT} aria-label="Previous" disabled={i === 0} onClick={() => setIndex(i - 1)} />
+          <Button size="xs" icon={CHEVRON} aria-label="Next" disabled={i === items.length - 1} onClick={() => setIndex(i + 1)} />
+        </div>
+      )}
+      {body}
     </div>
   );
 }

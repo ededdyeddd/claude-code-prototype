@@ -18,7 +18,7 @@ import { Button } from "../ui";
 import { NEW_CHAT, seeTab, sendMessage, useChatTask, type TaskTab } from "../data/chatTaskStore";
 import { ONE_CLICK_PROMPT, guessLevel } from "../data/chatTasks";
 import { useInbox } from "../data/inboxStore";
-import { BriefView, ChatTaskContext, PlanView, QuestionDock, TaskTabsBar } from "./ChatTask";
+import { BriefView, ChatTaskContext, DecisionDock, PlanView, TaskTabsBar } from "./ChatTask";
 
 // Rough context estimate for the mock: characters in the transcript vs. a small window,
 // so a long chat fills the ring noticeably more than a short one.
@@ -133,7 +133,7 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
           <span role="status" className="sr-only select-none" />
           {hasContent ? (
             <>
-              {chat && <QuestionDock key={chat.id} chatId={chat.id} />}
+              {chat && <DecisionDock key={chat.id} chatId={chat.id} view={view} setTab={setTab} />}
               {chat?.repo && <RepoBar repo={chat.repo} />}
             </>
           ) : (
