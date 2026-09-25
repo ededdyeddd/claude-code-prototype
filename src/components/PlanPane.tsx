@@ -544,14 +544,9 @@ function AutoDecisions({ task }: { task: Task }) {
 
 const fmtNum = (n: number) => n.toLocaleString("en-US");
 
-/** The agent's intent for a step ahead: marked as a plan, since the work will find its own way. */
+/** The agent's intent for a step ahead. That the plan may change is said once, by the plan rules below it. */
 function StepPlanView({ what }: { what: string }) {
-  return (
-    <div className="flex flex-col gap-xs pt-xs">
-      <span className="text-footnote text-muted">Plan, may change</span>
-      <p className="text-body text-secondary">{what}</p>
-    </div>
-  );
+  return <p className="pt-xs text-body text-secondary">{what}</p>;
 }
 
 /**
