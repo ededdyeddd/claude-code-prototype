@@ -62,22 +62,16 @@ function ChangedDot() {
   return <span aria-label="Changed" title="Changed by your edit" className="block size-[6px] rounded-full bg-muted" />;
 }
 
-/** "Chat · Brief · Plan" above the feed, and where the task stands (neutral: the gate bar carries the accent). */
+/** "Chat · Brief · Plan" above the feed and, once the task runs, the stage it is in. */
 export function TaskTabsBar({ view, tab, onTab }: { view: ChatTaskView; tab: TaskTab; onTab: (t: TaskTab) => void }) {
-  const gate = currentGate(view.live);
   const running = view.live.stages.find((st) => st.steps.some((p) => p.status === "running"));
-  const status =
-    view.atGate && gate ? (
-      <>
-        <StatusMark status="myGate" />
-        {gateText(gate)}
-      </>
-    ) : running ? (
-      <>
-        <StatusMark status="running" />
-        {running.title}
-      </>
-    ) : null;
+  // Only once the task runs: the stage it is in. At the gate the dot on the tab and the line under the brief say it already.
+  const status = running && (
+    <>
+      <StatusMark status="running" />
+      {running.title}
+    </>
+  );
   return (
     <div className="flex items-center gap-md pt-xs pb-sm">
       <Tabs
@@ -97,13 +91,7 @@ export function TaskTabsBar({ view, tab, onTab }: { view: ChatTaskView; tab: Tas
       />
       {status && (
         <span className="ms-auto flex min-w-0 items-center gap-1.5 truncate text-footnote text-secondary">
-          {view.task.levelReason ? (
-            <Hint text={`Large task: ${view.task.levelReason}`} className="flex items-center gap-1.5">
-              {status}
-            </Hint>
-          ) : (
-            status
-          )}
+          {status}
         </span>
       )}
     </div>
