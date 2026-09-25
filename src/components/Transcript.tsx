@@ -4,7 +4,7 @@ import { Button, Icon } from "../ui";
 import { Irregular_radiating_starburst } from "./icons/Irregular_radiating_starburst";
 
 const CHEVRON = "";
-const COPY = "";
+const COPY = "\uE056"; // two overlapping squares, as in the app
 const FORK = "\uE012";
 const PIN = "\uE0BD";
 const SPEAKER = "\uE0E4";
