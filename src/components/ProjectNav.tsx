@@ -135,6 +135,10 @@ export function ProjectNav() {
     <div className="flex flex-col">
       {groups.map((g, i) => {
         const isCollapsed = !!collapsed[g.key];
+        // A collapsed project still signals: one clay dot if a task inside is blocked on you, however many.
+        const blockedInside = isCollapsed && g.sessions.some((sess) => taskState(sess.id, needs)?.waiting === "blocked");
+        // The dot holds the actions' place until the header is hovered, like the dot on the Inbox row.
+        const showDot = blockedInside && hovered !== g.key;
         const afterCollapsed = i > 0 && !!collapsed[groups[i - 1].key];
         return (
           <div
@@ -152,12 +156,19 @@ export function ProjectNav() {
                 compact={afterCollapsed}
                 onToggle={() => setCollapsed((c) => ({ ...c, [g.key]: !isCollapsed }))}
                 actions={
-                  <>
-                    {canCreate(g) && (
-                      <Button size="xs" icon={PLUS} aria-label={`New chat in ${g.label}`} onClick={() => navigate("/code")} />
-                    )}
-                    {i === 0 && <NavFilterButton filters={filters} onChange={setFilters} open={filterOpen} setOpen={setFilterOpen} />}
-                  </>
+                  showDot ? (
+                    // Centered in a box the size of the "+" button, so the dot sits in the same column as the "+" icons.
+                    <span role="img" aria-label="A task here is waiting for you" className="flex size-[var(--cds-h-control--xs)] shrink-0 items-center justify-center">
+                      <span className="size-[6px] rounded-full bg-clay" />
+                    </span>
+                  ) : (
+                    <>
+                      {canCreate(g) && (
+                        <Button size="xs" icon={PLUS} aria-label={`New chat in ${g.label}`} onClick={() => navigate("/code")} />
+                      )}
+                      {i === 0 && <NavFilterButton filters={filters} onChange={setFilters} open={filterOpen} setOpen={setFilterOpen} />}
+                    </>
+                  )
                 }
               />
             </div>
