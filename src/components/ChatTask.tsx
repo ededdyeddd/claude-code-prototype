@@ -221,6 +221,10 @@ export function BriefView({ view }: { view: ChatTaskView }) {
   const brief = view.task.brief;
   if (!brief) return null;
   const risky = brief.assumptions.filter((a) => a.risky);
+  const criteria = [
+    ...brief.doneWhen.map((c) => ({ ...c, mine: false })),
+    ...view.criteria.map((text, i) => ({ id: `mine-${i}`, text, locked: true, mine: true })),
+  ];
   const safe = brief.assumptions.filter((a) => !a.risky);
   const env = view.envelope;
   const paths = (access: string) =>
@@ -291,15 +295,22 @@ export function BriefView({ view }: { view: ChatTaskView }) {
       </section>
 
       <section className="flex flex-col gap-sm">
-        <SectionTitle>Done when</SectionTitle>
+        <SectionTitle
+          aside={
+            <Hint text="I check these at the end and mark each one with its proof">
+              0 of {criteria.length} met
+            </Hint>
+          }
+        >
+          Done when
+        </SectionTitle>
         <ul className="flex flex-col gap-xs">
-          {[
-            ...brief.doneWhen.map((c) => ({ ...c, mine: false })),
-            ...view.criteria.map((text, i) => ({ id: `mine-${i}`, text, locked: true, mine: true })),
-          ].map((c) => (
+          {criteria.map((c) => (
             <li key={c.id} className="flex items-start gap-sm text-body text-primary">
-              {/* A plain bullet, not a box: the agent's checks meet these, the person doesn't tick them. */}
-              <Bullet />
+              {/* Not met yet: the plan's "ahead" ring, which turns into a mark once a check meets it. A ring, not a box: nobody ticks these by hand. */}
+              <span className="mt-[5px] flex">
+                <TaskDot state="ahead" />
+              </span>
               {/* The lock sits right after its criterion, not at the far edge of the pane. */}
               <span className="min-w-0">
                 <Inline text={c.text} />
