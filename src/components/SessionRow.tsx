@@ -29,7 +29,12 @@ export function SessionRow({
       <span className="df-leading-slot text-secondary">
         <span role="img" className="flex min-h-3.5 min-w-3.5 shrink-0 items-center justify-center">
           {running ? (
-            <span className="block size-[6px] rounded-full bg-clay" />
+            <span
+              aria-label="Working"
+              // dframe-dot-pulse comes from the design-system CSS (the original sidebar "working" dot).
+              className="block size-[6px] rounded-full bg-current text-secondary motion-reduce:!animate-none"
+              style={{ animation: "dframe-dot-pulse 2s infinite" }}
+            />
           ) : (
             <span className="block size-[6px] rounded-full border border-current text-muted opacity-50" />
           )}
