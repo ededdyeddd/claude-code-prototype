@@ -299,7 +299,7 @@ export function QuestionCard({
               if (e.key === "Enter") (e.preventDefault(), sendAsk());
               if (e.key === "Escape") setMode("choose");
             }}
-            placeholder="Ask about this question, Enter to send"
+            placeholder="Ask me about this question"
             aria-label="Ask about this question"
             className={fieldClass}
           />
@@ -308,7 +308,7 @@ export function QuestionCard({
           <div className="flex flex-col gap-0.5 rounded bg-alpha-1 px-md py-sm">
             <p className="text-body text-primary">“{custom.text}”</p>
             <span className="text-footnote text-muted">
-              {custom.ready ? "The plan change is ready: Apply to go with it." : "I'm drafting the plan change…"}
+              {custom.ready ? "Plan change ready: Apply it, or Edit your answer" : "Drafting the plan change…"}
             </span>
           </div>
         ) : (

@@ -410,8 +410,8 @@ function Budget({ view }: { view: ChatTaskView }) {
     <Hint
       text={
         <>
-          {t.over && <>Over the limit: raise it in the chip under the chat field, or cut scope. </>}
-          Forecast for what is left in the plan, summed from its steps. The limit is the task's spend cap from its autonomy envelope.
+          {t.over && <>Over the limit: cut scope to fit. </>}
+          Forecast for what's left in the plan, summed from its steps. The limit is this task's spending cap.
         </>
       }
       className={cx("tabular-nums", t.over && "text-clay")}
@@ -830,10 +830,15 @@ function AssumptionDecision({ view, a, nav }: { view: ChatTaskView; a: Assumptio
     else if (picked === 1 && draft.trim()) markAssumption(view.id, a.id, { ok: false, note: draft.trim() });
   };
   return (
-    <DockFrame nav={nav} title={<Inline text={a.text} />} count={2} pick={pick} canSubmit={ready} onSubmit={submit}>
-      {a.why && <p className="text-footnote text-muted">{a.why}</p>}
-      <OptionList label="Is this right?">
-        <OptionRow n={1} title="Confirm — it's right" selected={picked === 0} onSelect={() => pick(0)} />
+    <DockFrame nav={nav} title="Is this assumption right?" count={2} pick={pick} canSubmit={ready} onSubmit={submit}>
+      <div className="flex flex-col gap-0.5">
+        <p className="text-body text-primary">
+          <Inline text={a.text} />
+        </p>
+        {a.why && <p className="text-footnote text-muted">{a.why}</p>}
+      </div>
+      <OptionList label="Is this assumption right?">
+        <OptionRow n={1} title="Confirm" selected={picked === 0} onSelect={() => pick(0)} description="I'll build on it as written" />
         <OptionRow n={2} title="Correct it" selected={picked === 1} onSelect={() => pick(1)}>
           <RowField
             ref={field}
@@ -841,7 +846,7 @@ function AssumptionDecision({ view, a, nav }: { view: ChatTaskView; a: Assumptio
             onChange={setDraft}
             onFocus={() => setPicked(1)}
             onEnter={submit}
-            placeholder="How it should be, in your words"
+            placeholder="Type how it should be"
             label="Your correction"
           />
         </OptionRow>
@@ -859,10 +864,11 @@ function GateDecision({ view, nav, setTab, toAssumption }: { view: ChatTaskView;
     if (picked === 0 && left === 0) launch(view.id);
     if (picked === 1) (focusComposer(), nav.toggle());
   };
+  const title = `Approve ${gate?.title ?? "the plan"}?`;
   return (
     <DockFrame
       nav={nav}
-      title={`Approve ${gate?.title ?? "the plan"}?`}
+      title={title}
       count={2}
       pick={setPicked}
       canSubmit={picked === 1 || (picked === 0 && left === 0)}
@@ -873,12 +879,12 @@ function GateDecision({ view, nav, setTab, toAssumption }: { view: ChatTaskView;
         {view.tabs.includes("brief") && (
           <>
             <TextLink onClick={() => setTab("brief")}>brief</TextLink>
-            and the
+            and
           </>
         )}
         <TextLink onClick={() => setTab("plan")}>plan</TextLink>
       </p>
-      <OptionList label="Approve the plan?">
+      <OptionList label={title}>
         <OptionRow
           n={1}
           title="Approve and start"
@@ -895,10 +901,10 @@ function GateDecision({ view, nav, setTab, toAssumption }: { view: ChatTaskView;
         />
         <OptionRow
           n={2}
-          title="Not yet — I'll edit it in the chat"
+          title="Edit first"
           selected={picked === 1}
           onSelect={() => setPicked(1)}
-          description="Type the change below; the brief and plan follow it."
+          description="Type the change below; I'll update the brief and plan"
         />
       </OptionList>
     </DockFrame>
@@ -928,7 +934,7 @@ function EscalationChoice({ view, nav }: { view: ChatTaskView; nav: DockNav }) {
           onSelect={() => setPicked(0)}
           description={
             <>
-              Done work is kept, you approve between stages · <Budget view={view} />
+              Keeps what's done; you approve along the way · <Budget view={view} />
             </>
           }
         />
@@ -937,7 +943,7 @@ function EscalationChoice({ view, nav }: { view: ChatTaskView; nav: DockNav }) {
           title="Finish as is"
           selected={picked === 1}
           onSelect={() => setPicked(1)}
-          description="No brief or plan; I'll still ask at the edge of your limits"
+          description="No brief or plan; I'll still ask before going past your limits"
         />
       </OptionList>
     </DockFrame>
@@ -965,14 +971,24 @@ function ResultDecision({ view, nav }: { view: ChatTaskView; nav: DockNav }) {
           title="Accept"
           selected={picked === 0}
           onSelect={() => setPicked(0)}
-          description={review && openReview ? <TextLink onClick={() => openReview("changes")}>Review the change</TextLink> : undefined}
+          description={
+            <span className="flex flex-wrap items-baseline gap-x-1">
+              Marks the task done
+              {review && openReview && (
+                <>
+                  <span>·</span>
+                  <TextLink onClick={() => openReview("changes")}>Review the change</TextLink>
+                </>
+              )}
+            </span>
+          }
         />
         <OptionRow
           n={2}
           title="Ask for changes"
           selected={picked === 1}
           onSelect={() => setPicked(1)}
-          description="Tell me what to change in the chat below"
+          description="Type what to change below; I'll redo it"
         />
       </OptionList>
     </DockFrame>
