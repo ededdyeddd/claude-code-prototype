@@ -12,13 +12,11 @@
 
 /*
  * Claude spark while a chat is working (reference: screen recording of the app).
- * The star collapses to a dot, holds briefly, then opens back with a very light
- * overshoot. Scale only, soft easing on every segment, so the motion stays calm.
+ * The star collapses to a dot, holds briefly, then opens back up to 95% of its
+ * size (no overshoot). Scale only, soft easing on every segment.
  */
 @keyframes spark-breathe {
-  0% { transform: scale(1); animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
-  35% { transform: scale(0.35); }
-  50% { transform: scale(0.35); animation-timing-function: cubic-bezier(0.33, 0, 0.2, 1); }
-  85% { transform: scale(1.05); animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
-  100% { transform: scale(1); }
+  0% { transform: scale(0.95); animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  35%, 50% { transform: scale(0.35); animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+  100% { transform: scale(0.95); }
 }
