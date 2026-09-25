@@ -89,10 +89,6 @@ function DiffChip({ kind }: { kind: PlanDiff["kind"] }) {
   );
 }
 
-/** Agent name shown on hover: out of flow so it takes no width from the title; over the title's end, which fades out under it. */
-const HOVER_AGENT =
-  "pointer-events-none absolute right-full top-0 whitespace-nowrap pl-[var(--cds-gap-lg)] bg-[linear-gradient(to_right,transparent,var(--cds-surface-2)_var(--cds-gap-lg))] opacity-0 transition-opacity duration-fast group-hover/step:opacity-100";
-
 /** Text followed by its chip; the chip is glued to the last word so a wrapped title never leaves it alone on a line. */
 function WithChip({ text, kind }: { text: string; kind?: PlanDiff["kind"] }) {
   if (!kind) return <>{text}</>;
@@ -619,11 +615,7 @@ export function PlanPane({
             </span>
             {item.diff.time && (
               <span className="relative shrink-0 text-footnote tabular-nums text-secondary">
-                {item.diff.agent && (
-                  <span className={cx("text-muted", !newAgent.has(item.key) && HOVER_AGENT)}>
-                    {item.diff.agent} ·{" "}
-                  </span>
-                )}
+                {item.diff.agent && newAgent.has(item.key) && <span className="text-muted">{item.diff.agent} · </span>}
                 <Forecast cost={item.diff.cost} time={item.diff.time} basis={item.diff.basis} model={task.model} />
               </span>
             )}
@@ -720,10 +712,8 @@ export function PlanPane({
                   removing && "text-muted line-through",
                 )}
               >
-                {/* Agent: always where it changes, on hover everywhere else (overlaid, so nothing shifts and the title keeps its width). */}
-                <span className={cx("text-muted", status !== "done" && !newAgent.has(step.id) && HOVER_AGENT)}>
-                  {work.agent} ·{" "}
-                </span>
+                {/* Agent: only where it changes along the plan; the same name on every step reads as a table. */}
+                {work.agent && newAgent.has(step.id) && <span className="text-muted">{work.agent} · </span>}
                 <Forecast cost={work.cost} time={work.time} basis={work.basis} model={task.model} />
               </span>
             )}
