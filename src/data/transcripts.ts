@@ -40,8 +40,8 @@ export type LiveStatus = {
   step: string;
   target?: string;
   stats: string;
-  /** `step` is the plan step in progress (a task chat): shown as the lead, the file as a quiet note. */
-  planStep?: boolean;
+  /** `step` is the plan step in progress (a task chat): its place in the plan, shown as a row that opens the plan. */
+  planStep?: { n: number; of: number };
 };
 
 import { YANGO_TRANSCRIPTS } from "./yangoTranscripts";
