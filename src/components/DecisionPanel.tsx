@@ -198,11 +198,11 @@ export function DockFrame({
     <section
       ref={ref}
       aria-label="Decision"
-      className="not-prose mb-xs flex max-h-[min(60vh,560px)] flex-col rounded-lg border border-alpha-2 bg-surface-2 p-md"
+      className="not-prose mb-xs flex max-h-[min(60vh,560px)] flex-col rounded-lg border border-alpha-2 bg-surface-2 p-1"
     >
       {/* The header is inset like the text inside the option rows: the same distance from the top, left and right edges.
           The icon buttons' own padding makes up the difference on the right. */}
-      <div className="flex items-start gap-sm ps-[var(--cds-gap-sm)] pe-1.5">
+      <div className="flex items-start gap-sm ps-[var(--cds-gap-sm)] pe-1.5 pt-xs">
         <div className="flex min-w-0 flex-1 flex-col gap-sm pt-0.5">
           <p className="text-body font-medium text-primary">
             {title}
