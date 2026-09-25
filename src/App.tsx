@@ -1,9 +1,17 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { EmptyContainer } from "./components/EmptyContainer";
 import { NotificationRegion } from "./components/NotificationRegion";
 import { Sidebar } from "./components/Sidebar";
 import { ChatShell } from "./components/ChatShell";
 import { TokensPage } from "./pages/TokensPage";
+import { RoutinesPage } from "./pages/RoutinesPage";
+
+/** Content of the main pane: switches with the sidebar navigation. */
+function MainContent() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/routines")) return <RoutinesPage />;
+  return <ChatShell name="Eduard" />;
+}
 
 export function AppContent() {
   return (
@@ -168,7 +176,7 @@ export function AppContent() {
                                                     opacity: "1",
                                                   }}
                                                 >
-                                                  <ChatShell name="Eduard" />
+                                                  <MainContent />
                                                 </div>
                                               </div>
                                             </div>

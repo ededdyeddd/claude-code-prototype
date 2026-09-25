@@ -5,7 +5,7 @@
  * so the compiled design-system CSS styles them, and they only use --cds-* tokens.
  * See docs/DESIGN_GUIDE.md and the live catalog at /tokens.
  */
-import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
+import type { ButtonHTMLAttributes, CSSProperties, ReactNode, Ref } from "react";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
@@ -78,10 +78,22 @@ type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & {
   size?: ButtonSize;
   /** Leading icon glyph (Anthropicons codepoint). Without children the button is square. */
   icon?: string;
+  ref?: Ref<HTMLButtonElement>;
+  /** Trailing icon, e.g. a chevron for buttons that open a menu. */
+  trailingIcon?: string;
   children?: ReactNode;
 };
 
-export function Button({ variant = "ghost", size = "md", icon, children, className, type = "button", ...rest }: ButtonProps) {
+export function Button({
+  variant = "ghost",
+  size = "md",
+  icon,
+  trailingIcon,
+  children,
+  className,
+  type = "button",
+  ...rest
+}: ButtonProps) {
   const iconOnly = icon && !children;
   return (
     <button
@@ -108,6 +120,14 @@ export function Button({ variant = "ghost", size = "md", icon, children, classNa
       </span>
       {icon && <Icon glyph={icon} className={variant === "ghost" ? undefined : "!text-current"} />}
       {children != null && <span className="inline-flex min-w-0 items-center truncate">{children}</span>}
+      {trailingIcon && <Icon glyph={trailingIcon} className="-me-0.5 !text-current opacity-70" />}
     </button>
   );
 }
+
+export { Tabs } from "./Tabs";
+export { PageHeader } from "./PageHeader";
+export { EmptyState, StopwatchIllustration } from "./EmptyState";
+export { WavyDivider } from "./WavyDivider";
+export { ListCard, CardGrid } from "./ListCard";
+export { Menu, MenuItem, MenuCheckboxItem, MenuSelectItem, MenuSeparator } from "./Menu";

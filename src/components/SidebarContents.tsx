@@ -1,6 +1,5 @@
 import { SectionLabel } from "./SectionLabel";
-import { LabelRow } from "./LabelRow";
-import { SessionEntry } from "./SessionEntry";
+import { ProjectNav } from "./ProjectNav";
 
 export function SidebarContents() {
   return (
@@ -35,14 +34,7 @@ export function SidebarContents() {
           </div>
         </div>
         <div data-testid="sidebar-recents" className="df-recents-anchor grow shrink-0 min-h-[120px]">
-          <div className="group/section flex flex-col gap-px">
-            <div className="df-drag-shiftable">
-              <LabelRow />
-            </div>
-            <div className="contents">
-              <SessionEntry />
-            </div>
-          </div>
+          <ProjectNav />
         </div>
       </div>
     </div>

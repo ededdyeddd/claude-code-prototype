@@ -1,0 +1,173 @@
+import { useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { SectionLabel } from "./SectionLabel";
+import { SessionEntry } from "./SessionEntry";
+import { buildGroups, DEFAULT_FILTERS, SESSIONS } from "../data/sessions";
+import type { NavFilters, NavGroup } from "../data/sessions";
+import { Button, Menu, MenuCheckboxItem, MenuSelectItem, MenuSeparator } from "../ui";
+
+const PLUS = "";
+const FILTER = "";
+
+/** Header row of a group; same markup/classes as the original "Recents" label row. */
+function GroupHeader({
+  label,
+  collapsed,
+  onToggle,
+  actions,
+}: {
+  label: string;
+  collapsed: boolean;
+  onToggle: () => void;
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="group/labelrow df-label-inset flex w-full items-center gap-[var(--df-row-gap)] pt-[var(--df-group-pt)] pr-[calc((var(--df-row-h)-24px)/2)] pb-1 text-[length:var(--df-group-font)] leading-4 min-h-[calc(var(--df-group-pt)+(var(--df-row-h)-8px)+4px)] text-muted">
+      <SectionLabel label={label} collapsed={collapsed} onClick={onToggle} />
+      {actions && <div className="flex items-center gap-1">{actions}</div>}
+    </div>
+  );
+}
+
+/** Filter / grouping menu opened from the top group header. */
+function NavFilterButton({
+  filters,
+  onChange,
+  open,
+  setOpen,
+}: {
+  filters: NavFilters;
+  onChange: (f: NavFilters) => void;
+  // Open state lives in ProjectNav: the button moves when the top group changes, the menu must stay open.
+  open: boolean;
+  setOpen: (v: boolean | ((o: boolean) => boolean)) => void;
+}) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const set = <K extends keyof NavFilters>(k: K, v: NavFilters[K]) => onChange({ ...filters, [k]: v });
+  return (
+    <>
+      <Button
+        ref={ref}
+        size="xs"
+        icon={FILTER}
+        aria-label="Filter and group chats"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className={open ? "bg-alpha-2 rounded" : undefined}
+        onClick={() => setOpen((o) => !o)}
+      />
+      <Menu anchor={ref} open={open} onClose={() => setOpen(false)} placement="bottom-end" minWidth={196}>
+        <MenuSelectItem
+          label="Status"
+          value={filters.status}
+          onChange={(v) => set("status", v)}
+          options={[
+            { value: "active", label: "Active" },
+            { value: "archived", label: "Archived" },
+            { value: "all", label: "All" },
+          ]}
+        />
+        <MenuSelectItem
+          label="Environment"
+          value={filters.env}
+          onChange={(v) => set("env", v)}
+          options={[
+            { value: "all", label: "All" },
+            { value: "local", label: "Local" },
+            { value: "cloud", label: "Cloud" },
+          ]}
+        />
+        <MenuSeparator />
+        <MenuSelectItem
+          label="Group by"
+          value={filters.groupBy}
+          onChange={(v) => set("groupBy", v)}
+          options={[
+            { value: "folder", label: "Folder" },
+            { value: "none", label: "None" },
+          ]}
+        />
+        <MenuSelectItem
+          label="Sort by"
+          value={filters.sortBy}
+          onChange={(v) => set("sortBy", v)}
+          options={[
+            { value: "activity", label: "Last activity" },
+            { value: "created", label: "Created" },
+            { value: "title", label: "Title" },
+          ]}
+        />
+        <MenuSeparator />
+        <MenuCheckboxItem checked={filters.showEmptyGroups} onChange={(v) => set("showEmptyGroups", v)}>
+          Show empty groups
+        </MenuCheckboxItem>
+        <MenuCheckboxItem checked={filters.showPrStatus} onChange={(v) => set("showPrStatus", v)}>
+          Show PR status
+        </MenuCheckboxItem>
+      </Menu>
+    </>
+  );
+}
+
+/** Sidebar chat list grouped by project, with a "+" CTA per project and filters on the top group. */
+export function ProjectNav() {
+  const [filters, setFilters] = useState<NavFilters>(DEFAULT_FILTERS);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const groups = useMemo(() => buildGroups(SESSIONS, filters), [filters]);
+
+  const canCreate = (g: NavGroup) => g.kind === "project" || g.kind === "none";
+
+  return (
+    <div className="flex flex-col">
+      {groups.map((g, i) => {
+        const isCollapsed = !!collapsed[g.key];
+        return (
+          <div
+            key={g.key}
+            className="group/section flex flex-col gap-px"
+            {...(hovered === g.key ? { "data-hover-within": "" } : {})}
+            onMouseEnter={() => setHovered(g.key)}
+            onMouseLeave={() => setHovered(null)}
+          >
+            <div className="df-drag-shiftable">
+              <GroupHeader
+                label={g.label}
+                collapsed={isCollapsed}
+                onToggle={() => setCollapsed((c) => ({ ...c, [g.key]: !isCollapsed }))}
+                actions={
+                  <>
+                    {canCreate(g) && (
+                      <Button size="xs" icon={PLUS} aria-label={`New chat in ${g.label}`} onClick={() => navigate("/code")} />
+                    )}
+                    {i === 0 && <NavFilterButton filters={filters} onChange={setFilters} open={filterOpen} setOpen={setFilterOpen} />}
+                  </>
+                }
+              />
+            </div>
+            {!isCollapsed &&
+              g.sessions.map((s) => (
+                <SessionEntry
+                  key={s.id}
+                  title={s.title}
+                  running={s.running}
+                  pr={filters.showPrStatus ? s.pr : undefined}
+                  selected={pathname === `/code/${s.id}`}
+                  onOpen={() => navigate(`/code/${s.id}`)}
+                />
+              ))}
+            {!isCollapsed && g.sessions.length === 0 && (
+              <div className="px-[var(--df-row-px)] h-[var(--df-row-h)] flex items-center text-[length:var(--df-row-font)] text-muted opacity-70">
+                No chats
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}

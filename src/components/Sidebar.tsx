@@ -72,7 +72,7 @@ export function Sidebar() {
           <div className="dframe-nav-scroll relative flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden pl-1 pt-1 pb-2 -ml-1 -mt-1 -mr-2 pr-[max(0px,calc(8px-var(--df-nav-scrollbar-lane,0px)))] [scrollbar-gutter:stable]">
             <div data-testid="nav-pin-rows" className="-mt-1">
               <NavigationEntry />
-              <NavigationRow label="Routines" icon="" variant="standard" />
+              <NavigationRow label="Routines" icon="" variant="standard" to="/routines" />
               <NavigationRow label="Customize" icon="" variant="standard" />
               <MoreNavigationButton />
               <Spacer />

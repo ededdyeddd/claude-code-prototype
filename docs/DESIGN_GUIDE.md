@@ -55,7 +55,20 @@ import { Theme, Button, Icon } from "../ui";
 </Theme>
 ```
 
-`variant`: `ghost` · `secondary` · `primary` · `accent` · `danger`. `size`: `xs` · `sm` · `md` · `lg` (выставляет `data-size`, и CSS дизайн-системы сам меняет высоту и отступы).
+`variant`: `ghost` · `secondary` · `primary` · `accent` · `danger`. `size`: `xs` · `sm` · `md` · `lg` (выставляет `data-size`, и CSS дизайн-системы сам меняет высоту и отступы). `trailingIcon` добавляет иконку справа, например шеврон у кнопки с меню.
+
+Компоненты страниц, собранные по экрану Routines (пример использования: `src/pages/RoutinesPage.tsx`):
+
+| Компонент | Что это |
+|---|---|
+| `PageHeader` | Serif-заголовок страницы; под ним ряд: табы/фильтры слева, действия справа |
+| `Tabs` | Табы-пилюли («Yours / Templates») |
+| `EmptyState`, `StopwatchIllustration` | Пустое состояние списка: иллюстрация и приглушённый текст |
+| `WavyDivider` | Волнистый разделитель секций |
+| `ListCard`, `CardGrid` | Карточка: плитка с иконкой, заголовок, описание, строка-мета (расписание, триггер); сетка в 2 колонки. Hover-заливка приходит из CSS `Card`/`CardLink` |
+| `Menu`, `MenuSelectItem`, `MenuCheckboxItem`, `MenuItem`, `MenuSeparator` | Выпадающее меню в портале: строки со значением и подменю, чекбоксы, разделители. Закрывается по клику снаружи и по Escape |
+
+Навигация по проектам в сайдбаре: `src/components/ProjectNav.tsx`, данные и фильтрация в `src/data/sessions.ts`. Выбранный чат хранится в URL (`/code/:id`), активный пункт помечается `data-selected="focused"`, как в оригинале.
 
 Кроме того, CSS дизайн-системы уже стилизует компоненты по атрибуту `data-cds`. Чтобы сделать такой компонент, возьми разметку из `src/components` и повтори её атрибуты:
 `Button`, `Card`, `CardLink`, `Tabs`, `SegmentedControl`, `TextInput`, `TextArea`, `Banner`, `Toast`, `DataTable`, `Collapsible`, `AccordionHeader`, `Skeleton`, `Shortcut`, `Avatar`, `ModelSelector`, `ChatComposer*`, `MessageActions`, `TurnStatus`, `Pulse`.
