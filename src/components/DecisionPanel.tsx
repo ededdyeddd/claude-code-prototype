@@ -225,7 +225,7 @@ export function DockFrame({
       </div>
       {!nav.collapsed && (
         <>
-          <div className="-mx-md mt-md flex min-h-0 flex-col gap-md overflow-y-auto px-md">{children}</div>
+          <div className="-mx-1 mt-md flex min-h-0 flex-col gap-md overflow-y-auto px-1">{children}</div>
           <div className="mt-md flex flex-wrap items-center justify-end gap-xs">
             {left && <span className="me-auto flex items-center">{left}</span>}
             <Button size="sm" variant="secondary" onClick={nav.skip}>
