@@ -9,3 +9,18 @@
   35% { opacity: 0.7; animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
   100% { opacity: 0.3; }
 }
+
+/*
+ * Claude spark while a chat is working (reference: screen recording of the app).
+ * ~1.1s loop: the star collapses to a dot, holds briefly, then bursts open with
+ * an overshoot (longer rays) and settles; rays twist slightly as it grows.
+ */
+@keyframes spark-breathe {
+  0% { transform: scale(1) rotate(0deg); }
+  15% { transform: scale(0.72) rotate(-8deg); }
+  22%, 36% { transform: scale(0.34) rotate(-14deg); }
+  48% { transform: scale(0.7) rotate(-6deg); }
+  62%, 70% { transform: scale(1.22) rotate(10deg); }
+  84% { transform: scale(1.05) rotate(4deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}

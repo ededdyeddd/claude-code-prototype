@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Block, LiveStatus, Turn, TurnStep } from "../data/transcripts";
+import type { Block, Diff, LiveStatus, Turn, TurnStep } from "../data/transcripts";
 import { Button, Icon } from "../ui";
 import { Irregular_radiating_starburst } from "./icons/Irregular_radiating_starburst";
 
@@ -8,6 +8,21 @@ const COPY = "";
 const RETRY = "";
 const THUMB_UP = "";
 const THUMB_DOWN = "";
+const RUN = "\uE0C1";
+const FILE_CODE = "\uE048";
+const FILES = "\uE02D";
+
+const fmt = (n: number) => n.toLocaleString("en-US");
+
+/** "+14 -1" in git colors. */
+function DiffStat({ diff }: { diff: Diff }) {
+  return (
+    <span className="whitespace-nowrap tabular-nums">
+      <span className="text-git-added">+{fmt(diff.added)}</span>
+      <span className="text-git-removed">-{fmt(diff.removed)}</span>
+    </span>
+  );
+}
 
 /** Renders `backtick` spans as inline code (styled by the design-system .prose rules). */
 function Inline({ text }: { text: string }) {
@@ -33,7 +48,7 @@ function UserMessage({ text }: { text: string }) {
 }
 
 /** Collapsed "Thought for Ns" row; expands to the list of steps Claude took. */
-function TurnStatus({ label, target, steps = [] }: { label: string; target?: string; steps?: TurnStep[] }) {
+function TurnStatus({ label, target, diff, steps = [] }: { label: string; target?: string; diff?: Diff; steps?: TurnStep[] }) {
   const [open, setOpen] = useState(false);
   return (
     <div data-cds="TurnStatus" className="flex flex-col gap-xs">
@@ -47,6 +62,7 @@ function TurnStatus({ label, target, steps = [] }: { label: string; target?: str
           {label}
           {target && <span className="text-secondary"> {target}</span>}
         </span>
+        {diff && <DiffStat diff={diff} />}
         <Icon
           glyph={CHEVRON}
           size="sm"
@@ -141,8 +157,86 @@ function BlockView({ block }: { block: Block }) {
         </table>
       );
     case "code":
-      return <CodeBlock code={block.code} />;
+      return block.lang === "bash" ? <CommandBlock code={block.code} /> : <CodeBlock code={block.code} />;
+    case "status":
+      return (
+        <div className="not-prose">
+          <TurnStatus label={block.label} target={block.target} diff={block.diff} />
+        </div>
+      );
+    case "files":
+      return <FilesCard block={block} />;
   }
+}
+
+/** Very small shell highlighter: command name, URLs/paths/strings, and the rest. */
+function highlightShell(line: string) {
+  return line.split(/(\s+)/).map((tok, i) => {
+    if (/^\s+$/.test(tok)) return tok;
+    const cls = i === 0 ? "text-accent" : /^(https?:|\.{0,2}\/|["'])/.test(tok) ? "text-git-added" : "text-primary";
+    return (
+      <span key={i} className={cls}>
+        {tok}
+      </span>
+    );
+  });
+}
+
+/** Shell command with Run and Copy actions (one card per command, like in the app). */
+function CommandBlock({ code }: { code: string }) {
+  return (
+    <div
+      className="not-prose flex w-fit max-w-full items-center gap-md rounded-lg ps-md pe-1 py-1"
+      style={{ boxShadow: "inset 0 0 0 1px var(--cds-alpha-2)" }}
+    >
+      <pre className="min-w-0 overflow-x-auto font-mono text-code">
+        <code>{code.split("\n").map((l, i) => <div key={i}>{highlightShell(l)}</div>)}</code>
+      </pre>
+      <div className="flex shrink-0 items-center">
+        <Button size="xs" icon={RUN} aria-label="Run in terminal" />
+        <Button size="xs" icon={COPY} aria-label="Copy command" onClick={() => navigator.clipboard?.writeText(code)} />
+      </div>
+    </div>
+  );
+}
+
+/** "Edited N files" card with per-file diff stats. */
+function FilesCard({ block }: { block: Extract<Block, { type: "files" }> }) {
+  const [expanded, setExpanded] = useState(false);
+  const limit = block.visible ?? block.files.length;
+  const shown = expanded ? block.files : block.files.slice(0, limit);
+  const hidden = block.files.length - shown.length;
+  const row =
+    "flex h-[var(--cds-h-control)] w-full items-center gap-sm px-md text-left text-body outline-none hover:bg-fill-ghost-hover focus-visible:bg-fill-ghost-hover cursor-[var(--cds-cursor-interactive)]";
+  const chevron = <Icon glyph={CHEVRON} size="sm" className="!text-muted" />;
+  return (
+    <div
+      className="not-prose flex flex-col overflow-hidden rounded-lg py-1"
+      style={{ boxShadow: "inset 0 0 0 1px var(--cds-alpha-2)" }}
+    >
+      <button type="button" className={row}>
+        <Icon glyph={FILES} className="!text-muted" />
+        <span className="flex-1 truncate text-primary">{block.title}</span>
+        <DiffStat diff={block.diff} />
+        {chevron}
+      </button>
+      {shown.map((f) => (
+        <button key={f.name} type="button" className={row}>
+          <Icon glyph={FILE_CODE} className="!text-muted" />
+          <span className="flex-1 truncate text-primary">{f.name}</span>
+          <DiffStat diff={f.diff} />
+          {chevron}
+        </button>
+      ))}
+      {hidden > 0 && (
+        <button type="button" className={row} onClick={() => setExpanded(true)}>
+          <span className="w-4" />
+          <span className="flex-1 text-secondary">Show {hidden} more</span>
+          {chevron}
+        </button>
+      )}
+    </div>
+  );
 }
 
 function CodeBlock({ code }: { code: string }) {
@@ -199,7 +293,7 @@ export function Transcript({ turns, live }: { turns: Turn[]; live?: LiveStatus }
       {/* Running: current step row, then a pulsing spark with stats. Finished: a static spark only. */}
       {live && <TurnStatus label={live.step} target={live.target} />}
       <div className="flex h-[22px] items-center gap-sm">
-        <span className="flex" style={live ? { animation: "working-dot-pulse 2.4s infinite" } : undefined}>
+        <span className="flex motion-reduce:!animate-none" style={live ? { animation: "spark-breathe 1.1s ease-in-out infinite" } : undefined}>
           <Irregular_radiating_starburst />
         </span>
         {live && <span className="text-footnote text-muted">{live.stats}</span>}

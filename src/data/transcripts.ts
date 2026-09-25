@@ -6,7 +6,13 @@ export type Block =
   | { type: "verse"; lines: string[] }
   | { type: "ul" | "ol"; items: string[] }
   | { type: "table"; head: string[]; rows: string[][] }
-  | { type: "code"; lang?: string; code: string };
+  | { type: "code"; lang?: string; code: string }
+  /** Inline step row inside an answer, optionally with diff stats ("Edited X, ran a command +14 -1"). */
+  | { type: "status"; label: string; target?: string; diff?: Diff }
+  /** Card listing changed files; rows beyond `visible` hide behind "Show N more". */
+  | { type: "files"; title: string; diff: Diff; files: { name: string; diff: Diff }[]; visible?: number };
+
+export type Diff = { added: number; removed: number };
 
 export type TurnStep = { icon: string; label: string; detail?: string };
 
@@ -165,8 +171,22 @@ export const TRANSCRIPTS: Record<string, Turn[]> = {
             "Страница `/tokens` — живой справочник токенов, иконок и компонентов.",
           ],
         },
-        { type: "p", text: "Запуск:" },
-        { type: "code", lang: "bash", code: "npm install\nnpm run dev" },
+        { type: "p", text: "Чтобы поднять проект на другом компьютере:" },
+        { type: "code", lang: "bash", code: "git clone https://github.com/ededdyeddd/claude-code-prototype.git" },
+        { type: "p", text: "Затем `npm install` и `npm run dev`." },
+        { type: "status", label: "Edited DESIGN_GUIDE.md, ran a command", diff: { added: 14, removed: 1 } },
+        {
+          type: "files",
+          title: "Edited 4 files",
+          diff: { added: 461, removed: 1 },
+          visible: 3,
+          files: [
+            { name: "Menu.tsx", diff: { added: 189, removed: 0 } },
+            { name: "sessions.ts", diff: { added: 96, removed: 0 } },
+            { name: "ProjectNav.tsx", diff: { added: 162, removed: 0 } },
+            { name: "RoutinesPage.tsx", diff: { added: 14, removed: 1 } },
+          ],
+        },
         { type: "p", text: "Дальше собираю страницу Routines и навигацию по проектам в сайдбаре." },
       ],
     },
