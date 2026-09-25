@@ -3,7 +3,6 @@ import type { Block, Diff, LiveStatus, Turn, TurnStep } from "../data/transcript
 import { Button, Icon } from "../ui";
 import { Irregular_radiating_starburst } from "./icons/Irregular_radiating_starburst";
 import { ArtifactTile, ChatTaskContext, TASK_ICON, TaskBlock } from "./ChatTask";
-import { TaskDot } from "./StatusMark";
 
 const CHEVRON = "";
 const COPY = "\uE056"; // two overlapping squares, as in the app
@@ -285,8 +284,8 @@ function MessageActions({ time }: { time?: string }) {
 
 /** Chat transcript: user bubbles, assistant turns with status, prose answer and actions. */
 /**
- * What a task chat is doing now, as a card like the Plan tile: the step in progress with the plan's "running" dot,
- * its place in the plan and the file under it. Opens the plan, so the link between the feed and the plan is explicit.
+ * What a task chat is doing now, as a card like the Plan tile: the step in progress, and under it "In progress",
+ * its place in the plan and the file. Opens the plan, so the link between the feed and the plan is explicit.
  */
 function PlanStepRow({ live, planStep }: { live: LiveStatus; planStep: { n: number; of: number } }) {
   const { setTab } = useContext(ChatTaskContext);
@@ -294,13 +293,9 @@ function PlanStepRow({ live, planStep }: { live: LiveStatus; planStep: { n: numb
     <div className="not-prose">
       <ArtifactTile
         icon={TASK_ICON}
-        title={
-          <>
-            <span className="truncate">{live.step}</span>
-            <TaskDot state="running" />
-          </>
-        }
-        meta={[`Plan · step ${planStep.n} of ${planStep.of}`, live.target].filter(Boolean).join(" · ")}
+        title={<span className="truncate">{live.step}</span>}
+        // Said in words: a pulsing dot alone did not read as progress.
+        meta={["In progress", `plan step ${planStep.n} of ${planStep.of}`, live.target].filter(Boolean).join(" · ")}
         onOpen={() => setTab("plan")}
       />
     </div>
