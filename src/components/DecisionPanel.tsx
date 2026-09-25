@@ -95,7 +95,7 @@ export function OptionRow({
   );
 }
 
-/** The field inside the "Other" row (or "Correct it"): plain, on the row's fill, submits on Enter. */
+/** The field inside the "Other" row (or "Correct it"): plain, on the row's fill, submits on Enter. At the description size, since it sits in the description's place. */
 export function RowField({
   value,
   onChange,
@@ -128,7 +128,7 @@ export function RowField({
       }}
       placeholder={placeholder}
       aria-label={label}
-      className="w-full bg-transparent py-0.5 text-body text-primary outline-none placeholder:text-muted"
+      className="w-full bg-transparent py-0.5 text-footnote text-primary outline-none placeholder:text-muted"
     />
   );
 }
