@@ -231,6 +231,127 @@ const BIRTH_DATE: Task = {
   autoDecisions: [],
 };
 
+/** Level 3 running without trouble: the brief is approved, the plan shows progress, one criterion is already met. */
+const I18N: Task = {
+  id: "i18n",
+  agent: "i18n-translator",
+  model: "Sonnet 5",
+  spent: "$1.60",
+  tokens: "860K",
+  title: "Локализация на испанский",
+  summary: "Перевожу витрину на испанский: интерфейс, карточки товаров и письма. В конце — вычитка носителем.",
+  project: "storefront",
+  stage: "Build",
+  now: "Build · translating product cards",
+  level: 3,
+  brief: {
+    understanding:
+      "Витрина storefront на испанском для покупателей из Испании: интерфейс, карточки товаров и письма о заказе. Английский остаётся по умолчанию, язык выбирается по браузеру и переключателем в футере.",
+    assumptions: [
+      { id: "es-es", text: "Испанский для Испании (es-ES), не латиноамериканский", risky: true, why: "От этого зависят слова и обращение на «вы»", confirmed: true },
+      { id: "prices", text: "Цены и валюта не меняются, переводим только текст" },
+      { id: "brands", text: "Названия брендов и товарных линеек не переводим" },
+      { id: "intl", text: "Даты и числа форматирует Intl по локали es-ES" },
+    ],
+    boundaries: ["Цены, валюту и налоги не трогаю", "Адреса страниц для SEO не меняю", "В письмах меняю только тексты, не вёрстку"],
+    doneWhen: [
+      { id: "ui", text: "Все строки интерфейса на испанском, ни одного пропущенного ключа", met: "Линтер i18n: 0 пропущенных ключей из 1 240" },
+      { id: "cards", text: "Карточки товаров переведены: названия, описания, атрибуты" },
+      { id: "emails", text: "Письма о заказе на испанском" },
+      { id: "review", text: "Носитель вычитал и одобрил тексты", locked: true },
+    ],
+  },
+  envelope: {
+    ...DEFAULT_ENVELOPE,
+    paths: [
+      { path: "locales/", access: "write" },
+      { path: "emails/templates/", access: "write" },
+      { path: "src/", access: "read" },
+      { path: "server/payments/", access: "never" },
+    ],
+  },
+  stages: [
+    {
+      id: "scope",
+      title: "Scope",
+      steps: [
+        {
+          id: "count",
+          status: "done",
+          title: "Посчитать строки и собрать глоссарий",
+          work: { agent: "planner", cost: "$0.20", time: "6m" },
+          result: {
+            summary: "1 240 строк интерфейса, 312 карточек товаров, 6 писем. Глоссарий — 86 терминов, из них 14 брендов, которые не переводим.",
+          },
+        },
+      ],
+      gate: { title: "the brief and plan", mine: true, status: "passed" },
+    },
+    {
+      id: "build",
+      title: "Build",
+      steps: [
+        {
+          id: "a",
+          status: "done",
+          title: "Вынести строки интерфейса",
+          work: { agent: "i18n-translator", cost: "$0.60", time: "20m" },
+          result: {
+            summary: "Вынес 1 240 строк интерфейса в locales/en и подключил i18next. Ни одной строки в коде не осталось, проверено линтером.",
+            files: [
+              { name: "locales/en/common.json", added: 1240, removed: 0 },
+              { name: "src/i18n.ts", added: 28, removed: 0 },
+              { name: "src/**/*.tsx (84 files)", added: 910, removed: 910 },
+            ],
+          },
+        },
+        {
+          id: "ui",
+          status: "done",
+          title: "Перевести интерфейс",
+          work: { agent: "i18n-translator", cost: "$0.80", time: "14m" },
+          result: {
+            summary: "Перевёл строки интерфейса по глоссарию. Линтер i18n: 0 пропущенных ключей.",
+            decisions: ["«Cesta», а не «carrito» — так в Испании", "Обращение на «usted» во всём интерфейсе"],
+            files: [{ name: "locales/es/common.json", added: 1240, removed: 0 }],
+          },
+        },
+        {
+          id: "b",
+          status: "running",
+          title: "Карточки товаров",
+          work: { agent: "i18n-translator", cost: "~$1.50", time: "~35m", basis: "this task's pace, 62 strings a minute" },
+          plan: { what: "Названия, описания и атрибуты 312 карточек; бренды из глоссария оставляю как есть.", serves: ["cards"] },
+        },
+        {
+          id: "c",
+          status: "ahead",
+          title: "Письма",
+          work: { agent: "i18n-translator", cost: "~$0.40", time: "~15m", basis: "this task's pace" },
+          plan: { what: "Тексты 6 писем о заказе; вёрстку не трогаю.", serves: ["emails"] },
+        },
+      ],
+      gate: { title: "no missing translation keys", status: "ahead" },
+    },
+    {
+      id: "review",
+      title: "Review",
+      steps: [
+        {
+          id: "fixes",
+          status: "ahead",
+          title: "Правки после вычитки",
+          work: { agent: "i18n-translator", cost: "~$0.20–0.60", basis: "3 similar reviews" },
+          plan: { serves: ["review"] },
+        },
+      ],
+      gate: { title: "the Spanish copy", mine: true, status: "ahead", eta: "~17:30", etaSource: "this task's pace" },
+    },
+  ],
+  rules: RULES,
+  autoDecisions: [],
+};
+
 /** Level 1 that turned out bigger: the agent offers stages and a gate before the migration. */
 const LOYALTY: Task = {
   id: "loyalty",
@@ -301,7 +422,7 @@ const LOYALTY: Task = {
   autoDecisions: [],
 };
 
-export const CHAT_TASK_LIST: Task[] = [ONE_CLICK, BIRTH_DATE, LOYALTY];
+export const CHAT_TASK_LIST: Task[] = [ONE_CLICK, BIRTH_DATE, LOYALTY, I18N];
 
 export const CHAT_TASKS: Record<string, Task> = Object.fromEntries(CHAT_TASK_LIST.map((t) => [t.id, t]));
 

@@ -4,6 +4,7 @@
  * both land in TASKS (inbox.ts). See docs/INBOX.md and docs/CHAT_LEVELS.md.
  */
 import type { Turn } from "./transcripts";
+import type { Envelope } from "./chatTasks";
 
 /* ------------------------------------------------------------------- Plan */
 
@@ -116,6 +117,8 @@ export type Assumption = {
   risky?: boolean;
   /** Why it is risky, shown under the text. */
   why?: string;
+  /** Already marked right when the brief was approved, before this session (a task that is running). */
+  confirmed?: true;
 };
 
 export type Criterion = {
@@ -123,6 +126,8 @@ export type Criterion = {
   text: string;
   /** Protected: the agent cannot weaken it. Criteria the person adds are protected too. */
   locked?: boolean;
+  /** Met, with the check that proves it (a running task shows its progress against "done"). */
+  met?: string;
 };
 
 export type Brief = {
@@ -190,6 +195,8 @@ export type Task = {
   /** Why the task got its level (size from similar tasks, risk). */
   levelReason?: string;
   brief?: Brief;
+  /** This task's envelope when it differs from the project default (paths it edits, reads, won't touch). */
+  envelope?: Envelope;
   /** "Plan rules": what the agent changes itself and what it asks about. */
   rules?: { self: string; ask: string };
   edits?: ChatEdit[];

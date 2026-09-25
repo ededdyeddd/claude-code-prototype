@@ -298,7 +298,7 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         <SectionTitle
           aside={
             <Hint text="I check these at the end and mark each one with its proof">
-              0 of {criteria.length} met
+              {criteria.filter((c) => "met" in c && c.met).length} of {criteria.length} met
             </Hint>
           }
         >
@@ -307,19 +307,22 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         <ul className="flex flex-col gap-xs">
           {criteria.map((c) => (
             <li key={c.id} className="flex items-start gap-sm text-body text-primary">
-              {/* Not met yet: the plan's "ahead" ring, which turns into a mark once a check meets it. A ring, not a box: nobody ticks these by hand. */}
+              {/* Not met yet: the plan's "ahead" ring; met: its "done" dot, with the check that proves it. A ring, not a box: nobody ticks these by hand. */}
               <span className="mt-[5px] flex">
-                <TaskDot state="ahead" />
+                <TaskDot state={"met" in c && c.met ? "done" : "ahead"} />
               </span>
               {/* The lock sits right after its criterion, not at the far edge of the pane. */}
               <span className="min-w-0">
-                <Inline text={c.text} />
+                <span className={"met" in c && c.met ? "text-secondary" : undefined}>
+                  <Inline text={c.text} />
+                </span>
                 {c.mine && <span className="text-footnote text-muted"> · added by you</span>}
                 {c.locked && (
                   <Hint text="Locked: I can't loosen or skip this" className="ms-xs inline-flex align-[-2px] text-muted">
                     <Icon glyph={LOCK} size="sm" className="!text-muted" />
                   </Hint>
                 )}
+                {"met" in c && c.met && <span className="block text-footnote text-muted">{c.met}</span>}
               </span>
             </li>
           ))}

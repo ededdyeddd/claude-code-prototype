@@ -411,31 +411,6 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
     autoDecisions: [{ id: "1", text: "Перезапустил упавший прогон", why: "падение не воспроизвелось" }],
   },
   {
-    id: "i18n",
-    agent: "i18n-translator",
-    model: "Sonnet 5",
-    spent: "$2.10",
-    tokens: "860K",
-    title: "Локализация на испанский",
-    summary: "Перевожу витрину на испанский: интерфейс, карточки товаров и письма. В конце — вычитка носителем.",
-    project: "storefront",
-    stage: "Build",
-    now: "Build · translating product cards",
-    stages: [
-      {
-        id: "s1",
-        title: "Build",
-        steps: [
-          { id: "a", status: "done", title: "Вынести строки" },
-          { id: "b", status: "running", title: "Карточки товаров" },
-          { id: "c", status: "ahead", title: "Письма" },
-        ],
-        gate: { title: "the Spanish copy", mine: true, status: "ahead", eta: "~17:30", etaSource: "this task's pace" },
-      },
-    ],
-    autoDecisions: [],
-  },
-  {
     id: "chart-pdf",
     agent: "ui-engineer",
     model: "Opus 5.5",
@@ -487,9 +462,6 @@ const STEP_WORK: Record<string, StepWork> = {
   "flaky:a": { agent: "test-fixer", cost: "$0.08", time: "5m" },
   "flaky:b": { agent: "test-fixer", cost: "$0.04", time: "2m" },
   "flaky:c": { agent: "test-fixer", cost: "~$0.30", time: "~40m", basis: "2 similar fixes" },
-  "i18n:a": { agent: "i18n-translator", cost: "$0.60", time: "20m" },
-  "i18n:b": { agent: "i18n-translator", cost: "$1.50", time: "20m" },
-  "i18n:c": { agent: "i18n-translator", cost: "~$0.40", time: "~15m", basis: "this task's pace, 62 strings a minute" },
   "chart-pdf:a": { agent: "ui-engineer", cost: "$1.05", time: "4m" },
 };
 
@@ -536,14 +508,6 @@ const STEP_RESULT: Record<string, StepResult> = {
     summary: "За 30 дней 41 падение, все в трёх тестах системы домов Плацидуса. Падают только на раннерах с часовым поясом UTC−5 около полуночи.",
     decisions: ["Перезапустил упавший прогон — падение не воспроизвелось"],
     files: [{ name: "reports/flaky-houses.md", added: 27, removed: 0 }],
-  },
-  "i18n:a": {
-    summary: "Вынес 1 240 строк интерфейса в locales/en и подключил i18next. Ни одной строки в коде не осталось, проверено линтером.",
-    files: [
-      { name: "locales/en/common.json", added: 1240, removed: 0 },
-      { name: "src/i18n.ts", added: 28, removed: 0 },
-      { name: "src/**/*.tsx (84 files)", added: 910, removed: 910 },
-    ],
   },
 };
 
