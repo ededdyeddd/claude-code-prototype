@@ -1,7 +1,11 @@
 /* Project-level styles on top of the design system. */
 
-/* Sidebar "working" dot: calm, linear, never pauses (runs 0.3 -> 0.7 -> 0.3). */
+/*
+ * Sidebar "working" dot. Same rhythm as the design system's dframe-dot-pulse
+ * (quick rise, short hold, slow fade), but peaking at 0.7 instead of 1.
+ */
 @keyframes working-dot-pulse {
-  from { opacity: 0.3; }
-  to { opacity: 0.7; }
+  0%, 5% { opacity: 0.3; animation-timing-function: cubic-bezier(0.165, 0.84, 0.44, 1); }
+  15%, 25% { opacity: 0.7; animation-timing-function: cubic-bezier(0.165, 0.84, 0.44, 1); }
+  65%, 100% { opacity: 0.3; }
 }
