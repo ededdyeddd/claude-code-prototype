@@ -13,7 +13,6 @@ import {
   type PlanStep,
   type Question,
   type Stage,
-  type StepPlan,
   type StepResult,
   type Status,
   type Task,
@@ -545,38 +544,26 @@ function AutoDecisions({ task }: { task: Task }) {
 
 const fmtNum = (n: number) => n.toLocaleString("en-US");
 
-/** What a step ahead will do: the work in a sentence, where in the code, and the done-criteria it gets the task to. */
-function StepPlanView({ plan, task }: { plan: StepPlan; task: Task }) {
-  const criteria = (plan.serves ?? []).flatMap((id) => task.brief?.doneWhen.filter((c) => c.id === id) ?? []);
+/** The agent's intent for a step ahead: marked as a plan, since the work will find its own way. */
+function StepPlanView({ what }: { what: string }) {
   return (
-    <div className="flex flex-col gap-md pt-xs">
-      <p className="text-body text-secondary">{plan.what}</p>
-      {plan.where && plan.where.length > 0 && (
-        <div className="flex flex-col gap-xs">
-          <span className="text-footnote text-muted">Works in</span>
-          <ul className="flex flex-col gap-0.5">
-            {plan.where.map((w) => (
-              <li key={w} className="truncate font-mono text-footnote text-secondary">
-                {w}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {criteria.length > 0 && (
-        <div className="flex flex-col gap-xs">
-          <span className="text-footnote text-muted">Gets the task to</span>
-          <ul className="flex flex-col gap-0.5">
-            {criteria.map((c) => (
-              <li key={c.id} className="text-footnote text-secondary">
-                {c.text}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+    <div className="flex flex-col gap-xs pt-xs">
+      <span className="text-footnote text-muted">Plan, may change</span>
+      <p className="text-body text-secondary">{what}</p>
     </div>
   );
+}
+
+/**
+ * Which done-criteria a step ahead gets the task to, as a quiet line under its title: the one part of a
+ * step's plan that holds however the step is done. A step that covers them all says so instead of listing.
+ */
+function servesLine(task: Task, ids: string[] | undefined) {
+  const all = task.brief?.doneWhen ?? [];
+  const list = all.filter((c) => ids?.includes(c.id));
+  if (!list.length) return null;
+  if (all.length > 1 && list.length === all.length) return "For: all done criteria";
+  return `For: ${list.map((c) => c.text).join(" · ")}`;
 }
 
 /** What a finished step produced: summary, the agent's own decisions, and changed files with diff stats as in chats. */
@@ -822,7 +809,8 @@ export function PlanPane({
     // Finished steps open to show what they produced; steps ahead, what they will do.
     const result = status === "done" ? step.result : undefined;
     const stepPlan = status !== "done" && !removing ? step.plan : undefined;
-    const canOpen = !!result || !!stepPlan;
+    const serves = stepPlan && servesLine(task, stepPlan.serves);
+    const canOpen = !!result || !!stepPlan?.what;
     const expanded = canOpen && !!openSteps[step.id];
     return (
       <li key={item.key} className={cx("group/step relative flex items-start gap-md", !last && STEP_GAP)}>
@@ -887,13 +875,14 @@ export function PlanPane({
               </span>
             )}
           </div>
+          {serves && <span className="-mt-xs text-footnote text-muted">{serves}</span>}
           {changed && (
             <span className="text-footnote text-secondary">
               <WithChip text={changed.text} kind={changed.preview ? "change" : undefined} />
             </span>
           )}
           {expanded && result && <StepResultView result={result} />}
-          {expanded && stepPlan && <StepPlanView plan={stepPlan} task={task} />}
+          {expanded && stepPlan?.what && <StepPlanView what={stepPlan.what} />}
           {q && !picked && !q.blocking && hasBlocking && !openQs[q.id] && (
             // A blocking question is open elsewhere in the task: this one folds into a line so it does not compete.
             <div

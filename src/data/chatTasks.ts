@@ -139,7 +139,6 @@ const ONE_CLICK: Task = {
           work: { agent: "payments-engineer", cost: "~$1–3", basis: "23 similar tasks" },
           plan: {
             what: "Галочка «Запомнить карту» в форме оплаты. С ней платёж создаёт Stripe Customer и сохраняет карту; у нас остаются токен и последние 4 цифры.",
-            where: ["src/checkout/PaymentForm.tsx", "server/payments/stripe.ts"],
             serves: ["no-consent"],
           },
         },
@@ -150,7 +149,6 @@ const ONE_CLICK: Task = {
           work: { agent: "payments-engineer", cost: "~$2–3", basis: "14 similar tasks" },
           plan: {
             what: "Кнопка «Оплатить картой •• 4242» в повторном заказе: карта выбрана заранее, CVC не спрашиваем. Другую карту можно выбрать из списка.",
-            where: ["src/orders/OrderHistory.tsx", "src/checkout/SavedCards.tsx (новый)"],
             serves: ["one-click"],
           },
         },
@@ -160,8 +158,6 @@ const ONE_CLICK: Task = {
           title: "3-D Secure для повторной оплаты",
           work: { agent: "payments-engineer", cost: "~$1–2", basis: "size M, the agent's estimate" },
           plan: {
-            what: "Если банк требует подтверждение, показываем окно 3-D Secure поверх заказа и после него завершаем оплату. Переиспользую текущий handleNextAction.",
-            where: ["src/checkout/PaymentForm.tsx"],
             serves: ["3ds"],
           },
         },
@@ -171,8 +167,6 @@ const ONE_CLICK: Task = {
           title: "Apple Pay и Google Pay через Payment Request",
           work: { agent: "payments-engineer", cost: "~$1–2", basis: "6 similar tasks" },
           plan: {
-            what: "Та же кнопка предлагает Apple Pay или Google Pay, если они есть на устройстве. Через Payment Request, без отдельных SDK.",
-            where: ["src/checkout/PaymentForm.tsx"],
             serves: ["one-click"],
           },
         },
@@ -189,8 +183,6 @@ const ONE_CLICK: Task = {
           title: "E2E: повторная оплата в тестовом режиме",
           work: { agent: "test-fixer", cost: "~$1", basis: "31 similar tasks" },
           plan: {
-            what: "Сценарии в тестовом режиме Stripe: повторный заказ одним нажатием, карта с 3-D Secure, отказ от сохранения карты. Плюс весь набор тестов чекаута.",
-            where: ["e2e/checkout-repeat.spec.ts (новый)"],
             serves: ["one-click", "3ds", "no-consent", "tests"],
           },
         },

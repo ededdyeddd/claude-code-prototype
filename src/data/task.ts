@@ -65,10 +65,13 @@ export type StepResult = {
   files?: { name: string; added: number; removed: number }[];
 };
 
-/** What a step ahead will do: in a sentence, where in the code, and which done-criteria of the brief it serves. */
+/**
+ * A step ahead, as planned. `serves` links it to the brief's done-criteria: that holds however the step is done.
+ * `what` is the agent's intent, not a fact: given only for the nearest steps, since far ones will change.
+ * No files: they are found while working, and a list up front would read as a promise.
+ */
 export type StepPlan = {
-  what: string;
-  where?: string[];
+  what?: string;
   /** Ids of `Brief.doneWhen` criteria this step is how the task gets to. */
   serves?: string[];
 };
