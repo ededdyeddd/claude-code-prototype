@@ -67,14 +67,9 @@ function totals(view: ChatTaskView) {
 
 const TAB_LABEL: Record<TaskTab, string> = { chat: "Chat", brief: "Brief", plan: "Plan" };
 
-/** Clay dot and number: risky assumptions still to mark (the only accent in the bar). */
+/** Clay dot: risky assumptions still to mark (the only accent in the bar); the count is in the gate bar. */
 function CountBadge({ n }: { n: number }) {
-  return (
-    <span aria-label={`${n} to mark`} className="flex items-center gap-1 text-footnote tabular-nums text-clay">
-      <span className="block size-[6px] rounded-full bg-clay" />
-      {n}
-    </span>
-  );
+  return <span aria-label={`${n} to mark`} className="block size-[6px] rounded-full bg-clay" />;
 }
 
 /** Neutral dot: an edit changed this tab since it was last opened. */
