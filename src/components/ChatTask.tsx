@@ -669,53 +669,57 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
         <h3 className={heading}>
           What I propose{inFeed && aside(`~${money(t.min, t.max)} of the $${view.envelope.limit} limit`)}
         </h3>
-        {ahead.map((st) => {
-          const steps = st.steps.filter((p) => p.status !== "done");
-          const r = steps.reduce(
-            (n, p) => (p.work ? { min: n.min + costRange(p.work.cost).min, max: n.max + costRange(p.work.cost).max } : n),
-            { min: 0, max: 0 },
-          );
-          return (
-            <div key={st.id} className="flex flex-col gap-xs">
-              <span className={cx(size, "text-primary")}>
-                {st.title}
-                <span className="tabular-nums text-muted">
-                  {" — "}
-                  {steps.length} {steps.length === 1 ? "step" : "steps"}
-                  {r.max > 0 && `, ~${money(r.min, r.max)}`}
+        {/* Laid out like the plan: numbered stages, steps on a rail. */}
+        <ol className="flex flex-col gap-sm">
+          {ahead.map((st, n) => {
+            const steps = st.steps.filter((p) => p.status !== "done");
+            const r = steps.reduce(
+              (acc, p) => (p.work ? { min: acc.min + costRange(p.work.cost).min, max: acc.max + costRange(p.work.cost).max } : acc),
+              { min: 0, max: 0 },
+            );
+            const items: { key: string; text: ReactNode }[] = [
+              ...steps.map((p) => ({
+                key: p.id,
+                text: (
+                  <>
+                    <Inline text={p.title} />
+                    {p.work && (
+                      <span className="text-muted">
+                        {" · "}
+                        <Hint text={`Forecast · ${p.work.basis ?? "the agent's estimate"}`} className="tabular-nums">
+                          {p.work.cost}
+                        </Hint>
+                      </span>
+                    )}
+                  </>
+                ),
+              })),
+              ...(st.gate ? [{ key: "gate", text: gateText(st.gate) }] : []),
+            ];
+            return (
+              <li key={st.id} className="flex flex-col gap-xs">
+                <span className={cx(size, "text-primary")}>
+                  <span className="tabular-nums">{n + 1}</span> · {st.title}
+                  {r.max > 0 && <span className="tabular-nums text-muted"> · ~{money(r.min, r.max)}</span>}
                 </span>
-              </span>
-              <ul className="flex flex-col gap-0.5">
-                {steps.map((p) => (
-                  <li key={p.id} className={row}>
-                    <span className={cx("flex", mark)}>
-                      <TaskDot state="ahead" />
-                    </span>
-                    <span className="min-w-0 text-secondary">
-                      <Inline text={p.title} />
-                      {p.work && (
-                        <span className="text-muted">
-                          {" · "}
-                          <Hint text={`Forecast · ${p.work.basis ?? "the agent's estimate"}`} className="tabular-nums">
-                            {p.work.cost}
-                          </Hint>
-                        </span>
+                <ol className="flex flex-col">
+                  {items.map((it, k) => (
+                    <li key={it.key} className={cx("relative flex items-start gap-sm pb-xs", size)}>
+                      {k < items.length - 1 && (
+                        // From under this dot's box to the top of the next one: the next row starts after pb-xs, its dot box after `mark`.
+                        <span aria-hidden="true" className={cx("absolute left-[5.5px] w-px bg-alpha-3", inFeed ? "top-[17px] bottom-[-5px]" : "top-[15px] bottom-[-3px]")} />
                       )}
-                    </span>
-                  </li>
-                ))}
-                {st.gate && (
-                  <li className={row}>
-                    <span className={cx("flex", mark)}>
-                      <TaskDot state="ahead" />
-                    </span>
-                    <span className="text-secondary">{gateText(st.gate)}</span>
-                  </li>
-                )}
-              </ul>
-            </div>
-          );
-        })}
+                      <span className={cx("relative flex", mark)}>
+                        <TaskDot state="ahead" />
+                      </span>
+                      <span className="min-w-0 text-secondary">{it.text}</span>
+                    </li>
+                  ))}
+                </ol>
+              </li>
+            );
+          })}
+        </ol>
       </section>
       {esc && (
         <section className="flex flex-col gap-xs">
