@@ -201,10 +201,10 @@ function NewChatLine({
         </span>
         <button
           type="button"
-          onClick={() => navigate("/inbox", { state: { from: pathname } })}
+          onClick={() => navigate("/up-next", { state: { from: pathname } })}
           className="shrink-0 rounded-sm text-secondary outline-none hover:text-primary focus-visible:shadow-focus"
         >
-          Inbox →
+          Up next →
         </button>
       </div>
     );

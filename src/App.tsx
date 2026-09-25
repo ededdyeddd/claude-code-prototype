@@ -13,14 +13,16 @@ import { taskState, useInbox } from "./data/inboxStore";
 
 /** Content of the main pane: switches with the sidebar navigation. */
 function MainContent() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   // Hooks before the early returns: the page switches on every navigation.
   const needs = useInbox();
   if (pathname.startsWith("/routines")) return <RoutinesPage />;
-  if (pathname.startsWith("/inbox")) return <InboxPage />;
+  // "Up next" was "Inbox": old links (with ?task=) still land on it.
+  if (pathname.startsWith("/inbox")) return <Navigate to={`/up-next${search}`} replace />;
+  if (pathname.startsWith("/up-next")) return <InboxPage />;
   const chatId = pathname.match(/^\/code\/([^/]+)/)?.[1];
   const session = SESSIONS.find((s) => s.id === chatId);
-  // Task chats follow "Inbox": blocked means the agent is not working right now.
+  // Task chats follow "Up next": blocked means the agent is not working right now.
   const live = session && taskState(session.id, needs);
   const chat = session && live ? { ...session, running: live.running } : session;
   return <ChatShell name="Eduard" chat={chat} transcript={chatId ? TRANSCRIPTS[chatId] : undefined} />;
@@ -279,7 +281,7 @@ export function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/code" replace />} />
         <Route path="/tokens" element={<TokensPage />} />
-        <Route path="/needs-you" element={<Navigate to="/inbox" replace />} />
+        <Route path="/needs-you" element={<Navigate to="/up-next" replace />} />
         <Route path="*" element={<AppContent />} />
       </Routes>
     </BrowserRouter>
