@@ -138,6 +138,7 @@ export function QuestionCard({
   setCustom,
   onAnswered,
   showChanges,
+  bare,
 }: {
   task: Task;
   question: Question;
@@ -149,6 +150,8 @@ export function QuestionCard({
   onAnswered: () => void;
   /** List what the picked option changes in the plan: in the chat, where the plan is not beside the card. */
   showChanges?: boolean;
+  /** Inside a frame of its own (the question dock of the chat): no border or padding here. */
+  bare?: boolean;
 }) {
   const chosen = question.options.find((o) => o.id === choice)!;
   const recommended = question.options.find((o) => o.recommended);
@@ -182,7 +185,7 @@ export function QuestionCard({
     <section
       id={questionAnchor(task.id, question.id)}
       aria-label={question.text}
-      className="flex scroll-mt-[var(--cds-gap-xl)] flex-col gap-lg rounded-lg border border-alpha-2 p-lg"
+      className={cx("flex scroll-mt-[var(--cds-gap-xl)] flex-col gap-lg", !bare && "rounded-lg border border-alpha-2 p-lg")}
     >
       <div className="flex flex-col gap-xs">
         <span className={cx("text-footnote", question.blocking ? "text-clay" : "text-muted")}>

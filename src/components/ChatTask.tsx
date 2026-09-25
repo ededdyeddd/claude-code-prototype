@@ -5,7 +5,7 @@ import { costRange, currentGate, gateText, money, type Assumption } from "../dat
 import { useInbox } from "../data/inboxStore";
 import { PlanPane, QuestionCard, answerLabel, type CustomAnswer } from "./PlanPane";
 import { TASKS } from "../data/inbox";
-import { answerKey, unanswer } from "../data/inboxStore";
+import { answerKey, openQuestions, unanswer } from "../data/inboxStore";
 import {
   accept,
   addCriterion,
@@ -21,6 +21,7 @@ import { Inline } from "./Transcript";
 
 const LOCK = "";
 const CHEVRON = "\uE02A";
+const CHEVRON_LEFT = "\uE029";
 const PEN = "";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
@@ -726,43 +727,73 @@ function EscalationCard({ view, setTab }: { view: ChatTaskView; setTab: (t: Task
 }
 
 /**
- * A question of the task, asked by the agent right in its message and answered there: the same card and the
- * same answer state as on the plan step in the Inbox, so answering in one place closes it in the other.
+ * A question in the feed is just what the agent asked: the text, and once answered, the answer.
+ * It is answered in the dock over the composer, one question after another, like Claude asks.
  */
-function QuestionBlock({ chatId, questionId }: { chatId: string; questionId: string }) {
+function QuestionLine({ chatId, questionId }: { chatId: string; questionId: string }) {
   const { answers } = useInbox();
   const task = TASKS.find((t) => t.id === chatId);
   const question = task?.stages.flatMap((st) => st.steps).find((p) => p.question?.id === questionId)?.question;
-  const [choice, setChoice] = useState(() => question?.options.find((o) => o.recommended)?.id ?? question?.options[0].id ?? "");
-  const [custom, setCustom] = useState<CustomAnswer | undefined>();
   if (!task || !question) return null;
   const picked = answers[answerKey(task.id, question.id)];
-  if (picked)
-    return (
-      <p className="not-prose flex flex-wrap items-center gap-x-xs text-footnote text-muted">
-        <StatusMark status="done" />
-        <span className="text-secondary">{question.text}</span>
-        <span>· Your answer: {answerLabel(question, picked)}</span>
-        <button
-          type="button"
-          onClick={() => unanswer(task.id, question.id)}
-          className="rounded-sm px-1 text-secondary outline-none hover:bg-fill-ghost-hover hover:text-primary focus-visible:shadow-focus"
-        >
-          Change
-        </button>
-      </p>
-    );
   return (
-    <div className="not-prose">
+    <div className="not-prose flex flex-col gap-0.5">
+      <p className="text-body font-medium text-primary">{question.text}</p>
+      {picked && (
+        <p className="flex flex-wrap items-center gap-x-xs text-footnote text-muted">
+          <StatusMark status="done" />
+          Your answer: {answerLabel(question, picked)}
+          <button
+            type="button"
+            onClick={() => unanswer(task.id, question.id)}
+            className="rounded-sm px-1 text-secondary outline-none hover:bg-fill-ghost-hover hover:text-primary focus-visible:shadow-focus"
+          >
+            Change
+          </button>
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The agent's open questions, docked over the composer one at a time (blocking first), as Claude asks:
+ * the same QuestionCard and answer state as on the plan step in the Inbox. Answering moves on to the next.
+ */
+export function QuestionDock({ chatId }: { chatId: string }) {
+  const { answers } = useInbox();
+  const [index, setIndex] = useState(0);
+  const [choices, setChoices] = useState<Record<string, string>>({});
+  const [customs, setCustoms] = useState<Record<string, CustomAnswer | undefined>>({});
+  const task = TASKS.find((t) => t.id === chatId);
+  if (!task) return null;
+  const open = openQuestions(task, answers).sort((a, b) => Number(b.blocking) - Number(a.blocking));
+  if (open.length === 0) return null;
+  const i = Math.min(index, open.length - 1);
+  const q = open[i];
+  const choice = choices[q.id] ?? q.options.find((o) => o.recommended)?.id ?? q.options[0].id;
+  return (
+    <div className="mb-xs flex max-h-[min(60vh,520px)] flex-col gap-sm overflow-y-auto rounded-lg bg-surface-2 p-lg shadow-panel-sm dark:outline dark:outline-1 dark:outline-alpha-2">
+      {open.length > 1 && (
+        <div className="-mb-xs flex items-center justify-end gap-0.5 text-footnote tabular-nums text-muted">
+          <span className="me-xs">
+            {i + 1} of {open.length}
+          </span>
+          <Button size="xs" icon={CHEVRON_LEFT} aria-label="Previous question" disabled={i === 0} onClick={() => setIndex(i - 1)} />
+          <Button size="xs" icon={CHEVRON} aria-label="Next question" disabled={i === open.length - 1} onClick={() => setIndex(i + 1)} />
+        </div>
+      )}
       <QuestionCard
+        key={q.id}
         task={task}
-        question={question}
+        question={q}
         choice={choice}
-        setChoice={setChoice}
-        custom={custom}
-        setCustom={setCustom}
+        setChoice={(id) => setChoices((c) => ({ ...c, [q.id]: id }))}
+        custom={customs[q.id]}
+        setCustom={(c) => setCustoms((m) => ({ ...m, [q.id]: c }))}
         onAnswered={() => {}}
         showChanges
+        bare
       />
     </div>
   );
@@ -775,7 +806,7 @@ export function TaskBlock({
   block: Extract<Block, { type: "brief-card" | "result-card" | "escalation-card" | "edit-note" | "question" }>;
 }) {
   const { chatId, view, setTab } = useContext(ChatTaskContext);
-  if (block.type === "question") return chatId ? <QuestionBlock chatId={chatId} questionId={block.id} /> : null;
+  if (block.type === "question") return chatId ? <QuestionLine chatId={chatId} questionId={block.id} /> : null;
   if (block.type === "edit-note")
     return (
       <p className="not-prose flex flex-wrap items-center gap-x-sm text-body text-secondary">
