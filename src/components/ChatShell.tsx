@@ -86,7 +86,8 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
                 taskPane={
                   view && view.tabs.length > 1
                     ? {
-                        label: view.tabs.includes("brief") ? "Brief and plan" : "Plan",
+                        // One word at every level: the pane opens on the plan, the brief is a tab inside.
+                        label: "Plan",
                         open: !!panel,
                         changed: view.changed.length > 0,
                         // Opens on the plan: it is what the task will do and what it costs; the brief is one tab away.
