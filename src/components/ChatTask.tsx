@@ -179,10 +179,7 @@ function AssumptionState({ view, a }: { view: ChatTaskView; a: Assumption }) {
         {mark ? (
           <p className="text-footnote text-secondary">you: {"note" in mark ? mark.note : "confirmed"}</p>
         ) : (
-          <>
-            <p className="text-footnote text-clay">Waiting for you in the chat</p>
-            {a.why && <p className="text-footnote text-muted">{a.why}</p>}
-          </>
+          <p className="text-footnote text-clay">Waiting for you in the chat{a.why && <span className="text-muted"> · {a.why}</span>}</p>
         )}
       </div>
     </li>
@@ -242,13 +239,13 @@ export function BriefView({ view }: { view: ChatTaskView }) {
 
       <section className="flex flex-col gap-sm">
         <SectionTitle aside={view.unmarked.length ? `${view.unmarked.length} to confirm` : "all confirmed"}>Assumptions</SectionTitle>
-        <ul className="flex flex-col gap-xs">
+        <ul className="flex flex-col gap-sm">
           {risky.map((a) =>
             view.rejected.has(a.id) ? <SafeAssumption key={a.id} view={view} a={a} /> : <AssumptionState key={a.id} view={view} a={a} />,
           )}
         </ul>
         {safe.length > 0 && (
-          <div className="flex flex-col gap-xs">
+          <div className="mt-xs flex flex-col gap-xs">
             <span className="text-footnote text-muted">No need to confirm: checked in code or easy to undo</span>
             <ul className="flex flex-col gap-xs">
               {safe.map((a) => (
