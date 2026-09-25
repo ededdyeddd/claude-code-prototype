@@ -15,6 +15,8 @@ const TASK = "\uE041";
  */
 export type TaskPaneToggle = {
   label: string;
+  /** Progress of a running task, after the label: "3/6 · ~17:30". Visible without opening the pane. */
+  status?: string;
   open: boolean;
   changed?: boolean;
   onToggle: () => void;
@@ -63,14 +65,14 @@ export function EpitaxyTitlebar({ chat, taskPane }: { chat?: Session; taskPane?:
  * by the label. A narrow chat drops the name. Same icon as the tile in the feed. No clay: the gate itself asks in
  * the dock over the composer. Open = pressed fill; grey dot = changed since last open.
  */
-function TaskPaneChip({ label, open, changed, onToggle }: TaskPaneToggle) {
+function TaskPaneChip({ label, status, open, changed, onToggle }: TaskPaneToggle) {
   // Light: an icon and a label, no frame and no status; the icon ties it to the tile in the feed.
   return (
     <button
       type="button"
       aria-pressed={open}
       aria-controls="task-pane"
-      aria-label={label}
+      aria-label={status ? `${label}, ${status}` : label}
       onClick={onToggle}
       className={
         "me-1 flex h-[var(--cds-h-control--xs)] items-center gap-1.5 rounded-sm px-1.5 text-body outline-none transition-colors duration-fast focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)] " +
@@ -78,7 +80,10 @@ function TaskPaneChip({ label, open, changed, onToggle }: TaskPaneToggle) {
       }
     >
       <Icon glyph={TASK} size="sm" className="!text-current" />
-      <span className="hidden whitespace-nowrap @[400px]/titlebar:inline">{label}</span>
+      <span className="hidden whitespace-nowrap @[400px]/titlebar:inline">
+        {label}
+        {status && <span className="tabular-nums text-muted"> · {status}</span>}
+      </span>
       {changed && !open && <span aria-label="Changed" className="block size-[6px] rounded-full bg-muted" />}
     </button>
   );

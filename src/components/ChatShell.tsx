@@ -6,7 +6,14 @@ import type { Session } from "../data/sessions";
 import { useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useChatTask } from "../data/chatTaskStore";
-import type { ReviewTab } from "../data/task";
+import { planProgress, type ReviewTab, type Task } from "../data/task";
+
+/** "3/6 · ~17:30": steps done of all, and when you are next needed. */
+function chipStatus(task: Task) {
+  const p = planProgress(task);
+  if (!p.total) return undefined;
+  return [`${p.done}/${p.total}`, p.yourTurn].filter(Boolean).join(" · ");
+}
 import { usePersistentWidth } from "../data/usePersistentWidth";
 import { ReviewPane } from "./ReviewPane";
 import { SIDE_PANE, SidePane } from "./SidePane";
@@ -88,6 +95,8 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
                     ? {
                         // One word at every level: the pane opens on the plan, the brief is a tab inside.
                         label: "Plan",
+                        // A running task shows its progress right here, so it needs no opening; a gate asks in the dock instead.
+                        status: view.atGate ? undefined : chipStatus(view.live),
                         open: !!panel,
                         changed: view.changed.length > 0,
                         // Opens on the plan: it is what the task will do and what it costs; the brief is one tab away.

@@ -233,6 +233,25 @@ export const money = (min: number, max = min) => (Math.abs(max - min) < 0.005 ? 
 export const currentGate = (t: Task) => t.stages.find((s) => s.gate?.status === "current")?.gate;
 
 /** "You approve the brief" / "Check: tests pass"; past tense once passed. */
+/**
+ * Where a running task stands, for everywhere that shows it without opening the plan (the Plan chip, the
+ * plan's header, the live status): steps done of all, the stage and step in progress, and when you are next
+ * needed (the next approval of yours that has an estimate).
+ */
+export function planProgress(task: Task) {
+  const steps = task.stages.flatMap((st) => st.steps);
+  const stage = task.stages.find((st) => st.steps.some((p) => p.status !== "done")) ?? task.stages[task.stages.length - 1];
+  const next = task.stages.find((st) => st.gate?.mine && st.gate.status !== "passed")?.gate;
+  return {
+    done: steps.filter((p) => p.status === "done").length,
+    total: steps.length,
+    stage,
+    stageDone: stage?.steps.filter((p) => p.status === "done").length ?? 0,
+    running: steps.find((p) => p.status === "running"),
+    yourTurn: next?.eta,
+  };
+}
+
 export function gateText(gate: Gate) {
   if (gate.mine) return gate.status === "passed" ? `You approved ${gate.title}` : `You approve ${gate.title}`;
   return gate.status === "passed" ? `Passed: ${gate.title}` : `Check: ${gate.title}`;
