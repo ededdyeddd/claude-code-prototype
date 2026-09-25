@@ -14,10 +14,11 @@ import { taskState, useInbox } from "./data/inboxStore";
 /** Content of the main pane: switches with the sidebar navigation. */
 function MainContent() {
   const { pathname } = useLocation();
+  // Hooks before the early returns: the page switches on every navigation.
+  const needs = useInbox();
   if (pathname.startsWith("/routines")) return <RoutinesPage />;
   if (pathname.startsWith("/inbox")) return <InboxPage />;
   const chatId = pathname.match(/^\/code\/([^/]+)/)?.[1];
-  const needs = useInbox();
   const session = SESSIONS.find((s) => s.id === chatId);
   // Task chats follow "Inbox": blocked means the agent is not working right now.
   const live = session && taskState(session.id, needs);
