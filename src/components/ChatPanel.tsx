@@ -119,7 +119,12 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
           <span role="status" className="sr-only select-none" />
           {hasContent ? (
             <>
-              {chat && <DecisionDock key={chat.id} chatId={chat.id} view={view} setTab={setTab} />}
+              {chat && (
+                // The dock sits right under the messages: its text-body matches their prose size.
+                <div className="contents [--cds-font-size-body:var(--cds-font-size-prose)] [--cds-leading-body:var(--cds-leading-prose)]">
+                  <DecisionDock key={chat.id} chatId={chat.id} view={view} setTab={setTab} />
+                </div>
+              )}
               {chat?.repo && <RepoBar repo={chat.repo} />}
             </>
           ) : (
