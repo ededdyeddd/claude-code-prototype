@@ -31,9 +31,9 @@ export function SessionRow({
           {running ? (
             <span
               aria-label="Working"
-              // dframe-dot-pulse comes from the design-system CSS (the original sidebar "working" dot).
+              // working-dot-pulse: src/styles/app.css
               className="block size-[6px] rounded-full bg-current text-secondary motion-reduce:!animate-none"
-              style={{ animation: "dframe-dot-pulse 2s infinite" }}
+              style={{ animation: "working-dot-pulse 1.2s linear infinite alternate" }}
             />
           ) : (
             <span className="block size-[6px] rounded-full border border-current text-muted opacity-50" />
