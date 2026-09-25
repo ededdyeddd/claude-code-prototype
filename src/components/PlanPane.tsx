@@ -182,8 +182,8 @@ export function QuestionCard({
   /** In the chat's decision dock: drawn as Claude Code's question panel (numbered option rows, Other, Skip, Submit). */
   dock?: DockNav;
 }) {
-  // A stale choice (another question, another task) falls back to the first option instead of breaking the card.
-  const chosen = question.options.find((o) => o.id === choice) ?? question.options[0];
+  // Nothing is picked until the person picks: no option is preselected, not even the recommended one.
+  const chosen = question.options.find((o) => o.id === choice);
   const recommended = question.options.find((o) => o.recommended);
   const [mode, setMode] = useState<"choose" | "other" | "ask">("choose");
   const [draft, setDraft] = useState("");
@@ -387,7 +387,7 @@ export function QuestionCard({
       ) : mode === "choose" ? (
         <div role="radiogroup" aria-label={question.text} className="flex flex-col gap-xs">
           {question.options.map((o) => {
-            const on = o.id === chosen.id;
+            const on = o.id === chosen?.id;
             return (
               // What an option does to the plan is previewed in the plan itself, right below the card.
               <div key={o.id} className={cx("rounded transition-colors duration-fast", on ? "bg-alpha-2" : "hover:bg-fill-ghost-hover")}>
@@ -485,8 +485,10 @@ export function QuestionCard({
             <Button
               size="sm"
               variant="primary"
-              title={`Go with “${chosen.label}”`}
+              title={chosen ? `Go with “${chosen.label}”` : "Pick an option first"}
+              disabled={!chosen}
               onClick={() => {
+                if (!chosen) return;
                 answer(task.id, question.id, chosen.id);
                 onAnswered();
               }}
@@ -668,11 +670,9 @@ export function PlanPane({
   // Auto decisions or rules follow the last stage: it keeps the room after it, like the stages before.
   const hasTail = task.autoDecisions.length > 0 || !!task.rules;
 
-  // Picked option per question (recommended first). The plan previews it before you answer.
+  // Picked option per question, none until the person picks. The plan previews the picked one before you answer.
   const questions = task.stages.flatMap((st) => st.steps.flatMap((x) => (x.question ? [x.question] : [])));
-  const [choices, setChoices] = useState<Record<string, string>>(() =>
-    Object.fromEntries(questions.map((q) => [q.id, q.options.find((o) => o.recommended)?.id ?? q.options[0].id])),
-  );
+  const [choices, setChoices] = useState<Record<string, string>>({});
   // Own answers typed into a card, until applied. Once the agent has drafted it, the plan previews the change.
   const [customs, setCustoms] = useState<Record<string, CustomAnswer | undefined>>({});
   const stepOfQuestion = (qid: string) => task.stages.flatMap((st) => st.steps).find((x) => x.question?.id === qid)?.id ?? "";

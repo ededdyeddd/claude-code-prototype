@@ -76,7 +76,7 @@ export function OptionRow({
         }
       }}
       className={cx(
-        "flex items-center gap-md rounded px-md py-sm text-left outline-none transition-colors duration-fast focus-visible:shadow-focus",
+        "flex items-center gap-md rounded px-1.5 py-sm text-left outline-none transition-colors duration-fast focus-visible:shadow-focus",
         disabled
           ? "bg-alpha-1 opacity-disabled"
           : cx("cursor-[var(--cds-cursor-interactive)]", selected ? "bg-alpha-2 shadow-[inset_0_0_0_1px_var(--cds-alpha-5)]" : "bg-alpha-1 hover:bg-alpha-2"),
@@ -198,11 +198,11 @@ export function DockFrame({
     <section
       ref={ref}
       aria-label="Decision"
-      className="not-prose mb-xs flex max-h-[min(60vh,560px)] flex-col rounded-lg border border-alpha-2 bg-surface-2 p-1"
+      className="not-prose mb-xs flex max-h-[min(60vh,560px)] flex-col rounded-lg border border-alpha-2 bg-surface-2 p-2"
     >
       {/* The header is inset like the text inside the option rows: the same distance from the top, left and right edges.
           The icon buttons' own padding makes up the difference on the right. */}
-      <div className="flex items-start gap-sm ps-[var(--cds-gap-sm)] pe-1.5 pt-xs">
+      <div className="flex items-start gap-sm ps-1.5 pe-1">
         <div className="flex min-w-0 flex-1 flex-col gap-sm pt-0.5">
           <p className="text-body font-medium text-primary">
             {title}
