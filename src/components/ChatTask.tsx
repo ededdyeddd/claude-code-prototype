@@ -654,7 +654,7 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
   const aside = (text: ReactNode) => <span className="font-normal tabular-nums text-muted"> · {text}</span>;
   const row = cx("flex items-start gap-sm", size);
   return (
-    <div className={cx("flex flex-col gap-md", !inFeed && "border-t border-alpha-2 pt-md")}>
+    <div className={cx("flex flex-col gap-lg", !inFeed && "border-t border-alpha-2 pt-md")}>
       {view.task.levelReason && !inFeed && (
         <p className="text-footnote text-secondary">
           Why: <Inline text={view.task.levelReason} />
@@ -663,7 +663,7 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
       {done.length > 0 && (
         <section className="flex flex-col gap-xs">
           <h3 className={heading}>Done so far{aside(`$${spent.toFixed(2)}`)}</h3>
-          <ul className="flex flex-col gap-0.5">
+          <ul className="flex flex-col gap-xs">
             {done.map((p) => (
               <li key={p.id} className={row}>
                 <span className={cx("flex", mark)}>
@@ -678,12 +678,12 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
           </ul>
         </section>
       )}
-      <section className="flex flex-col gap-sm">
+      <section className="flex flex-col gap-xs">
         <h3 className={heading}>
           What I propose{inFeed && aside(`~${money(t.min, t.max)} of the $${view.envelope.limit} limit`)}
         </h3>
         {/* Laid out like the plan: numbered stages, steps on a rail. */}
-        <ol className="flex flex-col gap-sm">
+        <ol className="flex flex-col gap-md">
           {ahead.map((st, n) => {
             const steps = st.steps.filter((p) => p.status !== "done");
             const r = steps.reduce(
@@ -717,7 +717,7 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
                 </span>
                 <ol className="flex flex-col">
                   {items.map((it, k) => (
-                    <li key={it.key} className={cx("relative flex items-start gap-sm pb-xs", size)}>
+                    <li key={it.key} className={cx("relative flex items-start gap-sm", k < items.length - 1 && "pb-xs", size)}>
                       {k < items.length - 1 && (
                         // From under this dot's box to the top of the next one: the next row starts after pb-xs, its dot box after `mark`.
                         <span aria-hidden="true" className={cx("absolute left-[5.5px] w-px bg-alpha-3", inFeed ? "top-[17px] bottom-[-5px]" : "top-[15px] bottom-[-3px]")} />
