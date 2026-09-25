@@ -1,7 +1,26 @@
+import { useRef } from "react";
 import { IconButton } from "./IconButton";
-import { PromptEditor } from "./PromptEditor";
+import { PromptEditor, clearEditor } from "./PromptEditor";
 
-export function ChatComposer({ placeholder }: { placeholder?: string }) {
+export function ChatComposer({
+  placeholder,
+  initialText,
+  onChange,
+  onSend,
+}: {
+  placeholder?: string;
+  initialText?: string;
+  onChange?: (text: string) => void;
+  /** Enter or the send button; the field clears after it. */
+  onSend?: (text: string) => void;
+}) {
+  const editor = useRef<HTMLDivElement>(null);
+  const send = () => {
+    const text = editor.current?.innerText.trim();
+    if (!text || !onSend || !editor.current) return;
+    onSend(text);
+    clearEditor(editor.current, placeholder);
+  };
   return (
     <div className="bg-surface-3 [--cmp-pad-x:0.5rem] compact:[--cmp-pad-x:0.5rem] comfortable:[--cmp-pad-x:0.5rem] relative z-[1] flex w-full min-w-0 flex-col text-primary rounded-composer px-[var(--cmp-pad-x)] py-2 compact:py-2 comfortable:py-2 [--cmp-gap-y:0.375rem] compact:[--cmp-gap-y:0.375rem] comfortable:[--cmp-gap-y:0.5rem] gap-y-[var(--cmp-gap-y)] [--cmp-type-size:max(var(--cds-font-size-text-entry-floor,0px),var(--cmp-font-size,var(--cds-font-size-prose)))] [--cmp-leading:round(var(--cmp-type-size)*1.4,1px)] [--cmp-row-py:max(0px,(var(--cds-h-control)-var(--cmp-leading))/2)] [--cmp-row-h:calc(var(--cmp-leading)+2*var(--cmp-row-py))] transition-[background-color,border-color,box-shadow,opacity] duration-200 shadow-composer hover:[&:not(:where(:has(button:hover,a:hover,[role=button]:hover,label:hover)))]:shadow-composer-hover focus-within:shadow-composer-focus hover:focus-within:shadow-composer-focus cursor-text">
       <div
@@ -40,7 +59,7 @@ export function ChatComposer({ placeholder }: { placeholder?: string }) {
                   className="invisible pointer-events-none select-none max-w-full self-start break-words"
                   data-composer-placeholder-ghost={placeholder ?? "Describe a task or ask a question"}
                 />
-                <PromptEditor placeholder={placeholder} />
+                <PromptEditor ref={editor} placeholder={placeholder} initialText={initialText} onChange={onChange} onEnter={send} />
                 <span
                   id="skill-arg-hint-sr-u3bxjx"
                   role="status"
@@ -70,7 +89,7 @@ export function ChatComposer({ placeholder }: { placeholder?: string }) {
                 <div className="flex items-center gap-xs">
                   <div className="grid items-center justify-items-end">
                     <div className="col-start-1 row-start-1 flex cursor-default items-center justify-end">
-                      <div className="flex" id="_r_dg_">
+                      <div className="flex" id="_r_dg_" onClick={send}>
                         <IconButton dataId="6" />
                       </div>
                     </div>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Block, Diff, LiveStatus, Turn, TurnStep } from "../data/transcripts";
 import { Button, Icon } from "../ui";
 import { Irregular_radiating_starburst } from "./icons/Irregular_radiating_starburst";
+import { TaskBlock } from "./ChatTask";
 
 const CHEVRON = "";
 const COPY = "\uE056"; // two overlapping squares, as in the app
@@ -25,7 +26,7 @@ function DiffStat({ diff }: { diff: Diff }) {
 }
 
 /** Renders `backtick` spans as inline code (styled by the design-system .prose rules). */
-function Inline({ text }: { text: string }) {
+export function Inline({ text }: { text: string }) {
   const parts = text.split(/(`[^`]+`)/g);
   return (
     <>
@@ -166,6 +167,12 @@ function BlockView({ block }: { block: Block }) {
       );
     case "files":
       return <FilesCard block={block} />;
+    case "brief-card":
+    case "result-card":
+    case "escalation-card":
+    case "edit-note":
+    case "question":
+      return <TaskBlock block={block} />;
   }
 }
 

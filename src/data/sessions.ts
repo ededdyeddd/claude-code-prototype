@@ -33,10 +33,14 @@ export const SESSIONS: Session[] = [
   { id: "copy-prototype", title: "Копирование прототипа", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 2804, removed: 0 }, status: "active", env: "local", lastActivity: 120, created: 180 },
   // astrology-app: the MVP plan, a finished research chat, and two tasks from "Inbox".
   { id: "transit-push", title: "Пуши о транзитах", project: "astrology-app", repo: { name: "astrology-app", branch: "feat/transit-push", added: 96, removed: 3 }, status: "active", env: "cloud", lastActivity: 18, created: 200 },
+  { id: "birth-date", title: "Дата рождения сдвигается на день", project: "astrology-app", repo: { name: "astrology-app", branch: "fix/birth-date-tz", added: 6, removed: 2 }, status: "active", env: "local", lastActivity: 1, created: 3, running: true },
   { id: "flaky", title: "Флакующие тесты эфемерид", project: "astrology-app", repo: { name: "astrology-app", branch: "fix/flaky-houses", added: 42, removed: 9 }, status: "active", env: "cloud", lastActivity: 120, created: 400, running: true },
   { id: "chart-pdf", title: "PDF натальной карты", project: "astrology-app", repo: { name: "astrology-app", branch: "feat/chart-pdf", added: 612, removed: 38 }, status: "active", env: "cloud", lastActivity: 4, created: 900, running: true, pr: "draft" },
   { id: "ephemeris-api", title: "Выбор API эфемерид", project: "astrology-app", status: "active", env: "cloud", lastActivity: 2400, created: 2600 },
   { id: "astrology", title: "Astrology app plan", project: "astrology-app", status: "active", env: "cloud", lastActivity: 3000, created: 3500 },
+  // storefront: chat levels (chatTasks.ts): a large task at its first gate, a small one with a result, one that grew.
+  { id: "one-click-pay", title: "Оплата в один клик", project: "storefront", repo: { name: "storefront", branch: "feat/one-click-pay", added: 0, removed: 0 }, status: "active", env: "local", lastActivity: 1, created: 1 },
+  { id: "loyalty", title: "Скидка постоянным покупателям", project: "storefront", repo: { name: "storefront", branch: "feat/loyalty-discount", added: 84, removed: 5 }, status: "active", env: "local", lastActivity: 8, created: 25 },
   // storefront: three tasks from "Inbox" and a merged one.
   { id: "checkout", title: "Новый чекаут", project: "storefront", repo: { name: "storefront", branch: "feat/checkout", added: 1240, removed: 310 }, status: "active", env: "local", lastActivity: 32, created: 600 },
   { id: "search", title: "Поиск по каталогу", project: "storefront", repo: { name: "storefront", branch: "feat/search", added: 86, removed: 4 }, status: "active", env: "local", lastActivity: 70, created: 300, running: true },

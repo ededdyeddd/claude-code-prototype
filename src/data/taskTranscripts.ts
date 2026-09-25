@@ -7,7 +7,8 @@ const SEARCH = "";
 
 /**
  * Chats of the astrology-app and storefront projects. The task chats match their state in
- * "Inbox" (see inbox.ts): the last agent message is where the task stands now.
+ * "Inbox" (see inbox.ts): the last agent message is where the task stands now, and its questions
+ * are answered right in it (the same card and state as in the Inbox plan).
  */
 export const TASK_TRANSCRIPTS: Record<string, Turn[]> = {
   "light-theme": [
@@ -22,9 +23,8 @@ export const TASK_TRANSCRIPTS: Record<string, Turn[]> = {
       ],
       blocks: [
         { type: "p", text: "Переключатель в меню пользователя готов. Нашёл 14 мест, где тема зашита как `data-mode=\"dark\"`." },
-        { type: "h3", text: "Нужно решение: светлые цвета брать из токенов оригинала или подобрать заново?" },
-        { type: "p", text: "Варианты с ценой и тем, что изменится, — в плане задачи. Отвечай там: так ответ сразу применяется к плану." },
         { type: "p", text: "Пока не ответишь, экраны не перекрашиваю." },
+        { type: "question", id: "q1" },
       ],
     },
   ],
@@ -37,8 +37,7 @@ export const TASK_TRANSCRIPTS: Record<string, Turn[]> = {
       steps: [{ icon: READ, label: "Read docs/brief-push.md" }],
       blocks: [
         { type: "p", text: "Бриф согласован: один пуш в 8:00 по местному времени, текст про самый сильный транзит дня." },
-        { type: "h3", text: "Нужно решение: Expo Push или OneSignal?" },
-        { type: "p", text: "Варианты с ценой и тем, что изменится, — в плане задачи. Отвечай там: так ответ сразу применяется к плану." },
+        { type: "question", id: "q1" },
       ],
     },
   ],
@@ -54,9 +53,10 @@ export const TASK_TRANSCRIPTS: Record<string, Turn[]> = {
       ],
       blocks: [
         { type: "p", text: "Бриф согласован, форму адреса и доставки собрал, тесты зелёные. Дальше упираюсь в оплату." },
-        { type: "h3", text: "Нужно решение: Stripe Checkout или своя форма на Payment Element?" },
-        { type: "p", text: "Варианты с ценой и тем, что изменится, — в плане задачи. Отвечай там: так ответ сразу применяется к плану." },
-        { type: "p", text: "Пока не ответишь, оплату не трогаю. Есть ещё вопрос про шаблон письма — он может подождать, он тоже в плане." },
+        { type: "p", text: "Пока не ответишь, оплату не трогаю." },
+        { type: "question", id: "q1" },
+        { type: "p", text: "И вопрос про шаблон письма — он может подождать." },
+        { type: "question", id: "q2" },
       ],
     },
   ],
@@ -72,7 +72,8 @@ export const TASK_TRANSCRIPTS: Record<string, Turn[]> = {
       ],
       blocks: [
         { type: "p", text: "Разобрал запросы за 30 дней: 18% уходят в пустую выдачу, почти всё — поиск по цвету и материалу." },
-        { type: "p", text: "Пишу бриф. Есть вопрос, который может подождать: учитывать ли наличие на складе в ранжировании. Он в плане задачи, рядом со шагом «Ранжирование»." },
+        { type: "p", text: "Пишу бриф. Есть вопрос, который может подождать:" },
+        { type: "question", id: "q1" },
       ],
     },
   ],
@@ -117,7 +118,8 @@ export const TASK_TRANSCRIPTS: Record<string, Turn[]> = {
       ],
       blocks: [
         { type: "p", text: "Падают 3 теста системы домов Плацидуса: они зависят от часового пояса CI-раннера, и на границе суток результат сдвигается." },
-        { type: "p", text: "Вопрос про карантин для этих тестов — в плане задачи, он может подождать. Сам тем временем фиксирую таймзону в тестах." },
+        { type: "p", text: "Сам тем временем фиксирую таймзону в тестах. Вопрос про карантин может подождать:" },
+        { type: "question", id: "q1" },
       ],
     },
   ],
@@ -168,4 +170,5 @@ export const TASK_LIVE_STATUS: Record<string, LiveStatus> = {
   i18n: { step: "Translating product cards", target: "locales/es/products.json", stats: "20m · 860K tokens" },
   flaky: { step: "Pinning the time zone in tests", target: "houses.test.ts", stats: "6m · 95K tokens" },
   "chart-pdf": { step: "Running e2e on staging", stats: "4m · 320K tokens" },
+  "birth-date": { step: "Adding a test for UTC−5", target: "profile.test.ts", stats: "3m · 40K tokens" },
 };

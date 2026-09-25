@@ -13,8 +13,8 @@ export function SessionRow({
 }: {
   title: string;
   running?: boolean;
-  /** A task from "Inbox": blocked on the person (clay) or with questions that can wait (muted). */
-  waiting?: "blocked" | "canWait";
+  /** A task from "Inbox": blocked on the person (clay) or with questions that can wait (muted); a small task's result waiting to be accepted (grey dot). */
+  waiting?: "blocked" | "canWait" | "result";
   pr?: "open" | "merged" | "draft";
   selected?: boolean;
   onClick?: () => void;
@@ -36,6 +36,8 @@ export function SessionRow({
           {/* In the sidebar only blocked tasks take the clay dot; tasks whose questions can wait look like running work. */}
           {waiting === "blocked" ? (
             <TaskDot state="blocked" />
+          ) : waiting === "result" ? (
+            <TaskDot state="done" />
           ) : running || waiting === "canWait" ? (
             <span
               aria-label="Working"

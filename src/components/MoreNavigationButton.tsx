@@ -12,8 +12,10 @@ export function MoreNavigationButton() {
           data-cds="Icon"
           className="opacity-50"
           style={{
-            fontSize: "calc(1.25rem*var(--cds-rem-scale,1))",
-            fontWeight: "433.3",
+            // A chevron, not a nav icon: one size down from the 20px icons above, so it doesn't outweigh them.
+            fontSize: "calc(1rem*var(--cds-rem-scale,1))",
+            fontWeight: "533.3",
+            fontVariationSettings: '"opsz" 16, "wght" 533.3',
           }}
           data-editable-text="true"
         >

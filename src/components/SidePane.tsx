@@ -15,6 +15,7 @@ const CLOSE = "";
  * element (a task, an artifact). Same card as a tile: surface-2, hairline outline.
  */
 export function SidePane({
+  id,
   title,
   meta,
   width,
@@ -27,6 +28,8 @@ export function SidePane({
   footer,
   children,
 }: {
+  /** For aria-controls on the toggle that opens it. */
+  id?: string;
   title: ReactNode;
   meta?: ReactNode;
   width: number;
@@ -68,27 +71,35 @@ export function SidePane({
         />
       )}
       <section
+        id={id}
         aria-label="Side pane"
         className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-card bg-surface-2 shadow-panel-sm dark:shadow-sm dark:outline dark:outline-1 dark:outline-alpha-2"
       >
         {/* Hairlines show up only while content scrolls under the header or above the footer, as in chats. */}
         <header
           className={cx(
-            "flex shrink-0 items-start gap-sm border-b ps-[var(--cds-gap-lg)] pe-sm pt-[var(--cds-gap-md)] pb-xs transition-colors duration-fast",
+            "flex shrink-0 items-start gap-sm border-b ps-[var(--cds-gap-lg)] pe-sm pt-[var(--cds-gap-md)] transition-colors duration-fast",
+            // Tabs in place of the heading are lighter than the serif title: the content needs more room under them.
+            typeof title === "string" ? "pb-xs" : "pb-[var(--cds-gap-md)]",
             scroll.top ? "border-alpha-2" : "border-transparent",
           )}
         >
           <div className="flex min-w-0 flex-1 items-baseline gap-sm pt-xs">
-            <h2
-              className="truncate font-serif text-primary"
-              style={{
-                fontSize: "var(--cds-font-size-title)",
-                lineHeight: "var(--cds-leading-title)",
-                fontWeight: "var(--cds-font-weight-regular)",
-              }}
-            >
-              {title}
-            </h2>
+            {typeof title === "string" ? (
+              <h2
+                className="truncate font-serif text-primary"
+                style={{
+                  fontSize: "var(--cds-font-size-title)",
+                  lineHeight: "var(--cds-leading-title)",
+                  fontWeight: "var(--cds-font-weight-regular)",
+                }}
+              >
+                {title}
+              </h2>
+            ) : (
+              // A control in place of the heading, e.g. the Brief | Plan tabs of the task pane.
+              title
+            )}
             {meta && <span className="shrink-0 truncate text-footnote text-muted">{meta}</span>}
           </div>
           <div className="flex shrink-0 items-center gap-0.5 [--cds-text-primary:var(--cds-text-secondary)]">

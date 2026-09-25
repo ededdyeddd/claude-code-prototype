@@ -128,6 +128,7 @@ export function ProjectNav() {
   const { pathname } = useLocation();
   const groups = useMemo(() => buildGroups(SESSIONS, filters), [filters]);
   const needs = useInbox();
+  const waitingOf = (id: string) => taskState(id, needs)?.waiting;
 
   const canCreate = (g: NavGroup) => g.kind === "project" || g.kind === "none";
 
@@ -136,7 +137,7 @@ export function ProjectNav() {
       {groups.map((g, i) => {
         const isCollapsed = !!collapsed[g.key];
         // A collapsed project still signals: one clay dot if a task inside is blocked on you, however many.
-        const blockedInside = isCollapsed && g.sessions.some((sess) => taskState(sess.id, needs)?.waiting === "blocked");
+        const blockedInside = isCollapsed && g.sessions.some((sess) => waitingOf(sess.id) === "blocked");
         // The dot holds the actions' place until the header is hovered, like the dot on the Inbox row.
         const showDot = blockedInside && hovered !== g.key;
         const afterCollapsed = i > 0 && !!collapsed[groups[i - 1].key];
@@ -178,7 +179,7 @@ export function ProjectNav() {
                   key={s.id}
                   title={s.title}
                   running={taskState(s.id, needs)?.running ?? s.running}
-                  waiting={taskState(s.id, needs)?.waiting}
+                  waiting={waitingOf(s.id)}
                   selected={pathname === `/code/${s.id}`}
                   onOpen={() => navigate(`/code/${s.id}`)}
                 />
