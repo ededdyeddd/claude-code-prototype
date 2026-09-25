@@ -166,3 +166,4 @@ export { EmptyState, StopwatchIllustration } from "./EmptyState";
 export { WavyDivider } from "./WavyDivider";
 export { ListCard, CardGrid } from "./ListCard";
 export { Menu, MenuItem, MenuCheckboxItem, MenuSelectItem, MenuSeparator } from "./Menu";
+export { Popover } from "./Popover";
