@@ -9,11 +9,12 @@ React prototype of the Claude Code desktop app (Vite + React 19 + TS + Tailwind 
 - Icons: Anthropicons private-use glyphs via `<Icon glyph={"\uE0xx"} />`; the catalog is at `/tokens#icons`.
 - Token reference: `docs/DESIGN_TOKENS.md`, `src/design-system/tokens.json`, and the live `/tokens` page.
 
-## Inbox section
-- `/inbox` and its task pane are specified in `docs/INBOX.md` (PRD + design doc: principles, structure, architecture, decision log). Read it before changing the section; update it when a decision changes.
+## Up next (Inbox) section
+- The "Up next" page (`/up-next`, formerly Inbox; code still calls it Inbox) and its task pane are specified in `docs/INBOX.md` (PRD + design doc: principles, structure, architecture, decision log). Read it before changing the section; update it when a decision changes.
 
 ## Chat levels
 - Task UI inside a chat (levels 0–3, S2 composer + autonomy envelope, S3 brief/plan gate, result and escalation cards) is specified in `docs/CHAT_LEVELS.md`. Demo routes are listed at its top.
+- The task pane beside a chat (Plan | Brief tabs, plan steps, brief sections), questions in the feed, and chat typography are specified in `docs/BRIEF_AND_PLAN.md`, with a decision log. Update it when a decision changes.
 
 ## Don't
 - Don't edit `src/styles/design-system.css` (the original compiled CSS). Import order in `main.tsx` matters: design-system.css first, then tailwind.css.

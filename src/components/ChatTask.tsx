@@ -583,9 +583,9 @@ function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) 
         <div className="pt-xs">
           <ArtifactTile
             icon={TASK}
-            title="Brief and plan"
+            title="Plan"
             meta={briefMeta(view)}
-            onOpen={() => setTab("brief")}
+            onOpen={() => setTab("plan")}
           />
         </div>
       </div>

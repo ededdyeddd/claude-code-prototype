@@ -25,6 +25,7 @@ export function SidePane({
   onToggleExpand,
   onClose,
   actions,
+  subheader,
   footer,
   children,
 }: {
@@ -40,6 +41,8 @@ export function SidePane({
   onClose: () => void;
   /** Extra header buttons, before expand/close. */
   actions?: ReactNode;
+  /** Under the title, pinned with it: e.g. what the task is about, then the pane's tabs. */
+  subheader?: ReactNode;
   /** Pinned under the scroll area, e.g. a reply box. */
   footer?: ReactNode;
   children: ReactNode;
@@ -78,43 +81,46 @@ export function SidePane({
         {/* Hairlines show up only while content scrolls under the header or above the footer, as in chats. */}
         <header
           className={cx(
-            "flex shrink-0 items-start gap-sm border-b ps-[var(--cds-gap-lg)] pe-sm pt-[var(--cds-gap-md)] transition-colors duration-fast",
+            "flex shrink-0 flex-col border-b ps-[var(--cds-gap-lg)] pe-sm pt-[var(--cds-gap-md)] transition-colors duration-fast",
             // Tabs in place of the heading are lighter than the serif title: the content needs more room under them.
-            typeof title === "string" ? "pb-xs" : "pb-[var(--cds-gap-md)]",
+            typeof title === "string" && !subheader ? "pb-xs" : "pb-[var(--cds-gap-md)]",
             scroll.top ? "border-alpha-2" : "border-transparent",
           )}
         >
-          <div className="flex min-w-0 flex-1 items-baseline gap-sm pt-xs">
-            {typeof title === "string" ? (
-              <h2
-                className="truncate font-serif text-primary"
-                style={{
-                  fontSize: "var(--cds-font-size-title)",
-                  lineHeight: "var(--cds-leading-title)",
-                  fontWeight: "var(--cds-font-weight-regular)",
-                }}
-              >
-                {title}
-              </h2>
-            ) : (
-              // A control in place of the heading, e.g. the Brief | Plan tabs of the task pane.
-              title
-            )}
-            {meta && <span className="shrink-0 truncate text-footnote text-muted">{meta}</span>}
+          <div className="flex items-start gap-sm">
+            <div className="flex min-w-0 flex-1 items-baseline gap-sm pt-xs">
+              {typeof title === "string" ? (
+                <h2
+                  className="truncate font-serif text-primary"
+                  style={{
+                    fontSize: "var(--cds-font-size-title)",
+                    lineHeight: "var(--cds-leading-title)",
+                    fontWeight: "var(--cds-font-weight-regular)",
+                  }}
+                >
+                  {title}
+                </h2>
+              ) : (
+                // A control in place of the heading, e.g. the Brief | Plan tabs of the task pane.
+                title
+              )}
+              {meta && <span className="shrink-0 truncate text-footnote text-muted">{meta}</span>}
+            </div>
+            <div className="flex shrink-0 items-center gap-0.5 [--cds-text-primary:var(--cds-text-secondary)]">
+              {actions}
+              {onToggleExpand && (
+                <Button
+                  size="xs"
+                  icon={EXPAND}
+                  aria-label={expanded ? "Collapse pane" : "Expand pane"}
+                  aria-pressed={expanded}
+                  onClick={onToggleExpand}
+                />
+              )}
+              <Button size="xs" icon={CLOSE} aria-label="Close pane" onClick={onClose} />
+            </div>
           </div>
-          <div className="flex shrink-0 items-center gap-0.5 [--cds-text-primary:var(--cds-text-secondary)]">
-            {actions}
-            {onToggleExpand && (
-              <Button
-                size="xs"
-                icon={EXPAND}
-                aria-label={expanded ? "Collapse pane" : "Expand pane"}
-                aria-pressed={expanded}
-                onClick={onToggleExpand}
-              />
-            )}
-            <Button size="xs" icon={CLOSE} aria-label="Close pane" onClick={onClose} />
-          </div>
+          {subheader && <div className="pe-[calc(var(--cds-gap-lg)-var(--cds-gap-sm))]">{subheader}</div>}
         </header>
         <div ref={body} className="min-h-0 flex-1 overflow-y-auto" onScroll={onScroll}>
           {children}

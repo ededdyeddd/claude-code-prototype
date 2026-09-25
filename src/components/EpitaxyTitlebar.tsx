@@ -11,7 +11,7 @@ const TASK = "\uE041";
 
 
 /**
- * The toggle of the task pane on the right of the chat: "Brief and plan" (level 3) or "Plan" (level 2).
+ * The toggle of the task pane on the right of the chat: "Plan" at every level (the brief, when there is one, is a tab inside).
  */
 export type TaskPaneToggle = {
   label: string;

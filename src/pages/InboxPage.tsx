@@ -56,7 +56,7 @@ function Header({
             fontWeight: "var(--cds-font-weight-regular)",
           }}
         >
-          Inbox
+          Up next
         </h1>
         <AttentionMenu attention={attention} busyUntil={busyUntil} />
       </div>
