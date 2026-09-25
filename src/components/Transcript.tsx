@@ -293,10 +293,12 @@ function PlanStepRow({ live, planStep }: { live: LiveStatus; planStep: { done: n
     <div className="not-prose">
       <ArtifactTile
         icon={TASK_ICON}
-        title="Plan"
+        // Worded as the chip ("Plan · 3/6") so it reads as the same plan; the pulsing spark below says it is live.
+        title={`Plan · ${planStep.done}/${planStep.of}`}
         // Said in words: a pulsing dot alone did not read as progress. The count is the whole plan's, the same as on
         // the Plan chip and in the plan's header ("3 of 6"), not the step's number, which read as a mismatch.
-        meta={[`In progress: ${live.step}`, `${planStep.done}/${planStep.of}`, live.target].filter(Boolean).join(" · ")}
+        // No file: it changes every few seconds and is a tool call's detail, not the plan's.
+        meta={`Now: ${live.step}`}
         onOpen={() => setTab("plan")}
       />
     </div>
