@@ -858,7 +858,7 @@ function QuestionLine({ chatId, questionId }: { chatId: string; questionId: stri
   // Set apart from the message: a rail and the same Blocking / Can wait tag as the dock. Clay only while it blocks you.
   const blocks = question.blocking && !picked;
   return (
-    <div className={cx("not-prose my-md flex flex-col gap-0.5 border-s-2 ps-md", blocks ? "border-clay" : "border-alpha-3")}>
+    <div className={cx("not-prose my-md flex flex-col gap-0.5 border-s ps-md", blocks ? "border-clay" : "border-alpha-3")}>
       <span className={cx("text-footnote", blocks ? "text-clay" : "text-muted")}>{question.blocking ? "Blocking" : "Can wait"}</span>
       <p className="text-body font-medium text-primary">{question.text}</p>
       {picked && (
