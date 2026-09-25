@@ -89,8 +89,8 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
                         label: view.tabs.includes("brief") ? "Brief and plan" : "Plan",
                         open: !!panel,
                         changed: view.changed.length > 0,
-                        // Opens on the brief while it waits for approval, on the plan once the task runs.
-                        onToggle: () => setPanel(panel ? null : view.tabs.includes("brief") && view.atGate ? "brief" : "plan"),
+                        // Opens on the plan: it is what the task will do and what it costs; the brief is one tab away.
+                        onToggle: () => setPanel(panel ? null : "plan"),
                       }
                     : undefined
                 }
@@ -111,21 +111,24 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
         <div className="contents [--cds-font-size-body:var(--cds-font-size-prose)] [--cds-leading-body:var(--cds-leading-prose)]">
           <SidePane
             id="task-pane"
-            title={
-              view.tabs.includes("brief") ? (
-                <Tabs
-                  label="Brief and plan"
-                  value={panel}
-                  onChange={(t) => setPanel(t)}
-                  items={(["brief", "plan"] as const).map((t) => ({
-                    value: t,
-                    label: t === "brief" ? "Brief" : "Plan",
-                    badge: view.changed.includes(t) && panel !== t ? <span aria-label="Changed" className="block size-[6px] rounded-full bg-muted" /> : undefined,
-                  }))}
-                />
-              ) : (
-                "Plan"
-              )
+            // The task first, what it is about under it, then the tabs: the plan leads, the brief explains it.
+            title={view.task.title}
+            subheader={
+              <div className="flex flex-col gap-md pt-xs">
+                <p className="text-body text-secondary">{view.task.summary}</p>
+                {view.tabs.includes("brief") && (
+                  <Tabs
+                    label="Plan and brief"
+                    value={panel}
+                    onChange={(t) => setPanel(t)}
+                    items={(["plan", "brief"] as const).map((t) => ({
+                      value: t,
+                      label: t === "brief" ? "Brief" : "Plan",
+                      badge: view.changed.includes(t) && panel !== t ? <span aria-label="Changed" className="block size-[6px] rounded-full bg-muted" /> : undefined,
+                    }))}
+                  />
+                )}
+              </div>
             }
             width={Math.min(paneWidth, Math.max(SIDE_PANE.min, paneMax))}
             maxWidth={paneMax}
