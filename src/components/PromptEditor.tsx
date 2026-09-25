@@ -1,4 +1,4 @@
-export function PromptEditor() {
+export function PromptEditor({ placeholder = "Describe a task or ask a question" }: { placeholder?: string }) {
   return (
     <div
       contentEditable="true"
@@ -16,7 +16,7 @@ export function PromptEditor() {
         overflowWrap: "break-word",
       }}
     >
-      <p data-placeholder="Describe a task or ask a question" className="is-empty is-editor-empty">
+      <p data-placeholder={placeholder} className="is-empty is-editor-empty">
         <br className="ProseMirror-trailingBreak" />
       </p>
     </div>

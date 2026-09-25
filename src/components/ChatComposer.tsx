@@ -1,7 +1,7 @@
 import { IconButton } from "./IconButton";
 import { PromptEditor } from "./PromptEditor";
 
-export function ChatComposer() {
+export function ChatComposer({ placeholder }: { placeholder?: string }) {
   return (
     <div className="bg-surface-3 [--cmp-pad-x:0.5rem] compact:[--cmp-pad-x:0.5rem] comfortable:[--cmp-pad-x:0.5rem] relative z-[1] flex w-full min-w-0 flex-col text-primary rounded-composer px-[var(--cmp-pad-x)] py-2 compact:py-2 comfortable:py-2 [--cmp-gap-y:0.375rem] compact:[--cmp-gap-y:0.375rem] comfortable:[--cmp-gap-y:0.5rem] gap-y-[var(--cmp-gap-y)] [--cmp-type-size:max(var(--cds-font-size-text-entry-floor,0px),var(--cmp-font-size,var(--cds-font-size-prose)))] [--cmp-leading:round(var(--cmp-type-size)*1.4,1px)] [--cmp-row-py:max(0px,(var(--cds-h-control)-var(--cmp-leading))/2)] [--cmp-row-h:calc(var(--cmp-leading)+2*var(--cmp-row-py))] transition-[background-color,border-color,box-shadow,opacity] duration-200 shadow-composer hover:[&:not(:where(:has(button:hover,a:hover,[role=button]:hover,label:hover)))]:shadow-composer-hover focus-within:shadow-composer-focus hover:focus-within:shadow-composer-focus cursor-text">
       <div
@@ -27,7 +27,7 @@ export function ChatComposer() {
                 }}
                 data-editable-text="true"
               >
-                Describe a task or ask a question
+                {placeholder ?? "Describe a task or ask a question"}
               </span>
               <div
                 data-cds="ChatComposerEditor"
@@ -38,9 +38,9 @@ export function ChatComposer() {
               >
                 <span
                   className="invisible pointer-events-none select-none max-w-full self-start break-words"
-                  data-composer-placeholder-ghost="Describe a task or ask a question"
+                  data-composer-placeholder-ghost={placeholder ?? "Describe a task or ask a question"}
                 />
-                <PromptEditor />
+                <PromptEditor placeholder={placeholder} />
                 <span
                   id="skill-arg-hint-sr-u3bxjx"
                   role="status"

@@ -5,12 +5,16 @@ import { Sidebar } from "./components/Sidebar";
 import { ChatShell } from "./components/ChatShell";
 import { TokensPage } from "./pages/TokensPage";
 import { RoutinesPage } from "./pages/RoutinesPage";
+import { TRANSCRIPTS } from "./data/transcripts";
+import { SESSIONS } from "./data/sessions";
 
 /** Content of the main pane: switches with the sidebar navigation. */
 function MainContent() {
   const { pathname } = useLocation();
   if (pathname.startsWith("/routines")) return <RoutinesPage />;
-  return <ChatShell name="Eduard" />;
+  const chatId = pathname.match(/^\/code\/([^/]+)/)?.[1];
+  const chat = SESSIONS.find((s) => s.id === chatId);
+  return <ChatShell name="Eduard" chat={chat} transcript={chatId ? TRANSCRIPTS[chatId] : undefined} />;
 }
 
 export function AppContent() {

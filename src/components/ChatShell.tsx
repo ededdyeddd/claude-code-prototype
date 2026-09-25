@@ -1,8 +1,10 @@
 import { EpitaxyTitlebar } from "./EpitaxyTitlebar";
 import { NextHeader } from "./NextHeader";
 import { ChatPanel } from "./ChatPanel";
+import type { Turn } from "../data/transcripts";
+import type { Session } from "../data/sessions";
 
-export function ChatShell({ name }) {
+export function ChatShell({ name, transcript, chat }: { name: string; transcript?: Turn[]; chat?: Session }) {
   return (
     <div
       className="tiles-shell"
@@ -34,11 +36,11 @@ export function ChatShell({ name }) {
           <div className="relative isolate min-w-0 epitaxy-chat-panel" data-chat-gutter-end="bleed">
             <div className="rounded-card bg-surface-2 shadow-panel-sm dark:shadow-sm dark:outline dark:outline-1 dark:outline-alpha-2 pointer-events-none absolute inset-0 -z-[1] opacity-0 transition-opacity duration-200 [.tiles-dragging_&]:opacity-100" />
             <div className="relative h-full min-w-0 flex flex-col">
-              <EpitaxyTitlebar />
+              <EpitaxyTitlebar chat={transcript ? chat : undefined} />
               <div className="relative">
-                <NextHeader name={name} />
+                {!transcript && <NextHeader name={name} />}
               </div>
-              <ChatPanel />
+              <ChatPanel transcript={transcript} chat={chat} />
             </div>
           </div>
         </div>
