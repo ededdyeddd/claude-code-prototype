@@ -8,7 +8,6 @@ const PANEL = "\uE113";
 const GLOBE = "\uE082";
 const MORE = "\uE062";
 
-const TASK = "\uE041"; // clipboard with a list: the task's brief and plan
 
 /** The toggle of the task pane on the right of the chat: "Brief and plan" (level 3) or "Plan" (level 2). */
 export type TaskPaneToggle = { label: string; open: boolean; changed?: boolean; onToggle: () => void };
@@ -36,22 +35,20 @@ export function EpitaxyTitlebar({ chat, taskPane }: { chat?: Session; taskPane?:
         {chat ? (
           <div className="flex items-center gap-0.5">
             {taskPane && (
-              // A pane like the others on this side; the grey dot means an edit changed it since it was last open.
-              <span className="relative flex">
-                <Button
-                  size="xs"
-                  icon={TASK}
-                  aria-label={taskPane.changed ? `${taskPane.label} · changed` : taskPane.label}
-                  title={taskPane.changed ? `${taskPane.label} · changed` : taskPane.label}
-                  aria-pressed={taskPane.open}
-                  aria-controls="task-pane"
-                  onClick={taskPane.onToggle}
-                  className={taskPane.open ? "bg-alpha-2 [--cds-text-primary:var(--cds-text-primary)]" : undefined}
-                />
-                {taskPane.changed && !taskPane.open && (
-                  <span aria-hidden="true" className="pointer-events-none absolute end-0.5 top-0.5 size-[6px] rounded-full bg-muted" />
-                )}
-              </span>
+              // Text, not an icon: it says what opens. The grey dot means an edit changed it since it was last open.
+              <button
+                type="button"
+                aria-pressed={taskPane.open}
+                aria-controls="task-pane"
+                onClick={taskPane.onToggle}
+                className={
+                  "me-1 flex h-[var(--cds-h-control--xs)] items-center gap-1.5 rounded-sm px-sm text-body outline-none transition-colors duration-fast focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)] " +
+                  (taskPane.open ? "bg-alpha-2 text-primary" : "text-secondary hover:bg-alpha-1 hover:text-primary")
+                }
+              >
+                {taskPane.label}
+                {taskPane.changed && !taskPane.open && <span aria-label="Changed" className="block size-[6px] rounded-full bg-muted" />}
+              </button>
             )}
             <Button size="xs" icon={TERMINAL} aria-label="Terminal" />
             <Button size="xs" icon={PANEL} aria-label="Toggle panel" />

@@ -83,16 +83,21 @@ export function SidePane({
           )}
         >
           <div className="flex min-w-0 flex-1 items-baseline gap-sm pt-xs">
-            <h2
-              className="truncate font-serif text-primary"
-              style={{
-                fontSize: "var(--cds-font-size-title)",
-                lineHeight: "var(--cds-leading-title)",
-                fontWeight: "var(--cds-font-weight-regular)",
-              }}
-            >
-              {title}
-            </h2>
+            {typeof title === "string" ? (
+              <h2
+                className="truncate font-serif text-primary"
+                style={{
+                  fontSize: "var(--cds-font-size-title)",
+                  lineHeight: "var(--cds-leading-title)",
+                  fontWeight: "var(--cds-font-weight-regular)",
+                }}
+              >
+                {title}
+              </h2>
+            ) : (
+              // A control in place of the heading, e.g. the Brief | Plan tabs of the task pane.
+              title
+            )}
             {meta && <span className="shrink-0 truncate text-footnote text-muted">{meta}</span>}
           </div>
           <div className="flex shrink-0 items-center gap-0.5 [--cds-text-primary:var(--cds-text-secondary)]">

@@ -109,14 +109,8 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
       <ChatTaskContext.Provider value={{ chatId: view.id, view, setTab: (t) => setPanel(t) }}>
         <SidePane
           id="task-pane"
-          title={view.tabs.includes("brief") ? "Brief and plan" : "Plan"}
-          width={Math.min(paneWidth, Math.max(SIDE_PANE.min, paneMax))}
-          maxWidth={paneMax}
-          onResize={setPaneWidth}
-          onClose={() => setPanel(null)}
-        >
-          {view.tabs.includes("brief") && (
-            <div className="px-[var(--cds-gap-lg)] pt-xs">
+          title={
+            view.tabs.includes("brief") ? (
               <Tabs
                 label="Brief and plan"
                 value={panel}
@@ -127,8 +121,15 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
                   badge: view.changed.includes(t) && panel !== t ? <span aria-label="Changed" className="block size-[6px] rounded-full bg-muted" /> : undefined,
                 }))}
               />
-            </div>
-          )}
+            ) : (
+              "Plan"
+            )
+          }
+          width={Math.min(paneWidth, Math.max(SIDE_PANE.min, paneMax))}
+          maxWidth={paneMax}
+          onResize={setPaneWidth}
+          onClose={() => setPanel(null)}
+        >
           {panel === "brief" ? <BriefView view={view} /> : <PlanView view={view} />}
         </SidePane>
       </ChatTaskContext.Provider>
