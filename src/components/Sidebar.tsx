@@ -11,6 +11,7 @@ import { MoreNavigationButton } from "./MoreNavigationButton";
 import { Spacer } from "./Spacer";
 import { Contents } from "./Contents";
 import { UserMenuButton } from "./UserMenuButton";
+import { BudgetLine } from "./BudgetLine";
 import { NavigationEntry } from "./NavigationEntry";
 import { SidebarContents } from "./SidebarContents";
 import { useInbox } from "../data/inboxStore";
@@ -88,6 +89,7 @@ export function Sidebar(resize: { width: number; min: number; max: number; defau
           </div>
         </div>
         <div className="static-composer-boot-fade df-bottom-tray shrink-0">
+          <BudgetLine />
           <div className="df-footer-row shrink-0 flex items-center gap-[var(--df-footer-gap)]">
             <div className="min-w-0 flex-1">
               <UserMenuButton />
