@@ -1,48 +1,5 @@
-import type { ReactElement } from "react";
-import type { Status } from "../data/task";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
-
-/**
- * Status is carried by shape, not color: ✓ done, ● running, ○ ahead, ‖ waits for you. Gates take the plan's dots (TaskDot).
- * Anthropicons has no pause glyph, so the set is one small SVG family in currentColor.
- * Only "waits for you" takes the clay accent.
- */
-export function StatusMark({ status, className }: { status: Status; className?: string }) {
-  const paths: Record<Status, ReactElement> = {
-    done: (
-      <path d="M2.5 6.2 5 8.6l4.5-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    ),
-    running: <circle cx="6" cy="6" r="3.25" fill="currentColor" />,
-    ahead: <circle cx="6" cy="6" r="3.25" fill="none" stroke="currentColor" strokeWidth="1.25" />,
-    waiting: (
-      <g fill="currentColor">
-        <rect x="3" y="2.5" width="2" height="7" rx="0.75" />
-        <rect x="7" y="2.5" width="2" height="7" rx="0.75" />
-      </g>
-    ),
-  };
-  const tone = status === "waiting" ? "text-clay" : status === "ahead" ? "text-muted" : "text-secondary";
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 12 12"
-      role="img"
-      aria-label={STATUS_LABEL[status]}
-      className={cx("shrink-0", tone, className)}
-    >
-      {paths[status]}
-    </svg>
-  );
-}
-
-const STATUS_LABEL: Record<Status, string> = {
-  done: "Done",
-  running: "Running",
-  ahead: "Up next",
-  waiting: "Waiting for you",
-};
 
 /**
  * Task state as a dot, shared by the Inbox list and the sidebar:

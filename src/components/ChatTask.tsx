@@ -15,7 +15,7 @@ import {
   type TaskTab,
 } from "../data/chatTaskStore";
 import { Button, Hint, Icon } from "../ui";
-import { StatusMark, TaskDot } from "./StatusMark";
+import { TaskDot } from "./StatusMark";
 import { Inline } from "./Transcript";
 
 const LOCK = "";
@@ -95,7 +95,7 @@ function RiskyAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
     return (
       <li className={cx(row, "group/row")}>
         <span className="mt-[4px] flex">
-          <StatusMark status="done" />
+          <TaskDot state="done" />
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <p className={cx("text-body", mark.ok ? "text-primary" : "text-muted line-through")}>
@@ -170,7 +170,7 @@ function AssumptionState({ view, a }: { view: ChatTaskView; a: Assumption }) {
   const mark = view.marks[a.id];
   return (
     <li className="flex items-start gap-sm">
-      <span className="mt-[5px] flex">{mark ? <StatusMark status="done" /> : <TaskDot state="blocked" />}</span>
+      <span className="mt-[5px] flex">{mark ? <TaskDot state="done" /> : <TaskDot state="blocked" />}</span>
       <div className="flex min-w-0 flex-col">
         <p className={cx("text-body", mark && !mark.ok ? "text-muted line-through" : "text-primary")}>
           <Inline text={a.text} />
@@ -549,7 +549,7 @@ function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) 
     );
   return (
     <p className="not-prose flex flex-wrap items-center gap-x-sm pt-sm text-body text-secondary">
-      <StatusMark status="done" />
+      <TaskDot state="done" />
       You approved the brief and plan
       <Button size="xs" variant="secondary" onClick={() => setTab("brief")}>
         Open brief
@@ -569,7 +569,7 @@ function ResultCard({ view }: { view: ChatTaskView }) {
         {claims.map((c) => (
           <li key={c.text} className="flex items-start gap-sm">
             <span className="mt-[5px] flex">
-              <StatusMark status="done" />
+              <TaskDot state="done" />
             </span>
             <div className="flex min-w-0 flex-col">
               <span className="text-body text-primary">
@@ -616,7 +616,7 @@ function ResultCard({ view }: { view: ChatTaskView }) {
       )}
       {view.accepted && (
         <span className="flex items-center justify-end gap-1.5 text-footnote text-muted">
-          <StatusMark status="done" /> Accepted
+          <TaskDot state="done" /> Accepted
         </span>
       )}
     </div>
@@ -654,7 +654,7 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
             {done.map((p) => (
               <li key={p.id} className={row}>
                 <span className={cx("flex", mark)}>
-                  <StatusMark status="done" />
+                  <TaskDot state="done" />
                 </span>
                 <span className="min-w-0 text-secondary">
                   <Inline text={p.title} />
@@ -781,7 +781,7 @@ function QuestionLine({ chatId, questionId }: { chatId: string; questionId: stri
       <p className="text-body font-medium text-primary">{question.text}</p>
       {picked && (
         <p className="flex flex-wrap items-center gap-x-xs text-footnote text-muted">
-          <StatusMark status="done" />
+          <TaskDot state="done" />
           Your answer: {answerLabel(question, picked)}
           <button
             type="button"

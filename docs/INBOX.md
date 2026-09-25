@@ -139,7 +139,7 @@ Ask                               Other answer…   [Answer]
 | `src/data/taskTranscripts.ts` | Переписки чатов задач и живые статусы (`TASK_LIVE_STATUS`) |
 | `src/data/sessions.ts` | Проекты и чаты сайдбара; id чата задачи = id задачи |
 | `src/components/SidePane.tsx` | Боковая панель: шапка, ресайз слева, линии прокрутки под шапкой/над низом |
-| `src/components/StatusMark.tsx` | `TaskDot` — точки статуса (списки, сайдбар, план); `StatusMark` — ✓ (готово) и ● (идёт) в карточках; ромбов и паузы в интерфейсе нет |
+| `src/components/StatusMark.tsx` | `TaskDot` — точки статуса (списки, сайдбар, план); `TaskDot` — единственная система форм: терракотовая точка (нужен ты), серая точка (готово / отмечено), пульсирующая (идёт), кольцо (впереди); галочек, ромбов и паузы нет |
 | `src/components/ResizeHandle.tsx` | Рабочая ручка ресайза (мышь, стрелки, двойной клик — сброс) |
 | `src/data/usePersistentWidth.ts` | Ширина панелей в `localStorage` (`cc:sidebar-width`, `cc:side-pane-width`) |
 | `src/ui/Hint.tsx` | Тултип в портале (не обрезается прокруткой), на токенах поповера |

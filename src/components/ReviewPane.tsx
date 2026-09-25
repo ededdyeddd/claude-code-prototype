@@ -2,7 +2,7 @@ import type { Review, ReviewTab } from "../data/task";
 import type { ChatTaskView } from "../data/chatTaskStore";
 import { Tabs } from "../ui";
 import { SidePane } from "./SidePane";
-import { StatusMark } from "./StatusMark";
+import { TaskDot } from "./StatusMark";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
@@ -144,7 +144,7 @@ export function ReviewPane({
             {review.checks.map((c) => (
               <section key={c.label} className="flex flex-col gap-xs">
                 <div className="flex items-baseline gap-sm">
-                  <StatusMark status="done" />
+                  <TaskDot state="done" />
                   <span className="text-body text-primary">{c.label}</span>
                   <span className="ms-auto text-footnote tabular-nums text-secondary">{c.result}</span>
                 </div>

@@ -1,15 +1,13 @@
 import { useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button, Hint, Icon } from "../ui";
 import { SESSIONS } from "../data/sessions";
-import { StatusMark, TaskDot } from "./StatusMark";
+import { TaskDot } from "./StatusMark";
 import {
   costRange,
   gateText,
   isForecast,
   money as moneyRange,
   type Gate,
-  type Option,
   type PlanDiff,
   type PlanStep,
   type Question,
