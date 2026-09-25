@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
+import { DockFrame, OptionList, OptionRow, RowField, type DockNav } from "./DecisionPanel";
 import type { ReactNode } from "react";
 import type { Block } from "../data/transcripts";
 import { costRange, currentGate, gateText, money, type Assumption, type Question, type ReviewTab } from "../data/task";
@@ -20,7 +21,6 @@ import { Inline } from "./Transcript";
 
 const LOCK = "";
 const CHEVRON = "\uE02A";
-const CHEVRON_LEFT = "\uE029";
 const FILES = "\uE02D";
 const TASK = "\uE041";
 const PEN = "";
@@ -442,12 +442,7 @@ function DecisionCard({
   meta,
   actions,
   children,
-  bare,
-  corner,
 }: {
-  bare?: boolean;
-  /** On the label's line, at the right: the dock's "1 of N" navigation. */
-  corner?: ReactNode;
   label?: string;
   title?: ReactNode;
   context?: ReactNode;
@@ -457,15 +452,10 @@ function DecisionCard({
   children?: ReactNode;
 }) {
   return (
-    <section className={cx("not-prose flex flex-col gap-lg", !bare && "rounded-lg border border-alpha-2 p-lg", CODE)}>
+    <section className={cx("not-prose flex flex-col gap-lg rounded-lg border border-alpha-2 p-lg", CODE)}>
       {(label || title || context) && (
         <div className="flex flex-col gap-xs">
-          {(label || corner) && (
-            <div className="flex min-h-5 items-center justify-between gap-sm">
-              {label && <span className="text-footnote text-clay">{label}</span>}
-              {corner}
-            </div>
-          )}
+          {label && <span className="text-footnote text-clay">{label}</span>}
           {title && <p className="text-body font-medium text-primary">{title}</p>}
           {context && <div className="text-footnote text-muted">{context}</div>}
         </div>
@@ -823,55 +813,169 @@ function QuestionLine({ chatId, questionId }: { chatId: string; questionId: stri
   );
 }
 
-/** A risky assumption as a decision in the dock: right, or fix it in your words. */
-function AssumptionDecision({ view, a, corner }: { view: ChatTaskView; a: Assumption; corner?: ReactNode }) {
-  const [fixing, setFixing] = useState(false);
+const focusComposer = () => (document.querySelector("[data-testid=code-prompt-input]") as HTMLElement | null)?.focus();
+
+/** A risky assumption in the dock: the assumption is the question, why it matters under it; confirm it, or correct it in the row's field. */
+function AssumptionDecision({ view, a, nav }: { view: ChatTaskView; a: Assumption; nav: DockNav }) {
+  const [picked, setPicked] = useState<number | null>(null);
   const [draft, setDraft] = useState("");
-  const save = () => draft.trim() && markAssumption(view.id, a.id, { ok: false, note: draft.trim() });
+  const field = useRef<HTMLInputElement>(null);
+  const pick = (i: number) => {
+    setPicked(i);
+    if (i === 1) window.setTimeout(() => field.current?.focus());
+  };
+  const ready = picked === 0 || (picked === 1 && !!draft.trim());
+  const submit = () => {
+    if (picked === 0) markAssumption(view.id, a.id, { ok: true });
+    else if (picked === 1 && draft.trim()) markAssumption(view.id, a.id, { ok: false, note: draft.trim() });
+  };
   return (
-    <DecisionCard
-      bare
-      corner={corner}
-      label="Only you can confirm this"
-      title={<Inline text={a.text} />}
-      context={a.why}
-      actions={
-        fixing ? (
-          <>
-            <Button size="sm" variant="secondary" onClick={() => setFixing(false)}>
-              Cancel
-            </Button>
-            <Button size="sm" variant="primary" disabled={!draft.trim()} onClick={save}>
-              Save
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button size="sm" variant="secondary" onClick={() => (setDraft(""), setFixing(true))}>
-              Correct…
-            </Button>
-            <Button size="sm" variant="primary" onClick={() => markAssumption(view.id, a.id, { ok: true })}>
-              Confirm
-            </Button>
-          </>
-        )
-      }
+    <DockFrame nav={nav} title={<Inline text={a.text} />} count={2} pick={pick} canSubmit={ready} onSubmit={submit}>
+      {a.why && <p className="text-footnote text-muted">{a.why}</p>}
+      <OptionList label="Is this right?">
+        <OptionRow n={1} title="Confirm — it's right" selected={picked === 0} onSelect={() => pick(0)} />
+        <OptionRow n={2} title="Correct it" selected={picked === 1} onSelect={() => pick(1)}>
+          <RowField
+            ref={field}
+            value={draft}
+            onChange={setDraft}
+            onFocus={() => setPicked(1)}
+            onEnter={submit}
+            placeholder="How it should be, in your words"
+            label="Your correction"
+          />
+        </OptionRow>
+      </OptionList>
+    </DockFrame>
+  );
+}
+
+/** The gate on the brief and plan: approve and start, or not yet (edits go in the chat). What blocks it or what it costs is under "Approve". */
+function GateDecision({ view, nav, setTab, toAssumption }: { view: ChatTaskView; nav: DockNav; setTab: (t: TaskTab) => void; toAssumption: () => void }) {
+  const [picked, setPicked] = useState<number | null>(null);
+  const gate = currentGate(view.live);
+  const left = view.unmarked.length;
+  const submit = () => {
+    if (picked === 0 && left === 0) launch(view.id);
+    if (picked === 1) (focusComposer(), nav.toggle());
+  };
+  return (
+    <DockFrame
+      nav={nav}
+      title={`Approve ${gate?.title ?? "the plan"}?`}
+      count={2}
+      pick={setPicked}
+      canSubmit={picked === 1 || (picked === 0 && left === 0)}
+      onSubmit={submit}
     >
-      {fixing && (
-        <input
-          autoFocus
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") save();
-            if (e.key === "Escape") setFixing(false);
-          }}
-          placeholder="How it should be, in your words"
-          aria-label="Your correction"
-          className={fieldClass}
+      <p className="flex flex-wrap items-baseline gap-x-1 text-footnote text-muted">
+        {view.edits.length > 0 ? "Your edits are in the" : "See the"}
+        {view.tabs.includes("brief") && (
+          <>
+            <TextLink onClick={() => setTab("brief")}>brief</TextLink>
+            and the
+          </>
+        )}
+        <TextLink onClick={() => setTab("plan")}>plan</TextLink>
+      </p>
+      <OptionList label="Approve the plan?">
+        <OptionRow
+          n={1}
+          title="Approve and start"
+          selected={picked === 0}
+          onSelect={() => setPicked(0)}
+          description={
+            left > 0 ? (
+              // What blocks the start, as a way back to it: the assumptions come before the gate in the dock.
+              <TextLink onClick={toAssumption}>{left === 1 ? "Confirm 1 assumption first" : `Confirm ${left} assumptions first`}</TextLink>
+            ) : (
+              <Budget view={view} />
+            )
+          }
         />
-      )}
-    </DecisionCard>
+        <OptionRow
+          n={2}
+          title="Not yet — I'll edit it in the chat"
+          selected={picked === 1}
+          onSelect={() => setPicked(1)}
+          description="Type the change below; the brief and plan follow it."
+        />
+      </OptionList>
+    </DockFrame>
+  );
+}
+
+/** The escalation offer: split into stages (recommended), or finish as is. The reasons are the agent's message above. */
+function EscalationChoice({ view, nav }: { view: ChatTaskView; nav: DockNav }) {
+  const [picked, setPicked] = useState<number | null>(null);
+  const stages = view.task.stages.length;
+  return (
+    <DockFrame
+      nav={nav}
+      title={`Split it into ${stages} stages?`}
+      count={2}
+      pick={setPicked}
+      canSubmit={picked !== null}
+      onSubmit={() => picked !== null && escalate(view.id, picked === 0)}
+    >
+      <p className="text-footnote text-muted">The details are in my message above.</p>
+      <OptionList label={`Split it into ${stages} stages?`}>
+        <OptionRow
+          n={1}
+          title="Split into stages"
+          recommended
+          selected={picked === 0}
+          onSelect={() => setPicked(0)}
+          description={
+            <>
+              Done work is kept, you approve between stages · <Budget view={view} />
+            </>
+          }
+        />
+        <OptionRow
+          n={2}
+          title="Finish as is"
+          selected={picked === 1}
+          onSelect={() => setPicked(1)}
+          description="No brief or plan; I'll still ask at the edge of your limits"
+        />
+      </OptionList>
+    </DockFrame>
+  );
+}
+
+/** A small task's result: accept it, or ask for changes in the chat. */
+function ResultDecision({ view, nav }: { view: ChatTaskView; nav: DockNav }) {
+  const { openReview } = useContext(ChatTaskContext);
+  const [picked, setPicked] = useState<number | null>(null);
+  const review = view.task.result?.review;
+  return (
+    <DockFrame
+      nav={nav}
+      title="Accept the result?"
+      count={2}
+      pick={setPicked}
+      canSubmit={picked !== null}
+      onSubmit={() => (picked === 0 ? accept(view.id) : picked === 1 && (focusComposer(), nav.toggle()))}
+    >
+      <p className="text-footnote text-muted">What I did and how I checked it is in my message above.</p>
+      <OptionList label="Accept the result?">
+        <OptionRow
+          n={1}
+          title="Accept"
+          selected={picked === 0}
+          onSelect={() => setPicked(0)}
+          description={review && openReview ? <TextLink onClick={() => openReview("changes")}>Review the change</TextLink> : undefined}
+        />
+        <OptionRow
+          n={2}
+          title="Ask for changes"
+          selected={picked === 1}
+          onSelect={() => setPicked(1)}
+          description="Tell me what to change in the chat below"
+        />
+      </OptionList>
+    </DockFrame>
   );
 }
 
@@ -883,19 +987,21 @@ type Decision =
   | { key: string; kind: "result" };
 
 /**
- * Every decision of the chat, docked over the composer one at a time, as Claude asks: an escalation offer,
- * then the risky assumptions, then the gate on the brief and plan, then the agent's questions (blocking first),
- * then accepting a small task's result.
- * The Brief and Plan tabs are to read; this is the one place to decide. Answering moves on to the next.
+ * Every decision of the chat, docked over the composer one at a time, drawn as Claude Code's question panel:
+ * an escalation offer, then the risky assumptions, then the gate on the brief and plan, then the agent's
+ * questions (blocking first), then accepting a small task's result.
+ * The Brief and Plan tabs are to read; this is the one place to decide. Answering moves on to the next;
+ * Skip moves on without answering (folds the dock on the last one); Close hides it until the chat is reopened.
  */
 export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: ChatTaskView; setTab: (t: TaskTab) => void }) {
   const { answers } = useInbox();
-  const { openReview } = useContext(ChatTaskContext);
   const [index, setIndex] = useState(0);
+  const [collapsed, setCollapsed] = useState(false);
+  const [closed, setClosed] = useState(false);
   const [choices, setChoices] = useState<Record<string, string>>({});
   const [customs, setCustoms] = useState<Record<string, CustomAnswer | undefined>>({});
   const task = TASKS.find((t) => t.id === chatId);
-  if (!task) return null;
+  if (!task || closed) return null;
   const open = openQuestions(task, answers).sort((a, b) => Number(b.blocking) - Number(a.blocking));
   const items: Decision[] = [
     ...(view?.escalationPending ? [{ key: "escalation", kind: "escalation" as const }] : []),
@@ -907,140 +1013,43 @@ export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: 
   if (items.length === 0) return null;
   const i = Math.min(index, items.length - 1);
   const item = items[i];
+  const nav: DockNav = {
+    index: i,
+    count: items.length,
+    prev: () => setIndex(i - 1),
+    next: () => setIndex(i + 1),
+    collapsed,
+    toggle: () => setCollapsed((c) => !c),
+    close: () => setClosed(true),
+    skip: () => (i < items.length - 1 ? setIndex(i + 1) : setCollapsed(true)),
+  };
 
-  // "1 of N" sits on the label's line of the card, not as a header of its own above it.
-  const corner = items.length > 1 && (
-    <span className="-my-xs flex shrink-0 items-center gap-0.5 text-footnote tabular-nums text-muted">
-      <span className="me-xs">
-        {i + 1} of {items.length}
-      </span>
-      <Button size="xs" icon={CHEVRON_LEFT} aria-label="Previous" disabled={i === 0} onClick={() => setIndex(i - 1)} />
-      <Button size="xs" icon={CHEVRON} aria-label="Next" disabled={i === items.length - 1} onClick={() => setIndex(i + 1)} />
-    </span>
-  );
-
-  let body: ReactNode = null;
-  if (item.kind === "escalation" && view) {
-    body = (
-      <DecisionCard
-        bare
-        corner={corner}
-        label="Bigger than it looked"
-        title={`Split it into ${view.task.stages.length} stages?`}
-        context="The details are in my message above."
-        meta={<Budget view={view} />}
-        actions={
-          <>
-            <Button size="sm" variant="secondary" onClick={() => escalate(view.id, false)}>
-              Finish as is
-            </Button>
-            <Button size="sm" variant="primary" onClick={() => escalate(view.id, true)}>
-              Split into stages
-            </Button>
-          </>
-        }
-      />
+  if (item.kind === "escalation" && view) return <EscalationChoice key={item.key} view={view} nav={nav} />;
+  if (item.kind === "assumption" && view) return <AssumptionDecision key={item.key} view={view} a={item.a} nav={nav} />;
+  if (item.kind === "gate" && view)
+    return (
+      <GateDecision key={item.key} view={view} nav={nav} setTab={setTab} toAssumption={() => setIndex(items.findIndex((d) => d.kind === "assumption"))} />
     );
-  } else if (item.kind === "assumption" && view) {
-    body = <AssumptionDecision key={item.a.id} view={view} a={item.a} corner={corner} />;
-  } else if (item.kind === "gate" && view) {
-    const gate = currentGate(view.live);
-    const left = view.unmarked.length;
-    body = (
-      <DecisionCard
-        bare
-        corner={corner}
-        label="Before I start"
-        title={`Approve ${gate?.title ?? "the plan"}?`}
-        context={
-          <p className="flex flex-wrap items-baseline gap-x-1">
-            {view.edits.length > 0 ? "Your edits are in the" : "Anything to change? Type it below. See the"}
-            {view.tabs.includes("brief") && (
-              <>
-                <TextLink onClick={() => setTab("brief")}>brief</TextLink>
-                and the
-              </>
-            )}
-            <TextLink onClick={() => setTab("plan")}>plan</TextLink>
-          </p>
-        }
-        meta={
-          left > 0 ? (
-            // What blocks the start, as a way back to it: the assumptions come before the gate in the dock.
-            <TextLink onClick={() => setIndex(items.findIndex((d) => d.kind === "assumption"))}>
-              {left === 1 ? "1 assumption to confirm" : `${left} assumptions to confirm`}
-            </TextLink>
-          ) : (
-            <Budget view={view} />
-          )
-        }
-        actions={
-          <Button size="sm" variant="primary" disabled={left > 0} onClick={() => launch(view.id)}>
-            Approve and start
-          </Button>
-        }
-      />
-    );
-  } else if (item.kind === "result" && view) {
-    const review = view.task.result?.review;
-    body = (
-      <DecisionCard
-        bare
-        corner={corner}
-        label="Check the result"
-        title="Accept the result?"
-        context={
-          review && openReview ? (
-            <p className="flex flex-wrap items-baseline gap-x-1">
-              What I did and how I checked it is in my message above.
-              <TextLink onClick={() => openReview("changes")}>Review the change</TextLink>
-            </p>
-          ) : (
-            "What I did and how I checked it is in my message above."
-          )
-        }
-        actions={
-          <>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => (document.querySelector("[data-testid=code-prompt-input]") as HTMLElement | null)?.focus()}
-            >
-              Ask for changes
-            </Button>
-            <Button size="sm" variant="primary" onClick={() => accept(view.id)}>
-              Accept
-            </Button>
-          </>
-        }
-      />
-    );
-  } else if (item.kind === "question") {
+  if (item.kind === "result" && view) return <ResultDecision key={item.key} view={view} nav={nav} />;
+  if (item.kind === "question") {
     // Keyed by task and question: question ids repeat across tasks ("q1").
     const key = answerKey(task.id, item.q.id);
-    const choice = choices[key] ?? item.q.options.find((o) => o.recommended)?.id ?? item.q.options[0].id;
-    body = (
+    return (
       <QuestionCard
         key={key}
         task={task}
         question={item.q}
-        choice={choice}
+        choice={choices[key]}
         setChoice={(id) => setChoices((c) => ({ ...c, [key]: id }))}
         custom={customs[key]}
         setCustom={(c) => setCustoms((m) => ({ ...m, [key]: c }))}
         onAnswered={() => {}}
         showChanges
-        bare
-        corner={corner}
+        dock={nav}
       />
     );
   }
-
-  return (
-    <div className="mb-xs flex max-h-[min(60vh,520px)] flex-col overflow-y-auto rounded-lg border border-alpha-2 bg-surface-2 p-lg">
-      {body}
-    </div>
-  );
+  return null;
 }
 
 /** Task blocks inside the transcript; their content comes from the chat's task. */

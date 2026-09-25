@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
+import { DockFrame, OptionList, OptionRow, RowField, type DockNav } from "./DecisionPanel";
 import { Button, Hint, Icon } from "../ui";
 import { SESSIONS } from "../data/sessions";
 import { TaskDot } from "./StatusMark";
@@ -126,11 +127,14 @@ const EFFECT_WORD: Record<PlanDiff["kind"], string> = { add: "Adds step", remove
  * What picking this option does to the plan, inside the picked option's row: one line per change, the kind of
  * change in plain words first, then the step, then what a new step costs. Indented to the option's text.
  */
-function OptionEffects({ task, diff }: { task: Task; diff: PlanDiff[] }) {
+function OptionEffects({ task, diff, flush }: { task: Task; diff: PlanDiff[]; /** Inside an option row of the dock: no indent. */ flush?: boolean }) {
   return (
     <ul
       aria-label="What this does to the plan"
-      className="grid grid-cols-[auto_1fr] gap-x-sm gap-y-0.5 pb-sm ps-[calc(var(--cds-gap-sm)*2+12px)] pe-sm text-footnote"
+      className={cx(
+        "grid grid-cols-[auto_1fr] gap-x-sm gap-y-0.5 text-footnote",
+        flush ? "pt-xs" : "pb-sm ps-[calc(var(--cds-gap-sm)*2+12px)] pe-sm",
+      )}
     >
       {diff.map((d) => (
         <li key={d.kind + d.text} className="col-span-2 grid grid-cols-subgrid">
@@ -163,23 +167,20 @@ export function QuestionCard({
   setCustom,
   onAnswered,
   showChanges,
-  bare,
-  corner,
+  dock,
 }: {
   task: Task;
   question: Question;
-  /** Picked option; lives in PlanPane so the plan below can preview it. */
-  choice: string;
+  /** Picked option; lives in PlanPane so the plan below can preview it. In the dock nothing is picked at first. */
+  choice?: string;
   setChoice: (id: string) => void;
   custom?: CustomAnswer;
   setCustom: (c: CustomAnswer | undefined) => void;
   onAnswered: () => void;
   /** List what the picked option changes in the plan: in the chat, where the plan is not beside the card. */
   showChanges?: boolean;
-  /** Inside a frame of its own (the question dock of the chat): no border or padding here. */
-  bare?: boolean;
-  /** On the label's line, at the right: the dock's "1 of N" navigation. */
-  corner?: ReactNode;
+  /** In the chat's decision dock: drawn as Claude Code's question panel (numbered option rows, Other, Skip, Submit). */
+  dock?: DockNav;
 }) {
   // A stale choice (another question, another task) falls back to the first option instead of breaking the card.
   const chosen = question.options.find((o) => o.id === choice) ?? question.options[0];
@@ -187,6 +188,7 @@ export function QuestionCard({
   const [mode, setMode] = useState<"choose" | "other" | "ask">("choose");
   const [draft, setDraft] = useState("");
   const [thread, setThread] = useState<{ q: string; a?: string }[]>([]);
+  const otherRef = useRef<HTMLInputElement>(null);
 
   const sendOther = () => {
     const text = draft.trim();
@@ -210,40 +212,165 @@ export function QuestionCard({
     window.setTimeout(() => setThread((t) => t.map((m, k) => (k === t.length - 1 ? { ...m, a: reply.trim() } : m))), 700);
   };
 
+  const thread$ = thread.length > 0 && (
+    // Questions about the question: answered by the agent right here; the question stays open.
+    <ul className="flex flex-col gap-sm">
+      {thread.map((m, k) => (
+        <li key={k} className="flex flex-col gap-0.5 text-footnote">
+          <span className="text-secondary">
+            <span className="text-muted">You · </span>
+            {m.q}
+          </span>
+          <span className="text-secondary">
+            <span className="text-muted">{task.agent} · </span>
+            {m.a ?? <span className="text-muted">thinking…</span>}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+
+  if (dock) {
+    const n = question.options.length;
+    const otherOn = mode === "other";
+    const picked = otherOn ? undefined : question.options.find((o) => o.id === choice);
+    const pick = (i: number) => {
+      if (custom) return;
+      if (i < n) {
+        setChoice(question.options[i].id);
+        if (mode === "other") setMode("choose");
+      } else if (i === n) {
+        setMode("other");
+        window.setTimeout(() => otherRef.current?.focus());
+      }
+    };
+    const submit = () => {
+      if (custom) {
+        if (!custom.ready) return;
+        answer(task.id, question.id, `text:${custom.text}`);
+        return onAnswered();
+      }
+      if (otherOn) return sendOther();
+      if (!picked) return;
+      answer(task.id, question.id, picked.id);
+      onAnswered();
+    };
+    return (
+      <DockFrame
+        nav={dock}
+        title={question.text}
+        tag={question.blocking ? <span className="text-clay">Blocking</span> : <span className="text-muted">Can wait</span>}
+        count={custom ? 0 : n + 1}
+        pick={pick}
+        canSubmit={custom ? custom.ready : otherOn ? !!draft.trim() : !!picked}
+        onSubmit={submit}
+        submitLabel={custom ? "Apply" : "Submit"}
+        left={
+          custom ? (
+            <Button
+              size="sm"
+              onClick={() => {
+                setDraft(custom.text);
+                setCustom(undefined);
+                setMode("other");
+              }}
+            >
+              Edit
+            </Button>
+          ) : mode === "ask" ? (
+            <Button size="sm" onClick={() => setMode("choose")}>
+              Cancel
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => (setDraft(""), setMode("ask"))}>
+              Ask
+            </Button>
+          )
+        }
+      >
+        {question.context && <p className="text-footnote text-muted">{question.context}</p>}
+        {thread$}
+        {mode === "ask" && (
+          <input
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.preventDefault(), sendAsk());
+              if (e.key === "Escape") setMode("choose");
+            }}
+            placeholder="Ask about this question, Enter to send"
+            aria-label="Ask about this question"
+            className={fieldClass}
+          />
+        )}
+        {custom ? (
+          <div className="flex flex-col gap-0.5 rounded bg-alpha-1 px-md py-sm">
+            <p className="text-body text-primary">“{custom.text}”</p>
+            <span className="text-footnote text-muted">
+              {custom.ready ? "The plan change is ready: Apply to go with it." : "I'm drafting the plan change…"}
+            </span>
+          </div>
+        ) : (
+          <OptionList label={question.text}>
+            {question.options.map((o, k) => {
+              const on = !otherOn && o.id === choice;
+              return (
+                <OptionRow
+                  key={o.id}
+                  n={k + 1}
+                  title={o.label}
+                  recommended={o.recommended}
+                  selected={on}
+                  onSelect={() => pick(k)}
+                  description={
+                    <span className="tabular-nums">
+                      <Forecast cost={o.cost} time={o.toAcceptance} basis={o.forecastSource} model={task.model} focusable={false} /> ·{" "}
+                      <Hint text={`Reversible: ${o.reversible}.`} focusable={false}>
+                        {reversibleShort(o.reversible)}
+                      </Hint>
+                    </span>
+                  }
+                >
+                  {/* The plan is not beside the dock: what the picked option does to it, in its row. */}
+                  {showChanges && on && o.diff.length > 0 && <OptionEffects task={task} diff={o.diff} flush />}
+                </OptionRow>
+              );
+            })}
+            <OptionRow n={n + 1} title="Other" selected={otherOn} onSelect={() => pick(n)}>
+              <RowField
+                ref={otherRef}
+                value={draft}
+                onChange={setDraft}
+                onFocus={() => mode !== "other" && setMode("other")}
+                onEnter={sendOther}
+                placeholder="Type your own answer here"
+                label="Your answer"
+              />
+            </OptionRow>
+          </OptionList>
+        )}
+      </DockFrame>
+    );
+  }
+
   return (
     <section
       id={questionAnchor(task.id, question.id)}
       aria-label={question.text}
-      className={cx("flex scroll-mt-[var(--cds-gap-xl)] flex-col gap-lg", !bare && "rounded-lg border border-alpha-2 p-lg")}
+      className="flex scroll-mt-[var(--cds-gap-xl)] flex-col gap-lg rounded-lg border border-alpha-2 p-lg"
     >
       <div className="flex flex-col gap-xs">
         <div className="flex min-h-5 items-center justify-between gap-sm">
           <span className={cx("text-footnote", question.blocking ? "text-clay" : "text-muted")}>
             {question.blocking ? "Blocking" : "Can wait"}
           </span>
-          {corner}
         </div>
         <p className="text-body font-medium text-primary">{question.text}</p>
         {question.context && <p className="text-footnote text-muted">{question.context}</p>}
       </div>
 
-      {/* Questions about the question: answered by the agent right here; the question stays open. */}
-      {thread.length > 0 && (
-        <ul className="flex flex-col gap-sm">
-          {thread.map((m, k) => (
-            <li key={k} className="flex flex-col gap-0.5 text-footnote">
-              <span className="text-secondary">
-                <span className="text-muted">You · </span>
-                {m.q}
-              </span>
-              <span className="text-secondary">
-                <span className="text-muted">{task.agent} · </span>
-                {m.a ?? <span className="text-muted">thinking…</span>}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+      {thread$}
 
       {custom ? (
         <div className="flex flex-col gap-xs">
@@ -260,7 +387,7 @@ export function QuestionCard({
       ) : mode === "choose" ? (
         <div role="radiogroup" aria-label={question.text} className="flex flex-col gap-xs">
           {question.options.map((o) => {
-            const on = o.id === choice;
+            const on = o.id === chosen.id;
             return (
               // What an option does to the plan is previewed in the plan itself, right below the card.
               <div key={o.id} className={cx("rounded transition-colors duration-fast", on ? "bg-alpha-2" : "hover:bg-fill-ghost-hover")}>
@@ -360,7 +487,7 @@ export function QuestionCard({
               variant="primary"
               title={`Go with “${chosen.label}”`}
               onClick={() => {
-                answer(task.id, question.id, choice);
+                answer(task.id, question.id, chosen.id);
                 onAnswered();
               }}
             >
