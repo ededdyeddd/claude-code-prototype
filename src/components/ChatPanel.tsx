@@ -72,7 +72,7 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
   const liveBase = chat?.running ? LIVE_STATUS[chat.id] : undefined;
   const live =
     liveBase && progress?.running
-      ? { ...liveBase, step: progress.running.title, planStep: { n: progress.done + 1, of: progress.total } }
+      ? { ...liveBase, step: progress.running.title, planStep: { done: progress.done, of: progress.total } }
       : liveBase;
 
   const send = (text: string) => {
