@@ -6,7 +6,7 @@ import { Icon } from "./index";
 const CHEVRON_RIGHT = "";
 const CHECK = "";
 
-type Placement = "bottom-end" | "bottom-start" | "right-start";
+type Placement = "bottom-end" | "bottom-start" | "right-start" | "top-start";
 
 function useAnchoredPosition(anchor: RefObject<HTMLElement | null>, open: boolean, placement: Placement) {
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -15,8 +15,9 @@ function useAnchoredPosition(anchor: RefObject<HTMLElement | null>, open: boolea
     if (!open || !anchor.current || !menuRef.current) return;
     const a = anchor.current.getBoundingClientRect();
     const m = menuRef.current.getBoundingClientRect();
-    let top = placement === "right-start" ? a.top - 4 : a.bottom + 4;
-    let left = placement === "bottom-end" ? a.right - m.width : placement === "bottom-start" ? a.left : a.right + 2;
+    let top = placement === "right-start" ? a.top - 4 : placement === "top-start" ? a.top - m.height - 4 : a.bottom + 4;
+    let left =
+      placement === "bottom-end" ? a.right - m.width : placement === "bottom-start" || placement === "top-start" ? a.left : a.right + 2;
     // Keep the menu inside the viewport.
     left = Math.max(8, Math.min(left, window.innerWidth - m.width - 8));
     top = Math.max(8, Math.min(top, window.innerHeight - m.height - 8));
