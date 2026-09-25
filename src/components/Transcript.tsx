@@ -169,32 +169,32 @@ function BlockView({ block }: { block: Block }) {
   }
 }
 
-/** Very small shell highlighter: command name, URLs/paths/strings, and the rest. */
+/** Shell highlighter: the command name in accent, its arguments in green (as in the app). */
 function highlightShell(line: string) {
   return line.split(/(\s+)/).map((tok, i) => {
     if (/^\s+$/.test(tok)) return tok;
-    const cls = i === 0 ? "text-accent" : /^(https?:|\.{0,2}\/|["'])/.test(tok) ? "text-git-added" : "text-primary";
     return (
-      <span key={i} className={cls}>
+      <span key={i} className={i === 0 ? "text-accent" : "text-git-added"}>
         {tok}
       </span>
     );
   });
 }
 
-/** Shell command with Run and Copy actions (one card per command, like in the app). */
+/** Shell command with Run and Copy actions: soft filled card, no border (as in the app). */
 function CommandBlock({ code }: { code: string }) {
   return (
-    <div
-      className="not-prose flex w-fit max-w-full items-center gap-md rounded-lg ps-md pe-1 py-1"
-      style={{ boxShadow: "inset 0 0 0 1px var(--cds-alpha-2)" }}
-    >
-      <pre className="min-w-0 overflow-x-auto font-mono text-code">
-        <code>{code.split("\n").map((l, i) => <div key={i}>{highlightShell(l)}</div>)}</code>
+    <div className="not-prose flex w-fit max-w-full items-center gap-6 rounded-lg bg-alpha-1 py-1.5 ps-4 pe-2">
+      <pre className="min-w-0 overflow-x-auto py-0.5 font-mono text-code">
+        <code>
+          {code.split("\n").map((l, i) => (
+            <div key={i}>{highlightShell(l)}</div>
+          ))}
+        </code>
       </pre>
       <div className="flex shrink-0 items-center">
-        <Button size="xs" icon={RUN} aria-label="Run in terminal" />
-        <Button size="xs" icon={COPY} aria-label="Copy command" onClick={() => navigator.clipboard?.writeText(code)} />
+        <Button size="xs" icon={RUN} aria-label="Run in terminal" className="!text-secondary" />
+        <Button size="xs" icon={COPY} aria-label="Copy command" className="!text-secondary" onClick={() => navigator.clipboard?.writeText(code)} />
       </div>
     </div>
   );
