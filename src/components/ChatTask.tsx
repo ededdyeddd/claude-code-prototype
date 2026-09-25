@@ -179,10 +179,22 @@ function AssumptionState({ view, a }: { view: ChatTaskView; a: Assumption }) {
         {mark ? (
           <p className="text-footnote text-secondary">you: {"note" in mark ? mark.note : "confirmed"}</p>
         ) : (
-          <p className="text-footnote text-clay">Waiting for you in the chat{a.why && <span className="text-muted"> · {a.why}</span>}</p>
+          <>
+            <p className="text-footnote text-clay">Waiting for you in the chat</p>
+            {a.why && <p className="text-footnote text-muted">{a.why}</p>}
+          </>
         )}
       </div>
     </li>
+  );
+}
+
+/** A plain list marker in the brief, in the slot of a status dot: rings mean "up next" in the plan, so lists don't use them. */
+function Bullet() {
+  return (
+    <span aria-hidden="true" className="mt-[5px] flex size-3 shrink-0 items-center justify-center">
+      <span className="block size-1 rounded-full bg-alpha-5" />
+    </span>
   );
 }
 
@@ -191,9 +203,7 @@ function SafeAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
   const note = view.rejected.get(a.id);
   return (
     <li className="flex items-start gap-sm">
-      <span className="mt-[5px] flex">
-        <TaskDot state="ahead" />
-      </span>
+      <Bullet />
       <div className="min-w-0">
         <p className={cx("text-body", note ? "text-muted line-through" : "text-secondary")}>
           <Inline text={a.text} />
@@ -239,7 +249,7 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         </ul>
         {safe.length > 0 && (
           <div className="flex flex-col gap-xs">
-            <span className="text-footnote text-muted">Checked or reversible</span>
+            <span className="text-footnote text-muted">No need to confirm: checked in code or easy to undo</span>
             <ul className="flex flex-col gap-xs">
               {safe.map((a) => (
                 <SafeAssumption key={a.id} view={view} a={a} />
@@ -254,26 +264,33 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         <ul className="flex flex-col gap-xs">
           {brief.boundaries.map((b) => (
             <li key={b} className="flex items-start gap-sm text-body text-secondary">
-              <span className="mt-[5px] flex">
-                <TaskDot state="ahead" />
-              </span>
+              <Bullet />
               <span>
                 <Inline text={b} />
               </span>
             </li>
           ))}
         </ul>
-        <p className="text-footnote text-muted">
-          <Inline
-            text={[
-              paths("write") && `Your limits: I edit ${paths("write")}`,
-              paths("read") && `read only ${paths("read")}`,
-              paths("never") && `don't touch ${paths("never")}`,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          />
-        </p>
+        {/* The envelope's territory, one access level per row, so paths are readable and never wrap alone. */}
+        <dl className="grid grid-cols-[max-content_1fr] items-baseline gap-x-md gap-y-0.5">
+          {(
+            [
+              ["write", "Edits"],
+              ["read", "Read only"],
+              ["never", "Won't touch"],
+            ] as const
+          ).map(
+            ([access, label]) =>
+              paths(access) && (
+                <div key={access} className="contents">
+                  <dt className="text-footnote text-muted">{label}</dt>
+                  <dd className="text-body text-secondary">
+                    <Inline text={paths(access)} />
+                  </dd>
+                </div>
+              ),
+          )}
+        </dl>
       </section>
 
       <section className="flex flex-col gap-sm">
@@ -284,7 +301,7 @@ export function BriefView({ view }: { view: ChatTaskView }) {
             ...view.criteria.map((text, i) => ({ id: `mine-${i}`, text, locked: true, mine: true })),
           ].map((c) => (
             <li key={c.id} className="flex items-start gap-sm text-body text-primary">
-              <span aria-hidden="true" className="mt-[4px] block size-3 shrink-0 rounded-[3px] border border-alpha-5" />
+              <span aria-hidden="true" className="mt-[4px] block size-3 shrink-0 rounded-[3px] border border-alpha-3" />
               {/* The lock sits right after its criterion, not at the far edge of the pane. */}
               <span className="min-w-0">
                 <Inline text={c.text} />
