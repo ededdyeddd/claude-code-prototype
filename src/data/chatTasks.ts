@@ -56,7 +56,7 @@ const READ = "";
 const RUN = "";
 const SEARCH = "";
 
-const RULES = { self: "subtasks and their order within a stage", ask: "a new stage or gate, scope, anything over +$2" };
+const RULES = { self: "subtasks and their order within a stage", ask: "a new stage or approval step, scope, anything over +$2" };
 
 /** S3: a large task (payments) right after the first message: the gate on the brief and plan. */
 const ONE_CLICK: Task = {

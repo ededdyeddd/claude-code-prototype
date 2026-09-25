@@ -64,7 +64,7 @@ const TAB_LABEL: Record<TaskTab, string> = { chat: "Chat", brief: "Brief", plan:
 
 /** Clay dot: risky assumptions still to mark (the only accent in the bar); the count is in the gate bar. */
 function CountBadge({ n }: { n: number }) {
-  return <span aria-label={`${n} to mark`} className="block size-[6px] rounded-full bg-clay" />;
+  return <span aria-label="Waiting for you in Chat" className="block size-[6px] rounded-full bg-clay" />;
 }
 
 /** Neutral dot: an edit changed this tab since it was last opened. */
@@ -126,7 +126,7 @@ function Chip({ children }: { children: ReactNode }) {
 
 /**
  * A risky assumption at the gate, as a row like an option of a question card: unmarked, it sits on a soft
- * fill with the clay dot (needs you) and its own small "Right" / "Fix…"; marked, it drops the fill and gets ✓
+ * fill with the clay dot (needs you) and its own small "Confirm" / "Correct…"; marked, it drops the fill and gets ✓
  * with your words. The row's buttons stay xs and inside the row, so the card's footer keeps the one primary.
  */
 function RiskyAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
@@ -151,7 +151,7 @@ function RiskyAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
           <p className={cx("text-body", mark.ok ? "text-primary" : "text-muted line-through")}>
             <Inline text={a.text} />
           </p>
-          <p className="text-footnote text-secondary">you: {"note" in mark ? mark.note : "right"}</p>
+          <p className="text-footnote text-secondary">you: {"note" in mark ? mark.note : "confirmed"}</p>
         </div>
         {editable && (
           <Button
@@ -202,11 +202,11 @@ function RiskyAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
           </div>
         ) : (
           <div className="flex gap-xs">
-            <Button size="xs" variant="secondary" onClick={() => markAssumption(view.id, a.id, { ok: true })}>
-              Right
-            </Button>
             <Button size="xs" onClick={() => (setDraft(""), setFixing(true))}>
-              Fix…
+              Correct…
+            </Button>
+            <Button size="xs" variant="secondary" onClick={() => markAssumption(view.id, a.id, { ok: true })}>
+              Confirm
             </Button>
           </div>
         )}
@@ -226,7 +226,7 @@ function AssumptionState({ view, a }: { view: ChatTaskView; a: Assumption }) {
           <Inline text={a.text} />
         </p>
         {mark ? (
-          <p className="text-footnote text-secondary">you: {"note" in mark ? mark.note : "right"}</p>
+          <p className="text-footnote text-secondary">you: {"note" in mark ? mark.note : "confirmed"}</p>
         ) : (
           <p className="text-footnote text-clay">Waiting for you in the chat{a.why && <span className="text-muted"> · {a.why}</span>}</p>
         )}
@@ -280,7 +280,7 @@ export function BriefView({ view }: { view: ChatTaskView }) {
       </section>
 
       <section className="flex flex-col gap-sm">
-        <SectionTitle aside={view.unmarked.length ? `${view.unmarked.length} to mark` : "all marked"}>Assumptions</SectionTitle>
+        <SectionTitle aside={view.unmarked.length ? `${view.unmarked.length} to confirm` : "all confirmed"}>Assumptions</SectionTitle>
         <ul className="flex flex-col gap-sm">
           {risky.map((a) =>
             view.rejected.has(a.id) ? <SafeAssumption key={a.id} view={view} a={a} /> : <AssumptionState key={a.id} view={view} a={a} />,
@@ -315,9 +315,9 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         <p className="text-footnote text-muted">
           <Inline
             text={[
-              paths("write") && `From the envelope: writes ${paths("write")}`,
-              paths("read") && `reads ${paths("read")}`,
-              paths("never") && `never ${paths("never")}`,
+              paths("write") && `Your limits: I edit ${paths("write")}`,
+              paths("read") && `read only ${paths("read")}`,
+              paths("never") && `don't touch ${paths("never")}`,
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -336,10 +336,10 @@ export function BriefView({ view }: { view: ChatTaskView }) {
               <span aria-hidden="true" className="mt-[4px] block size-3 shrink-0 rounded-[3px] border border-alpha-5" />
               <span className="min-w-0 flex-1">
                 <Inline text={c.text} />
-                {c.mine && <span className="text-footnote text-muted"> · you</span>}
+                {c.mine && <span className="text-footnote text-muted"> · added by you</span>}
               </span>
               {c.locked && (
-                <Hint text="Protected: the agent can't weaken it" className="flex shrink-0 items-center gap-1 text-footnote text-muted">
+                <Hint text="Locked: I can't loosen or skip this" className="flex shrink-0 items-center gap-1 text-footnote text-muted">
                   <Icon glyph={LOCK} size="sm" className="!text-muted" />
                 </Hint>
               )}
@@ -367,12 +367,12 @@ export function PlanView({ view }: { view: ChatTaskView }) {
         header={
           <header className="flex flex-col gap-0.5">
             <p className="text-heading text-primary">
-              ≈ {money(t.min, t.max)} <span className="text-secondary">of the ${view.envelope.limit} limit</span>
+              ~{money(t.min, t.max)} <span className="text-secondary">of the ${view.envelope.limit} limit</span>
             </p>
             <p className="text-footnote text-muted">Forecast for what is left{spent > 0 && ` · $${spent.toFixed(2)} spent`}</p>
             {t.over && (
               <p className="pt-xs text-footnote text-clay">
-                Doesn't fit the envelope: up to ${t.max} against ${view.envelope.limit}. Raise the limit in the chip under the field, or cut scope.
+                May go over your limit: up to ${t.max} of ${view.envelope.limit}. Raise the limit below the message box, or cut scope.
               </p>
             )}
           </header>
@@ -416,12 +416,12 @@ export function GateCard({ view, onOpenBrief, onDone }: { view: ChatTaskView; on
           <p className="text-body text-secondary">
             <Inline text={brief.understanding} />
           </p>
-          {onOpenBrief && <TextLink onClick={onOpenBrief}>Full brief in chat</TextLink>}
+          {onOpenBrief && <TextLink onClick={onOpenBrief}>Open brief</TextLink>}
         </div>
       )}
       {view.risky.length > 0 && (
         <div className="flex flex-col gap-xs">
-          <span className="text-footnote text-muted">{view.risky.length === 1 ? "Can't check this myself" : "Can't check these myself"}</span>
+          <span className="text-footnote text-muted">{view.risky.length === 1 ? "Only you can confirm this" : "Only you can confirm these"}</span>
           <ul className="flex flex-col gap-xs">
             {view.risky.map((a) => (
               <RiskyAssumption key={a.id} view={view} a={a} />
@@ -464,7 +464,7 @@ function Budget({ view }: { view: ChatTaskView }) {
       }
       className={cx("tabular-nums", t.over && "text-clay")}
     >
-      ≈ {money(t.min, t.max)} of the ${limit} limit
+      ~{money(t.min, t.max)} of the ${limit} limit
     </Hint>
   );
 }
@@ -473,7 +473,7 @@ function Budget({ view }: { view: ChatTaskView }) {
 function GateStatus({ view }: { view: ChatTaskView }) {
   const left = view.unmarked.length;
   if (left === 0) return <Budget view={view} />;
-  return <span>{left === 1 ? "1 assumption to mark" : `${left} assumptions to mark`}</span>;
+  return <span>{left === 1 ? "1 assumption to confirm" : `${left} assumptions to confirm`}</span>;
 }
 
 /**
@@ -601,7 +601,7 @@ function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) 
     <div className={cx(CARD, "!flex-row items-center gap-md")}>
       <span className="flex min-w-0 flex-1 items-center gap-sm text-body text-secondary">
         <StatusMark status="done" />
-        Brief accepted
+        You approved the brief and plan
       </span>
       <Button size="sm" variant="secondary" onClick={() => setTab("brief")}>
         Open brief
@@ -616,7 +616,7 @@ function ResultCard({ view }: { view: ChatTaskView }) {
   const review = view.task.result?.review;
   return (
     <div className={CARD}>
-      <span className="text-footnote text-muted">Result · check before accepting</span>
+      <span className="text-footnote text-muted">Check the result, then accept</span>
       <ul className="flex flex-col gap-sm">
         {claims.map((c) => (
           <li key={c.text} className="flex items-start gap-sm">
@@ -693,7 +693,7 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
   const row = "flex items-baseline gap-sm text-footnote";
   return (
     <div className={cx("flex flex-col gap-md", !inFeed && "border-t border-alpha-2 pt-md")}>
-      {view.task.levelReason && (
+      {view.task.levelReason && !inFeed && (
         <p className="text-footnote text-secondary">
           Why: <Inline text={view.task.levelReason} />
         </p>
@@ -714,7 +714,7 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
       )}
       <div className="flex flex-col gap-1">
         <span className="text-footnote text-muted">
-          What I propose{inFeed && ` · ≈ ${money(t.min, t.max)} of the $${view.envelope.limit} limit`}
+          What I propose{inFeed && ` · ~${money(t.min, t.max)} of the $${view.envelope.limit} limit`}
         </span>
         {ahead.map((st) => (
           <div key={st.id} className="flex flex-col gap-1">
@@ -744,10 +744,10 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
         ))}
       </div>
       {esc && (
-        <p className="text-footnote text-secondary">
-          <span className="text-muted">If you finish as is: </span>
-          {esc.afterDecline}
-        </p>
+        <div className="flex flex-col gap-1">
+          <span className="text-footnote text-muted">If you finish as is</span>
+          <p className="text-footnote text-secondary">{esc.afterDecline}</p>
+        </div>
       )}
     </div>
   );
@@ -780,13 +780,13 @@ function EscalationCard({ view, setTab }: { view: ChatTaskView; setTab: (t: Task
       <p className="text-body text-primary">{esc.text}</p>
       {view.escalation === "agreed" ? (
         <div className="flex items-center justify-between gap-md">
-          <span className="text-footnote text-muted">Moved to a plan · {stages} stages, done work kept as done</span>
+          <span className="text-footnote text-muted">Split into {stages} stages · done work is kept</span>
           <Button size="xs" variant="secondary" onClick={() => setTab("plan")}>
             Open plan
           </Button>
         </div>
       ) : (
-        <span className="text-footnote text-muted">Finishing as is · the envelope still applies</span>
+        <span className="text-footnote text-muted">Finishing as is · I'll still ask at the edge of your limits</span>
       )}
     </div>
   );
@@ -831,7 +831,7 @@ function AssumptionDecision({ view, a, corner }: { view: ChatTaskView; a: Assump
     <DecisionCard
       bare
       corner={corner}
-      label="Can't check this myself"
+      label="Only you can confirm this"
       title={<Inline text={a.text} />}
       context={a.why}
       actions={
@@ -847,10 +847,10 @@ function AssumptionDecision({ view, a, corner }: { view: ChatTaskView; a: Assump
         ) : (
           <>
             <Button size="sm" variant="secondary" onClick={() => (setDraft(""), setFixing(true))}>
-              Fix…
+              Correct…
             </Button>
             <Button size="sm" variant="primary" onClick={() => markAssumption(view.id, a.id, { ok: true })}>
-              Right
+              Confirm
             </Button>
           </>
         )
@@ -945,11 +945,11 @@ export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: 
       <DecisionCard
         bare
         corner={corner}
-        label="Your gate"
+        label="Before I start"
         title={`Approve ${gate?.title ?? "the plan"}?`}
         context={
           <p className="flex flex-wrap items-baseline gap-x-1">
-            Edits you typed in the chat are in the
+            {view.edits.length > 0 ? "Your edits are in the" : "Anything to change? Type it below. See the"}
             {view.tabs.includes("brief") && (
               <>
                 <TextLink onClick={() => setTab("brief")}>brief</TextLink>
@@ -963,7 +963,7 @@ export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: 
           left > 0 ? (
             // What blocks the start, as a way back to it: the assumptions come before the gate in the dock.
             <TextLink onClick={() => setIndex(items.findIndex((d) => d.kind === "assumption"))}>
-              {left === 1 ? "1 assumption to mark" : `${left} assumptions to mark`}
+              {left === 1 ? "1 assumption to confirm" : `${left} assumptions to confirm`}
             </TextLink>
           ) : (
             <Budget view={view} />

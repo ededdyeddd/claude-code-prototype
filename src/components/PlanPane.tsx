@@ -126,7 +126,7 @@ const fieldClass =
   "w-full resize-none rounded border border-alpha-2 bg-fill-field px-sm py-xs text-body text-primary outline-none placeholder:text-muted focus-visible:shadow-focus";
 
 /** Plan changes spelled out for the chat, where the plan itself is not in view to preview them. */
-const EFFECT_WORD: Record<PlanDiff["kind"], string> = { add: "Adds step", remove: "Drops step", change: "Changes step", gate: "Adds check" };
+const EFFECT_WORD: Record<PlanDiff["kind"], string> = { add: "Adds step", remove: "Drops step", change: "Changes step", gate: "Adds your approval" };
 
 /**
  * What picking this option does to the plan, inside the picked option's row: one line per change, the kind of
@@ -256,7 +256,11 @@ export function QuestionCard({
           <span className="text-footnote text-muted">Your answer</span>
           <p className="text-body text-primary">“{custom.text}”</p>
           <span className="text-footnote text-muted">
-            {custom.ready ? "The plan change is ready — review it in the plan below." : `${task.agent} is drafting the plan change…`}
+            {custom.ready
+              ? showChanges
+                ? "The change is ready — it's under your answer."
+                : "The plan change is ready — review it in the plan below."
+              : `${task.agent} is drafting the plan change…`}
           </span>
         </div>
       ) : mode === "choose" ? (
@@ -315,7 +319,7 @@ export function QuestionCard({
           }}
           placeholder={
             mode === "other"
-              ? "Your answer in your own words. The agent turns it into a plan change for you to review."
+              ? `Your answer in your own words. ${showChanges ? "I'll" : `${task.agent} will`} turn it into a plan change you can review.`
               : "Ask about this question"
           }
           aria-label={mode === "other" ? "Your answer" : "Ask about this question"}
@@ -802,7 +806,7 @@ export function PlanPane({
               {approx ? (
                 <>
                   <Hint text={`${sumWhy} Each forecast shows its source on hover.`} focusable={false}>
-                    ~{cost(sumCost.min, sumCost.max)}
+                    ~{moneyRange(sumCost.min, sumCost.max)}
                   </Hint>
                   {sumTime > 0 && (
                     <>
@@ -871,7 +875,7 @@ export function PlanPane({
           <li className="flex flex-col gap-0.5 border-t border-alpha-2 pt-md text-footnote">
             <span className="text-muted">Plan rules</span>
             <span className="text-secondary">
-              I change myself: {task.rules.self}. I'll ask about: {task.rules.ask}.
+              I'll change on my own: {task.rules.self}. I'll ask first about: {task.rules.ask}.
             </span>
           </li>
         )}
