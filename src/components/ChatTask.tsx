@@ -14,7 +14,7 @@ import {
   type ChatTaskView,
   type TaskTab,
 } from "../data/chatTaskStore";
-import { Button, Hint, Icon, Tabs } from "../ui";
+import { Button, Hint, Icon } from "../ui";
 import { StatusMark, TaskDot } from "./StatusMark";
 import { Inline } from "./Transcript";
 
@@ -56,47 +56,6 @@ function totals(view: ChatTaskView) {
       max += r.max;
     }
   return { min, max, over: max > view.envelope.limit };
-}
-
-/* ---------------------------------------------------------------- Tab bar */
-
-const TAB_LABEL: Record<TaskTab, string> = { chat: "Chat", brief: "Brief", plan: "Plan" };
-
-/** Neutral dot: an edit changed this tab since it was last opened. */
-function ChangedDot() {
-  return <span aria-label="Changed" title="Changed by your edit" className="block size-[6px] rounded-full bg-muted" />;
-}
-
-/** "Chat · Brief · Plan" above the feed and, once the task runs, the stage it is in. */
-export function TaskTabsBar({ view, tab, onTab }: { view: ChatTaskView; tab: TaskTab; onTab: (t: TaskTab) => void }) {
-  const running = view.live.stages.find((st) => st.steps.some((p) => p.status === "running"));
-  // Only once the task runs: the stage it is in. At the gate the dot on the tab and the line under the brief say it already.
-  const status = running && (
-    <>
-      <StatusMark status="running" />
-      {running.title}
-    </>
-  );
-  return (
-    <div className="flex items-center gap-md pt-xs pb-sm">
-      <Tabs
-        label="Task views"
-        value={tab}
-        onChange={onTab}
-        items={view.tabs.map((t) => ({
-          value: t,
-          label: TAB_LABEL[t],
-          // Only what changed; what waits for you is always in view in the dock over the composer.
-          badge: view.changed.includes(t) && tab !== t ? <ChangedDot /> : undefined,
-        }))}
-      />
-      {status && (
-        <span className="ms-auto flex min-w-0 items-center gap-1.5 truncate text-footnote text-secondary">
-          {status}
-        </span>
-      )}
-    </div>
-  );
 }
 
 /* ------------------------------------------------------------------ Brief */
