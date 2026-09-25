@@ -115,12 +115,12 @@ const reversibleShort = (r: string) =>
   r.startsWith("Yes") ? "reversible" : r.startsWith("Partly") ? "partly reversible" : "not reversible";
 
 /** Custom answers typed in the reply box are stored as `text:…` next to option ids. */
-const answerLabel = (q: Question, picked: string) =>
+export const answerLabel = (q: Question, picked: string) =>
   picked.startsWith("text:") ? `“${picked.slice(5)}”` : (q.options.find((o) => o.id === picked)?.label ?? picked);
 
 /** A question inside its plan step: every option shows its cost, time and reversibility, so they can be compared at a glance. */
 /** A custom answer typed into the card: the agent turns it into a plan change you review and apply. */
-type CustomAnswer = { text: string; ready: boolean };
+export type CustomAnswer = { text: string; ready: boolean };
 
 const fieldClass =
   "w-full resize-none rounded border border-alpha-2 bg-fill-field px-sm py-xs text-body text-primary outline-none placeholder:text-muted focus-visible:shadow-focus";
@@ -129,7 +129,7 @@ const fieldClass =
  * The only place to answer a question: pick an option, or give your own answer, which comes back as a plan
  * change to apply. "Ask" is a thread about the question; it never answers it.
  */
-function QuestionCard({
+export function QuestionCard({
   task,
   question,
   choice,
@@ -137,6 +137,7 @@ function QuestionCard({
   custom,
   setCustom,
   onAnswered,
+  showChanges,
 }: {
   task: Task;
   question: Question;
@@ -146,6 +147,8 @@ function QuestionCard({
   custom?: CustomAnswer;
   setCustom: (c: CustomAnswer | undefined) => void;
   onAnswered: () => void;
+  /** List what the picked option changes in the plan: in the chat, where the plan is not beside the card. */
+  showChanges?: boolean;
 }) {
   const chosen = question.options.find((o) => o.id === choice)!;
   const recommended = question.options.find((o) => o.recommended);
@@ -275,6 +278,19 @@ function QuestionCard({
           aria-label={mode === "other" ? "Your answer" : "Ask about this question"}
           className={fieldClass}
         />
+      )}
+
+      {showChanges && mode === "choose" && !custom && chosen.diff.length > 0 && (
+        <div className="flex flex-col gap-xs">
+          <span className="text-footnote text-muted">Changes in the plan</span>
+          <ul className="flex flex-col gap-0.5">
+            {chosen.diff.map((d) => (
+              <li key={d.kind + d.text} className={cx("text-footnote", d.kind === "remove" ? "text-muted line-through" : "text-secondary")}>
+                <WithChip text={d.text} kind={d.kind} />
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <div className="flex items-center justify-end gap-xs">

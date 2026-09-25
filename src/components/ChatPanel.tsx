@@ -11,7 +11,6 @@ import { LIVE_STATUS } from "../data/transcripts";
 import type { Turn } from "../data/transcripts";
 import type { Session } from "../data/sessions";
 import { RepoBar } from "./RepoBar";
-import { AnswerInPlanBar } from "./AnswerInPlanBar";
 import { ContextUsage } from "./icons/Blue_dot_right_edge";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -78,7 +77,7 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
   };
 
   return (
-    <ChatTaskContext.Provider value={{ view, setTab }}>
+    <ChatTaskContext.Provider value={{ chatId: chat?.id, view, setTab }}>
     <ContextUsage.Provider value={contextUsage(transcript)}>
     <div className="contents">
       {view && view.tabs.length > 0 && (
@@ -119,7 +118,6 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
           <span role="status" className="sr-only select-none" />
           {hasContent ? (
             <>
-              {chat && <AnswerInPlanBar taskId={chat.id} />}
               {chat?.repo && <RepoBar repo={chat.repo} />}
             </>
           ) : (

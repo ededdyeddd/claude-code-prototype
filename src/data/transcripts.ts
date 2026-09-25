@@ -13,6 +13,8 @@ export type Block =
   | { type: "files"; title: string; diff: Diff; files: { name: string; diff: Diff }[]; visible?: number }
   /** Task chats (chatTasks.ts): pointer to the brief, result card, escalation offer; their content comes from the task. */
   | { type: "brief-card" | "result-card" | "escalation-card" }
+  /** A question of the chat's task (Inbox model), answered right in the chat; `id` is the question id in its plan. */
+  | { type: "question"; id: string }
   /** One-line note that an edit changed the brief or plan ("Removed Apple Pay, the plan is one task shorter"). */
   | { type: "edit-note"; text: string };
 

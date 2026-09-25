@@ -3,7 +3,9 @@ import type { ReactNode } from "react";
 import type { Block } from "../data/transcripts";
 import { costRange, currentGate, gateText, money, type Assumption } from "../data/task";
 import { useInbox } from "../data/inboxStore";
-import { PlanPane } from "./PlanPane";
+import { PlanPane, QuestionCard, answerLabel, type CustomAnswer } from "./PlanPane";
+import { TASKS } from "../data/inbox";
+import { answerKey, unanswer } from "../data/inboxStore";
 import {
   accept,
   addCriterion,
@@ -30,7 +32,8 @@ const fieldClass =
   "w-full rounded border border-alpha-2 bg-fill-field px-sm py-xs text-body text-primary outline-none placeholder:text-muted focus-visible:shadow-focus";
 
 /** The task of the open chat and a way to switch its tabs, for blocks rendered deep in the transcript. */
-export const ChatTaskContext = createContext<{ view?: ChatTaskView; setTab: (t: TaskTab) => void }>({ setTab: () => {} });
+/** `chatId` is set for every chat, `view` only for chats with a task level. */
+export const ChatTaskContext = createContext<{ chatId?: string; view?: ChatTaskView; setTab: (t: TaskTab) => void }>({ setTab: () => {} });
 
 /* ------------------------------------------------------------ Derived plan */
 
@@ -153,7 +156,7 @@ function RiskyAssumption({ view, a, bare }: { view: ChatTaskView; a: Assumption;
   return (
     <li className={cx("flex flex-col gap-sm", !bare && "rounded-lg border border-alpha-2 p-md")}>
       <div className="flex flex-col gap-0.5">
-        <span className="text-footnote text-clay">Can't check this myself</span>
+        {!bare && <span className="text-footnote text-clay">Can't check this myself</span>}
         <p className="text-body text-primary">
           <Inline text={a.text} />
         </p>
@@ -389,33 +392,35 @@ export function GateCard({ view, onOpenBrief, onDone }: { view: ChatTaskView; on
   const [open, setOpen] = useState(false);
   if (view.escalationPending && esc)
     return (
-      <section className={cx("flex flex-col gap-md rounded-lg border border-alpha-2 p-lg", CODE)}>
-        <div className="flex flex-col gap-xs">
-          <span className="text-footnote text-clay">Bigger than it looked</span>
-          <p className="text-body text-primary">{esc.text}</p>
-        </div>
-        {open && <EscalationDetails view={view} />}
-        <div className="flex justify-end gap-xs">
-          <DetailsToggle open={open} onToggle={() => setOpen(!open)} />
-          <Button size="sm" variant="secondary" onClick={() => (escalate(view.id, false), onDone?.())}>
-            Finish as is
-          </Button>
-          <Button size="sm" variant="primary" onClick={() => escalate(view.id, true)}>
-            Split into stages
-          </Button>
-        </div>
-      </section>
+      <EscalationDecision view={view} open={open} setOpen={setOpen} onAgree={() => escalate(view.id, true)} onDecline={() => (escalate(view.id, false), onDone?.())} />
     );
-  if (!view.atGate) return null;
+  const gate = currentGate(view.live);
+  if (!view.atGate || !gate) return null;
   const left = view.unmarked.length;
   const t = totals(view);
   return (
-    <section className={cx("flex flex-col gap-md rounded-lg border border-alpha-2 p-lg", CODE)}>
-      {view.task.brief && (
-        <p className="text-body text-secondary">
-          <Inline text={view.task.brief.understanding} />
-        </p>
-      )}
+    <DecisionCard
+      label="Your gate"
+      title={`Approve ${gate.title}?`}
+      context={view.task.brief && <Inline text={view.task.brief.understanding} />}
+      aside={
+        onOpenBrief && (
+          <Button size="sm" onClick={onOpenBrief}>
+            Full brief in chat
+          </Button>
+        )
+      }
+      meta={
+        <span className={t.over ? "text-clay" : undefined}>
+          ≈ {money(t.min, t.max)} of ${view.envelope.limit}
+        </span>
+      }
+      actions={
+        <Button size="sm" variant="primary" disabled={left > 0} onClick={() => (launch(view.id), onDone?.())}>
+          Pass the gate and start
+        </Button>
+      }
+    >
       {view.risky.length > 0 && (
         <ul className="flex flex-col gap-md">
           {view.risky.map((a) => (
@@ -423,26 +428,85 @@ export function GateCard({ view, onOpenBrief, onDone }: { view: ChatTaskView; on
           ))}
         </ul>
       )}
-      <div className="flex flex-wrap items-center gap-sm">
-        {onOpenBrief && (
-          <Button size="sm" className="me-auto" onClick={onOpenBrief}>
-            Full brief in chat
-          </Button>
-        )}
-        <span className={cx("ms-auto text-footnote", t.over ? "text-clay" : "text-muted")}>
-          ≈ {money(t.min, t.max)} of ${view.envelope.limit}
-        </span>
-        <Button
-          size="sm"
-          variant="primary"
-          disabled={left > 0}
-          title={left > 0 ? "Mark the assumptions first" : undefined}
-          onClick={() => (launch(view.id), onDone?.())}
-        >
-          Pass the gate and start
-        </Button>
+    </DecisionCard>
+  );
+}
+
+/**
+ * One frame for every decision card, the same as the question card in the Inbox: clay label, the decision as
+ * the title, context in small muted text, the body, then one footer row — a quiet link on the left, the
+ * consequence (cost) and the buttons on the right, the committing one last and white.
+ */
+function DecisionCard({
+  label,
+  title,
+  context,
+  aside,
+  meta,
+  actions,
+  children,
+}: {
+  label: string;
+  title: ReactNode;
+  context?: ReactNode;
+  aside?: ReactNode;
+  meta?: ReactNode;
+  actions: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <section className={cx("not-prose flex flex-col gap-lg rounded-lg border border-alpha-2 p-lg", CODE)}>
+      <div className="flex flex-col gap-xs">
+        <span className="text-footnote text-clay">{label}</span>
+        <p className="text-body font-medium text-primary">{title}</p>
+        {context && <p className="text-footnote text-muted">{context}</p>}
+      </div>
+      {children}
+      <div className="flex flex-wrap items-center justify-end gap-xs">
+        {aside && <span className="me-auto">{aside}</span>}
+        {meta && <span className="me-xs text-footnote tabular-nums text-muted">{meta}</span>}
+        {actions}
       </div>
     </section>
+  );
+}
+
+/** The escalation offer as a decision: split the task into stages, or finish it as is; details unfold. */
+function EscalationDecision({
+  view,
+  open,
+  setOpen,
+  onAgree,
+  onDecline,
+}: {
+  view: ChatTaskView;
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  onAgree: () => void;
+  onDecline: () => void;
+}) {
+  const esc = view.task.escalation!;
+  const t = totals(view);
+  return (
+    <DecisionCard
+      label="Bigger than it looked"
+      title={`Split it into ${view.task.stages.length} stages?`}
+      context={esc.text}
+      aside={<DetailsToggle open={open} onToggle={() => setOpen(!open)} />}
+      meta={`≈ ${money(t.min, t.max)} of $${view.envelope.limit}`}
+      actions={
+        <>
+          <Button size="sm" variant="secondary" onClick={onDecline}>
+            Finish as is
+          </Button>
+          <Button size="sm" variant="primary" onClick={onAgree}>
+            Split into stages
+          </Button>
+        </>
+      }
+    >
+      {open && <EscalationDetails view={view} />}
+    </DecisionCard>
   );
 }
 
@@ -450,7 +514,7 @@ export function GateCard({ view, onOpenBrief, onDone }: { view: ChatTaskView; on
 
 const CARD = CODE + " not-prose flex flex-col gap-sm rounded-lg border border-alpha-2 p-md";
 
-/** Accepting the brief, right under it in the feed: why it can't be started yet, or what it will cost; then start. */
+/** Accepting the brief, right under it in the feed (the brief above is the card's body here): why it can't be started yet, or what it will cost; then start. */
 function GateActions({ view, onOpenPlan }: { view: ChatTaskView; onOpenPlan: () => void }) {
   const left = view.unmarked.length;
   const t = totals(view);
@@ -545,7 +609,7 @@ function ResultCard({ view }: { view: ChatTaskView }) {
  * What stands behind an escalation offer, folded by default: why the task grew, what is already done,
  * the stages and gates it would get, the forecast against the envelope, and what "Finish as is" means.
  */
-function EscalationDetails({ view }: { view: ChatTaskView }) {
+function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the chat, as part of the agent's reply: always open, no divider. */ inFeed?: boolean }) {
   const esc = view.task.escalation;
   const done = view.live.stages.flatMap((st) => st.steps).filter((p) => p.status === "done");
   const spent = done.reduce((n, p) => n + (p.work ? costRange(p.work.cost).min : 0), 0);
@@ -553,7 +617,7 @@ function EscalationDetails({ view }: { view: ChatTaskView }) {
   const t = totals(view);
   const row = "flex items-baseline gap-sm text-footnote";
   return (
-    <div className="flex flex-col gap-md border-t border-alpha-2 pt-md">
+    <div className={cx("flex flex-col gap-md", !inFeed && "border-t border-alpha-2 pt-md")}>
       {view.task.levelReason && (
         <p className="text-footnote text-secondary">
           Why: <Inline text={view.task.levelReason} />
@@ -617,7 +681,7 @@ function EscalationDetails({ view }: { view: ChatTaskView }) {
 /** "Details" toggle for a card: chevron after the label, turned when open (as on plan steps). */
 function DetailsToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
-    <Button size="sm" className="me-auto" aria-expanded={open} onClick={onToggle}>
+    <Button size="sm" aria-expanded={open} onClick={onToggle}>
       Details
       <Icon glyph={CHEVRON} size="sm" className={cx("ms-1 !text-muted transition-transform duration-fast", open && "rotate-90")} />
     </Button>
@@ -626,32 +690,28 @@ function DetailsToggle({ open, onToggle }: { open: boolean; onToggle: () => void
 
 function EscalationCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) => void }) {
   const esc = view.task.escalation;
-  const [open, setOpen] = useState(false);
   if (!esc) return null;
-  const stages = view.task.stages.length;
-  return (
-    <div className={CARD}>
-      {!view.escalation && <span className="text-footnote text-clay">Bigger than it looked</span>}
-      <p className="text-body text-primary">{esc.text}</p>
-      {!view.escalation && open && <EscalationDetails view={view} />}
-      {!view.escalation ? (
-        <div className="flex justify-end gap-xs">
-          <DetailsToggle open={open} onToggle={() => setOpen(!open)} />
+  // In the chat the offer is the agent's reply itself, with its context in full; buttons under it, as under the brief.
+  if (!view.escalation)
+    return (
+      <div className={cx("not-prose flex flex-col gap-lg pt-sm", CODE)}>
+        <p className="text-body text-primary">{esc.text}</p>
+        <EscalationDetails view={view} inFeed />
+        <div className="flex flex-wrap items-center justify-end gap-xs">
           <Button size="sm" variant="secondary" onClick={() => escalate(view.id, false)}>
             Finish as is
           </Button>
-          <Button
-            size="sm"
-            variant="primary"
-            onClick={() => {
-              escalate(view.id, true);
-              setTab("plan");
-            }}
-          >
-            Open plan
+          <Button size="sm" variant="primary" onClick={() => (escalate(view.id, true), setTab("plan"))}>
+            Split into stages
           </Button>
         </div>
-      ) : view.escalation === "agreed" ? (
+      </div>
+    );
+  const stages = view.task.stages.length;
+  return (
+    <div className={CARD}>
+      <p className="text-body text-primary">{esc.text}</p>
+      {view.escalation === "agreed" ? (
         <div className="flex items-center justify-between gap-md">
           <span className="text-footnote text-muted">Moved to a plan · {stages} stages, done work kept as done</span>
           <Button size="xs" variant="secondary" onClick={() => setTab("plan")}>
@@ -665,9 +725,57 @@ function EscalationCard({ view, setTab }: { view: ChatTaskView; setTab: (t: Task
   );
 }
 
+/**
+ * A question of the task, asked by the agent right in its message and answered there: the same card and the
+ * same answer state as on the plan step in the Inbox, so answering in one place closes it in the other.
+ */
+function QuestionBlock({ chatId, questionId }: { chatId: string; questionId: string }) {
+  const { answers } = useInbox();
+  const task = TASKS.find((t) => t.id === chatId);
+  const question = task?.stages.flatMap((st) => st.steps).find((p) => p.question?.id === questionId)?.question;
+  const [choice, setChoice] = useState(() => question?.options.find((o) => o.recommended)?.id ?? question?.options[0].id ?? "");
+  const [custom, setCustom] = useState<CustomAnswer | undefined>();
+  if (!task || !question) return null;
+  const picked = answers[answerKey(task.id, question.id)];
+  if (picked)
+    return (
+      <p className="not-prose flex flex-wrap items-center gap-x-xs text-footnote text-muted">
+        <StatusMark status="done" />
+        <span className="text-secondary">{question.text}</span>
+        <span>· Your answer: {answerLabel(question, picked)}</span>
+        <button
+          type="button"
+          onClick={() => unanswer(task.id, question.id)}
+          className="rounded-sm px-1 text-secondary outline-none hover:bg-fill-ghost-hover hover:text-primary focus-visible:shadow-focus"
+        >
+          Change
+        </button>
+      </p>
+    );
+  return (
+    <div className="not-prose">
+      <QuestionCard
+        task={task}
+        question={question}
+        choice={choice}
+        setChoice={setChoice}
+        custom={custom}
+        setCustom={setCustom}
+        onAnswered={() => {}}
+        showChanges
+      />
+    </div>
+  );
+}
+
 /** Task blocks inside the transcript; their content comes from the chat's task. */
-export function TaskBlock({ block }: { block: Extract<Block, { type: "brief-card" | "result-card" | "escalation-card" | "edit-note" }> }) {
-  const { view, setTab } = useContext(ChatTaskContext);
+export function TaskBlock({
+  block,
+}: {
+  block: Extract<Block, { type: "brief-card" | "result-card" | "escalation-card" | "edit-note" | "question" }>;
+}) {
+  const { chatId, view, setTab } = useContext(ChatTaskContext);
+  if (block.type === "question") return chatId ? <QuestionBlock chatId={chatId} questionId={block.id} /> : null;
   if (block.type === "edit-note")
     return (
       <p className="not-prose flex flex-wrap items-center gap-x-sm text-body text-secondary">
