@@ -186,14 +186,21 @@ function AssumptionState({ view, a }: { view: ChatTaskView; a: Assumption }) {
   );
 }
 
+/** A plain list marker in the brief, in the slot of a status dot: rings mean "up next" in the plan, so lists don't use them. */
+function Bullet() {
+  return (
+    <span aria-hidden="true" className="mt-[5px] flex size-3 shrink-0 items-center justify-center">
+      <span className="block size-1 rounded-full bg-alpha-5" />
+    </span>
+  );
+}
+
 /** Safe assumption: just listed; struck through with the person's words once an edit rejected it. */
 function SafeAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
   const note = view.rejected.get(a.id);
   return (
     <li className="flex items-start gap-sm">
-      <span className="mt-[5px] flex">
-        <TaskDot state="ahead" />
-      </span>
+      <Bullet />
       <div className="min-w-0">
         <p className={cx("text-body", note ? "text-muted line-through" : "text-secondary")}>
           <Inline text={a.text} />
@@ -214,6 +221,10 @@ export function BriefView({ view }: { view: ChatTaskView }) {
   const brief = view.task.brief;
   if (!brief) return null;
   const risky = brief.assumptions.filter((a) => a.risky);
+  const criteria = [
+    ...brief.doneWhen.map((c) => ({ ...c, mine: false })),
+    ...view.criteria.map((text, i) => ({ id: `mine-${i}`, text, locked: true, mine: true })),
+  ];
   const safe = brief.assumptions.filter((a) => !a.risky);
   const env = view.envelope;
   const paths = (access: string) =>
@@ -232,14 +243,14 @@ export function BriefView({ view }: { view: ChatTaskView }) {
 
       <section className="flex flex-col gap-sm">
         <SectionTitle aside={view.unmarked.length ? `${view.unmarked.length} to confirm` : "all confirmed"}>Assumptions</SectionTitle>
-        <ul className="flex flex-col gap-xs">
+        <ul className="flex flex-col gap-sm">
           {risky.map((a) =>
             view.rejected.has(a.id) ? <SafeAssumption key={a.id} view={view} a={a} /> : <AssumptionState key={a.id} view={view} a={a} />,
           )}
         </ul>
         {safe.length > 0 && (
-          <div className="flex flex-col gap-xs">
-            <span className="text-footnote text-muted">Checked or reversible</span>
+          <div className="mt-xs flex flex-col gap-xs">
+            <span className="text-footnote text-muted">No need to confirm: checked in code or easy to undo</span>
             <ul className="flex flex-col gap-xs">
               {safe.map((a) => (
                 <SafeAssumption key={a.id} view={view} a={a} />
@@ -254,37 +265,52 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         <ul className="flex flex-col gap-xs">
           {brief.boundaries.map((b) => (
             <li key={b} className="flex items-start gap-sm text-body text-secondary">
-              <span className="mt-[5px] flex">
-                <TaskDot state="ahead" />
-              </span>
+              <Bullet />
               <span>
                 <Inline text={b} />
               </span>
             </li>
           ))}
         </ul>
-        <p className="text-footnote text-muted">
-          <Inline
-            text={[
-              paths("write") && `Your limits: I edit ${paths("write")}`,
-              paths("read") && `read only ${paths("read")}`,
-              paths("never") && `don't touch ${paths("never")}`,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          />
-        </p>
+        {/* The envelope's territory, one access level per row, so paths are readable and never wrap alone. */}
+        <dl className="grid grid-cols-[max-content_1fr] items-baseline gap-x-md gap-y-0.5">
+          {(
+            [
+              ["write", "Edits"],
+              ["read", "Read only"],
+              ["never", "Won't touch"],
+            ] as const
+          ).map(
+            ([access, label]) =>
+              paths(access) && (
+                <div key={access} className="contents">
+                  <dt className="text-footnote text-muted">{label}</dt>
+                  <dd className="text-body text-secondary">
+                    <Inline text={paths(access)} />
+                  </dd>
+                </div>
+              ),
+          )}
+        </dl>
       </section>
 
       <section className="flex flex-col gap-sm">
-        <SectionTitle>Done when</SectionTitle>
+        <SectionTitle
+          aside={
+            <Hint text="I check these at the end and mark each one with its proof">
+              0 of {criteria.length} met
+            </Hint>
+          }
+        >
+          Done when
+        </SectionTitle>
         <ul className="flex flex-col gap-xs">
-          {[
-            ...brief.doneWhen.map((c) => ({ ...c, mine: false })),
-            ...view.criteria.map((text, i) => ({ id: `mine-${i}`, text, locked: true, mine: true })),
-          ].map((c) => (
+          {criteria.map((c) => (
             <li key={c.id} className="flex items-start gap-sm text-body text-primary">
-              <span aria-hidden="true" className="mt-[4px] block size-3 shrink-0 rounded-[3px] border border-alpha-5" />
+              {/* Not met yet: the plan's "ahead" ring, which turns into a mark once a check meets it. A ring, not a box: nobody ticks these by hand. */}
+              <span className="mt-[5px] flex">
+                <TaskDot state="ahead" />
+              </span>
               {/* The lock sits right after its criterion, not at the far edge of the pane. */}
               <span className="min-w-0">
                 <Inline text={c.text} />
@@ -798,7 +824,8 @@ function EscalationCard({ view, setTab }: { view: ChatTaskView; setTab: (t: Task
 }
 
 /**
- * A question in the feed is just what the agent asked: the text, and once answered, the answer.
+ * A question in the feed is what the agent asked, set apart from the message with its Blocking / Can wait tag;
+ * once answered, the answer.
  * It is answered in the dock over the composer, one question after another, like Claude asks.
  */
 function QuestionLine({ chatId, questionId }: { chatId: string; questionId: string }) {
@@ -807,8 +834,11 @@ function QuestionLine({ chatId, questionId }: { chatId: string; questionId: stri
   const question = task?.stages.flatMap((st) => st.steps).find((p) => p.question?.id === questionId)?.question;
   if (!task || !question) return null;
   const picked = answers[answerKey(task.id, question.id)];
+  // Set apart from the message: a rail and the same Blocking / Can wait tag as the dock. Clay only while it blocks you.
+  const blocks = question.blocking && !picked;
   return (
-    <div className="not-prose flex flex-col gap-0.5">
+    <div className={cx("not-prose my-md flex flex-col gap-0.5 border-s-2 ps-md", blocks ? "border-clay" : "border-alpha-3")}>
+      <span className={cx("text-footnote", blocks ? "text-clay" : "text-muted")}>{question.blocking ? "Blocking" : "Can wait"}</span>
       <p className="text-body font-medium text-primary">{question.text}</p>
       {picked && (
         <p className="flex flex-wrap items-center gap-x-xs text-footnote text-muted">

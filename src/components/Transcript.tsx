@@ -172,12 +172,7 @@ function BlockView({ block }: { block: Block }) {
     case "escalation-card":
     case "edit-note":
     case "question":
-      // Task cards are built with text-body; in the feed they match the message text (prose size), so the token is remapped here.
-      return (
-        <div className="contents [--cds-font-size-body:var(--cds-font-size-prose)] [--cds-leading-body:var(--cds-leading-prose)]">
-          <TaskBlock block={block} />
-        </div>
-      );
+      return <TaskBlock block={block} />;
   }
 }
 
@@ -290,7 +285,9 @@ function MessageActions({ time }: { time?: string }) {
 /** Chat transcript: user bubbles, assistant turns with status, prose answer and actions. */
 export function Transcript({ turns, live }: { turns: Turn[]; live?: LiveStatus }) {
   return (
-    <div className="flex flex-col gap-lg pt-lg pb-xl">
+    // Everything in the feed (status rows, file cards, task cards) is built with text-body; here it reads at the
+    // message size, so the body token maps to the prose size for the whole feed. Footnotes stay 12px.
+    <div className="flex flex-col gap-lg pt-lg pb-xl [--cds-font-size-body:var(--cds-font-size-prose)] [--cds-leading-body:var(--cds-leading-prose)]">
       {turns.map((t, i) =>
         t.role === "user" ? (
           <UserMessage key={i} text={t.text} />

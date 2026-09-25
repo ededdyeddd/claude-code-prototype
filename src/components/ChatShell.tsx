@@ -107,31 +107,34 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
     </div>
     {panel && view && (
       <ChatTaskContext.Provider value={{ chatId: view.id, view, setTab: (t) => setPanel(t) }}>
-        <SidePane
-          id="task-pane"
-          title={
-            view.tabs.includes("brief") ? (
-              <Tabs
-                label="Brief and plan"
-                value={panel}
-                onChange={(t) => setPanel(t)}
-                items={(["brief", "plan"] as const).map((t) => ({
-                  value: t,
-                  label: t === "brief" ? "Brief" : "Plan",
-                  badge: view.changed.includes(t) && panel !== t ? <span aria-label="Changed" className="block size-[6px] rounded-full bg-muted" /> : undefined,
-                }))}
-              />
-            ) : (
-              "Plan"
-            )
-          }
-          width={Math.min(paneWidth, Math.max(SIDE_PANE.min, paneMax))}
-          maxWidth={paneMax}
-          onResize={setPaneWidth}
-          onClose={() => setPanel(null)}
-        >
-          {panel === "brief" ? <BriefView view={view} /> : <PlanView view={view} />}
-        </SidePane>
+        {/* Beside 14px messages the task pane reads at the same size: its text-body maps to the prose size. */}
+        <div className="contents [--cds-font-size-body:var(--cds-font-size-prose)] [--cds-leading-body:var(--cds-leading-prose)]">
+          <SidePane
+            id="task-pane"
+            title={
+              view.tabs.includes("brief") ? (
+                <Tabs
+                  label="Brief and plan"
+                  value={panel}
+                  onChange={(t) => setPanel(t)}
+                  items={(["brief", "plan"] as const).map((t) => ({
+                    value: t,
+                    label: t === "brief" ? "Brief" : "Plan",
+                    badge: view.changed.includes(t) && panel !== t ? <span aria-label="Changed" className="block size-[6px] rounded-full bg-muted" /> : undefined,
+                  }))}
+                />
+              ) : (
+                "Plan"
+              )
+            }
+            width={Math.min(paneWidth, Math.max(SIDE_PANE.min, paneMax))}
+            maxWidth={paneMax}
+            onResize={setPaneWidth}
+            onClose={() => setPanel(null)}
+          >
+            {panel === "brief" ? <BriefView view={view} /> : <PlanView view={view} />}
+          </SidePane>
+        </div>
       </ChatTaskContext.Provider>
     )}
     {review && view && (
