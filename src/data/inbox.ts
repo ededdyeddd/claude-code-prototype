@@ -1,77 +1,6 @@
-/** Mock data for the "Inbox" start screen: tasks, their plans and the agent's questions. */
-
-/** Status is shown by shape, not color: ✓ done, ● running, ○ ahead, ‖ waits for you, ◇ gate, ◆ your gate. */
-export type Status = "done" | "running" | "ahead" | "waiting" | "gate" | "myGate";
-
-/** One line of "what changes in the plan" under an answer option. */
-/**
- * What an option does to the plan. `step` is the plan step it touches: removed or changed for "remove"/"change";
- * for "add"/"gate" the new item goes right after it.
- */
-export type PlanDiff = {
-  kind: "add" | "change" | "remove" | "gate";
-  text: string;
-  step: string;
-  /** Estimate for a new step or gate: who does it and roughly what it costs. Gates are done by you ("you", no cost). */
-  agent?: string;
-  cost?: string;
-  time?: string;
-  /** Where the estimate comes from; defaults to the agent's own estimate. */
-  basis?: string;
-};
-
-export type Option = {
-  id: string;
-  label: string;
-  recommended?: boolean;
-  cost: string;
-  toAcceptance: string;
-  reversible: string;
-  forecastSource: string;
-  diff: PlanDiff[];
-};
-
-export type Question = {
-  id: string;
-  /** Blocking questions stop the task; the rest wait until the person has time. */
-  blocking: boolean;
-  text: string;
-  context?: string;
-  options: Option[];
-};
-
-export type PlanStep = { id: string; status: Status; title: string; note?: string; question?: Question };
-
-export type Stage = {
-  id: string;
-  title: string;
-  steps: PlanStep[];
-  /** Stop after the stage: `mine` — the person approves; otherwise an automatic check. `title` reads after "You approve …" / "Check: …". */
-  gate?: { title: string; mine?: boolean; status: "passed" | "ahead"; eta?: string; etaSource?: string };
-};
-
-export type AutoDecision = { id: string; text: string; why: string };
-
-export type Task = {
-  id: string;
-  title: string;
-  /** One or two sentences from the agent: what the task does and when it is done. */
-  brief: string;
-  project: string;
-  stage: string;
-  /** "Stage · what is happening" line. */
-  now: string;
-  waitingFor?: string;
-  /** Agent working on the task (named by its role), its model, and what the task has used so far. */
-  agent: string;
-  model: string;
-  spent: string;
-  tokens: string;
-  /** How the task reaches the person: pushed right away or in the 16:00 digest. */
-  delivery?: "push" | "digest";
-  stages: Stage[];
-  autoDecisions: AutoDecision[];
-};
+/** Inbox mocks: tasks with their plans and the agent's questions, and the away recap. Model: task.ts. */
+import type { AutoDecision, Stage, StepResult, StepWork, Task } from "./task";
+import { CHAT_TASK_LIST } from "./chatTasks";
 
 /** The away window. Decisions and spend are counted from TASKS, so the recap matches the lists behind it. */
 export const AWAY = {
@@ -90,7 +19,8 @@ export const AWAY = {
   alarm: { text: "GitHub token for storefront expired. Agents can't push.", action: "Reconnect" } as { text: string; action: string } | null,
 };
 
-export const TASKS: Task[] = [
+/** Inbox tasks as authored; step work and results come from STEP_WORK / STEP_RESULT below. */
+const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: AutoDecision[] })[] = [
   {
     id: "light-theme",
     agent: "ui-engineer",
@@ -98,7 +28,7 @@ export const TASKS: Task[] = [
     spent: "$1.80",
     tokens: "540K",
     title: "Светлая тема прототипа",
-    brief: "Добавляю в прототип светлую тему с переключателем в меню пользователя. Готово, когда все экраны в светлой теме совпадают с оригиналом.",
+    summary: "Добавляю в прототип светлую тему с переключателем в меню пользователя. Готово, когда все экраны в светлой теме совпадают с оригиналом.",
     project: "yango-prototype",
     stage: "Build",
     now: "Build · waiting on the palette",
@@ -166,7 +96,7 @@ export const TASKS: Task[] = [
     spent: "$4.20",
     tokens: "1.3M",
     title: "Новый чекаут",
-    brief: "Собираю новый чекаут для storefront: адрес, доставка, оплата картой и письмо о заказе. Готово, когда проходят критерии приёмки из docs/checkout.md.",
+    summary: "Собираю новый чекаут для storefront: адрес, доставка, оплата картой и письмо о заказе. Готово, когда проходят критерии приёмки из docs/checkout.md.",
     project: "storefront",
     stage: "Build",
     now: "Build · waiting on payments",
@@ -289,7 +219,7 @@ export const TASKS: Task[] = [
     spent: "$0.70",
     tokens: "230K",
     title: "Пуши о транзитах",
-    brief: "Делаю утренний пуш с прогнозом дня по самому сильному транзиту к натальной карте. Один пуш в день, в 8:00 по местному времени.",
+    summary: "Делаю утренний пуш с прогнозом дня по самому сильному транзиту к натальной карте. Один пуш в день, в 8:00 по местному времени.",
     project: "astrology-app",
     stage: "Build",
     now: "Build · waiting on the push service",
@@ -363,7 +293,7 @@ export const TASKS: Task[] = [
     spent: "$0.90",
     tokens: "410K",
     title: "Поиск по каталогу",
-    brief: "Расширяю поиск: искать по описанию и атрибутам и подсвечивать совпадения. Сейчас 18% запросов уходят в пустую выдачу.",
+    summary: "Расширяю поиск: искать по описанию и атрибутам и подсвечивать совпадения. Сейчас 18% запросов уходят в пустую выдачу.",
     project: "storefront",
     stage: "Brief",
     now: "Brief · waiting on ranking",
@@ -431,7 +361,7 @@ export const TASKS: Task[] = [
     spent: "$0.12",
     tokens: "95K",
     title: "Флакующие тесты эфемерид",
-    brief: "Три теста расчёта домов падают через раз из-за часового пояса CI. Чиню тесты, а пока предлагаю карантин.",
+    summary: "Три теста расчёта домов падают через раз из-за часового пояса CI. Чиню тесты, а пока предлагаю карантин.",
     project: "astrology-app",
     stage: "Triage",
     now: "Triage · waiting on quarantine",
@@ -487,7 +417,7 @@ export const TASKS: Task[] = [
     spent: "$2.10",
     tokens: "860K",
     title: "Локализация на испанский",
-    brief: "Перевожу витрину на испанский: интерфейс, карточки товаров и письма. В конце — вычитка носителем.",
+    summary: "Перевожу витрину на испанский: интерфейс, карточки товаров и письма. В конце — вычитка носителем.",
     project: "storefront",
     stage: "Build",
     now: "Build · translating product cards",
@@ -512,7 +442,7 @@ export const TASKS: Task[] = [
     spent: "$1.05",
     tokens: "320K",
     title: "PDF натальной карты",
-    brief: "Делаю экспорт натальной карты в PDF: круг карты, таблица позиций и расшифровки по разделам.",
+    summary: "Делаю экспорт натальной карты в PDF: круг карты, таблица позиций и расшифровки по разделам.",
     project: "astrology-app",
     stage: "Review",
     now: "Review · running e2e",
@@ -528,19 +458,8 @@ export const TASKS: Task[] = [
   },
 ];
 
-export const questionsOf = (t: Task) =>
-  t.stages.flatMap((s) => s.steps.map((p) => p.question).filter((q): q is Question => !!q));
-
 /** Who works on each step and what it costs: actual for done steps, estimate (~) for the rest. Key: `${taskId}:${stepId}`. */
-export type StepWork = {
-  agent: string;
-  cost: string;
-  time: string;
-  /** Where a forecast (~) comes from, e.g. "14 similar steps in storefront". Defaults to the agent's own estimate. */
-  basis?: string;
-};
-
-export const STEP_WORK: Record<string, StepWork> = {
+const STEP_WORK: Record<string, StepWork> = {
   "light-theme:a": { agent: "ui-engineer", cost: "$0.60", time: "18m" },
   "light-theme:b": { agent: "ui-engineer", cost: "$0.40", time: "9m" },
   "light-theme:p": { agent: "ui-engineer", cost: "~$1.20", time: "~40m", basis: "3 similar tasks" },
@@ -574,14 +493,8 @@ export const STEP_WORK: Record<string, StepWork> = {
   "chart-pdf:a": { agent: "ui-engineer", cost: "$1.05", time: "4m" },
 };
 
-/** What a finished step produced: the agent's summary, decisions it made on the way, and changed files. Key: `${taskId}:${stepId}`. */
-export type StepResult = {
-  summary: string;
-  decisions?: string[];
-  files?: { name: string; added: number; removed: number }[];
-};
-
-export const STEP_RESULT: Record<string, StepResult> = {
+/** What a finished step produced. Key: `${taskId}:${stepId}`. */
+const STEP_RESULT: Record<string, StepResult> = {
   "light-theme:a": {
     summary: "Добавил пункт «Theme» в меню пользователя: System, Light, Dark. Выбор сохраняется между сессиями и сразу применяется ко всем экранам.",
     decisions: ["По умолчанию тема системы — так в оригинале", "Сохраняю выбор в localStorage, как ширину панелей"],
@@ -633,3 +546,15 @@ export const STEP_RESULT: Record<string, StepResult> = {
     ],
   },
 };
+
+/** Every task: Inbox mocks with work and results folded into their steps, then the chat-level tasks. */
+export const TASKS: Task[] = [
+  ...INBOX_TASKS.map((t) => ({
+    ...t,
+    stages: t.stages.map((st) => ({
+      ...st,
+      steps: st.steps.map((p) => ({ ...p, work: STEP_WORK[`${t.id}:${p.id}`], result: STEP_RESULT[`${t.id}:${p.id}`] })),
+    })),
+  })),
+  ...CHAT_TASK_LIST,
+];

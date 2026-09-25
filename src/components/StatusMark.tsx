@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import type { Status } from "../data/inbox";
+import type { Status } from "../data/task";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 

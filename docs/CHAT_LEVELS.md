@@ -3,7 +3,7 @@
 Экран чата Claude Code остаётся основой и не заменяется. Элементы задачи (табы, бриф, план, гейты, прогнозы) появляются только тогда, когда задаче есть что в них показать. Всё начинается как обычный чат.
 
 - Маршруты демо: `/code?scene=s2` (S2), `/code/one-click-pay` (S3, таб через `?tab=brief|plan`), `/code/reorder-button` (уровень 1), `/code/loyalty` (эскалация).
-- Код: данные `src/data/chatTasks.ts`, состояние `src/data/chatTaskStore.ts`, экран `src/components/ChatTask.tsx`, конверт `src/components/EnvelopeChip.tsx`, сборка в `src/components/ChatPanel.tsx`.
+- Код: модель `src/data/task.ts` (общая с Inbox), моки `src/data/chatTasks.ts`, состояние `src/data/chatTaskStore.ts`, экран `src/components/ChatTask.tsx`, план `src/components/PlanPane.tsx` (общий с Inbox), конверт `src/components/EnvelopeChip.tsx`, сборка в `src/components/ChatPanel.tsx`.
 - Принципы Inbox (`docs/INBOX.md`, §1) действуют и здесь: прогноз подписан, терракота значит только «нужен ты», тише со временем.
 
 ---
@@ -45,7 +45,7 @@
 
 ### 2.3. S3 — гейт «Brief and plan» (сразу после отправки, уровень 3)
 
-- **Табы** «Chat · Brief · Plan» над лентой, открыт «Chat». У «Brief» — терракотовая точка с числом неотмеченных рискованных допущений. Таб, который изменила правка, получает серую точку до первого открытия.
+- **Табы** «Chat · Brief · Plan» над лентой, открыт «Chat». У «Brief» — терракотовая точка, пока есть неотмеченные рискованные допущения; их число — в полосе гейта. Таб, который изменила правка, получает серую точку до первого открытия.
 - **Статус справа от табов нейтральный:** «◆ Your gate · Brief and plan», после запуска — «● Build». Акцент — у точки на табе и полосы гейта, иначе один сигнал повторялся бы четыре раза.
 - **Ответ агента в ленте заканчивается карточкой**, а не брифом: «Put together a brief and plan · 1 assumption I can't check myself · Open brief».
 - **Полоса гейта над композером** видна из любого таба: «◆ Brief and plan · 1 assumption left to mark · [Pass the gate and start]». Кнопка неактивна, пока есть неотмеченные рискованные допущения; причина написана рядом и ведёт на бриф. Когда всё отмечено — вместо причины итог «≈ $5–9 of $12».
@@ -85,9 +85,10 @@
 
 | Файл | Что внутри |
 |---|---|
-| `src/data/chatTasks.ts` | Модель: `Level`, `Envelope` (+ `DEFAULT_ENVELOPE`), `Brief`, `Assumption`, `Criterion`, `Plan`/`Stage`/`PlanItem`/`Gate`, `Forecast`, `ChatEdit`, `ChatTask`; моки трёх сценариев и их переписки; `guessLevel()` для подсказки в S2; `planTotal()`, `money()` |
-| `src/data/chatTaskStore.ts` | Внешний стор (как `inboxStore`): отметки допущений, применённые правки, свои критерии, запуск, принятие, эскалация, сообщения сессии, изменённые табы, конверт на чат. `deriveTask()` вычисляет уровень, табы, неотмеченные допущения, `atGate`; `useChatTaskStatus()` — статус для сайдбара |
-| `src/components/ChatTask.tsx` | `TaskTabsBar`, `BriefView`, `PlanView`, `GateBar`, блоки ленты (`brief-card`, `result-card`, `escalation-card`, `edit-note`) через `TaskBlock`; `ChatTaskContext` даёт блокам задачу и переключение табов |
+| `src/data/task.ts` | Одна модель с Inbox: `Task` (+ `level`, `levelReason`, `brief`, `rules`, `edits`, `result`, `escalation`, `launched`), `Stage`, `PlanStep` (`work`: агент, цена «~$1–3», время необязательно, источник; `result`), `Gate` (`passed` / `current` / `ahead`), `Brief`, `ChatEdit`; `costRange()`, `money()`, `gateText()` |
+| `src/data/chatTasks.ts` | `Envelope` (+ `DEFAULT_ENVELOPE`); моки трёх задач как обычные `Task` (`CHAT_TASK_LIST` входит в `TASKS` Inbox) и их переписки; `guessLevel()` для подсказки в S2 |
+| `src/data/chatTaskStore.ts` | Внешний стор (как `inboxStore`): отметки допущений, применённые правки, свои критерии, запуск, принятие, эскалация, сообщения сессии, изменённые табы, конверт на чат. `deriveTask()` вычисляет уровень, табы, неотмеченные допущения, `atGate`, `escalationPending`, `resultPending`, правки плана (`planEdits`) и `liveTask()` — задачу как она есть сейчас (гейт пройден, шаг идёт, этап и «now» обновлены). Этим пользуются и Inbox (`inboxStore.taskStatus`), и чат |
+| `src/components/ChatTask.tsx` | `TaskTabsBar`, `BriefView`, `PlanView` (итог против конверта + общий `PlanPane`), `GateBar`, блоки ленты (`brief-card`, `result-card`, `escalation-card`, `edit-note`) через `TaskBlock`; `ChatTaskContext` даёт блокам задачу и переключение табов |
 | `src/components/EnvelopeChip.tsx` | Чип конверта и поповер |
 | `src/ui/Popover.tsx` | Новый примитив: панель в портале у контрола, закрывается кликом снаружи и Escape |
 | `src/ui/Tabs.tsx` | Получил `badge` у пункта (точка-счётчик, точка изменения) |
@@ -96,7 +97,9 @@
 
 **Состояние.** Всё вычисляется из стора: отметил допущение — меняются точка на табе, карточка в ленте, полоса гейта и статус в сайдбаре. Правки текстом в прототипе распознаются по ключевым словам (`ChatEdit.match`); на остальное агент отвечает нейтрально.
 
-**Статусы в сайдбаре.** Гейт ждёт — терракотовая точка (как Blocked в Inbox), результат уровня 1 ждёт принятия — серая точка, после запуска — серая пульсирующая.
+**Одна модель с Inbox.** Задача чата — обычная `Task`: в Inbox она в Blocked, пока ждёт гейт («your gate») или ответ на эскалацию («your decision»), после запуска — в Running с актуальным этапом. Панель Inbox рисует тот же `PlanPane`, что таб «Plan», с теми же правками («Removed») и гейтом «waiting for you · Open brief». Правки текстом попадают в план как `PlanDiff` типа `remove` — тем же механизмом, что предпросмотр ответов.
+
+**Статусы в сайдбаре** берутся из тех же групп Inbox (`taskState`): гейт ждёт — терракотовая точка, результат уровня 1 ждёт принятия — серая точка, после запуска — серая пульсирующая.
 
 ---
 
@@ -125,7 +128,7 @@
 
 ## 6. Открытые вопросы и что дальше
 
-- Задачи на гейте не попадают в список Inbox (только точка в сайдбаре): модель плана Inbox (`inbox.ts`) и чата (`chatTasks.ts`) пока разные. Следующий шаг — одна модель плана и `PlanPane` для обоих мест.
+- Чаты задач Inbox (уровня нет) пока без табов: их план по-прежнему открывается в Inbox. Следующий шаг — дать им «Chat · Plan» с тем же `PlanPane` и убрать «Answer in the plan».
 - Уровень 2 поддержан моделью и компонентами, но отдельного демо-чата нет.
 - Отправка в S2 для большой задачи ведёт в демо S3; обычный чат из S2 не создаётся.
 - Правки текстом распознаются по ключевым словам; «Fix…» у допущения план не перестраивает.

@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
-import { TASKS, questionsOf, type Task } from "./inbox";
+import { TASKS } from "./inbox";
+import { questionsOf, type Task } from "./task";
+import { EMPTY, deriveTask, useChatStates, type TaskState } from "./chatTaskStore";
 
 /** Attention mode: what is allowed to break through to the person. */
 export type Attention = "available" | "busy" | "dnd";
@@ -41,23 +43,49 @@ export function openQuestions(task: Task, answers: Record<string, string>) {
   return questionsOf(task).filter((q) => !answers[answerKey(task.id, q.id)]);
 }
 
+/**
+ * Where a task stands for the person. Blocked: the agent stopped and waits (a blocking question, a gate of
+ * the task chat, an escalation offer). Can wait: questions only, the agent keeps going. Result: a small task's
+ * result to accept (the sidebar shows it; the Inbox list does not). None: a small task, not in the Inbox.
+ */
+export function taskStatus(t: Task, answers: Record<string, string>, chat: TaskState = EMPTY) {
+  const open = openQuestions(t, answers);
+  const d = deriveTask(t, chat);
+  if (open.some((q) => q.blocking) || d.atGate || d.escalationPending) return "blocked" as const;
+  if (open.length > 0) return "canWait" as const;
+  if (d.resultPending) return "result" as const;
+  if (d.level < 2) return d.escalation === "declined" ? ("running" as const) : ("none" as const);
+  return "running" as const;
+}
+
 export function useInbox() {
   const s = useSyncExternalStore(
     (l) => (listeners.add(l), () => listeners.delete(l)),
     () => state
   );
-  // Blocked: the agent stopped and waits for an answer. Can wait: questions only, the agent keeps going.
-  const blocked = TASKS.filter((t) => openQuestions(t, s.answers).some((q) => q.blocking));
-  const canWait = TASKS.filter((t) => !blocked.includes(t) && openQuestions(t, s.answers).length > 0);
+  const chats = useChatStates();
+  const status = new Map(TASKS.map((t) => [t.id, taskStatus(t, s.answers, chats[t.id])]));
+  // Lists show tasks as they stand now (a passed gate, a started stage).
+  const live = TASKS.map((t) => (chats[t.id] ? deriveTask(t, chats[t.id]).live : t));
+  const of = (k: string) => live.filter((t) => status.get(t.id) === k);
+  const blocked = of("blocked");
+  const canWait = of("canWait");
   const needsYou = [...blocked, ...canWait];
-  const running = TASKS.filter((t) => !needsYou.includes(t));
-  return { ...s, blocked, canWait, needsYou, running };
+  // Small tasks run too, but only tasks with a plan are listed.
+  const running = live.filter((t) => status.get(t.id) === "running" && deriveTask(t, chats[t.id]).level >= 2);
+  const results = of("result");
+  const smallRunning = live.filter((t) => status.get(t.id) === "running" && deriveTask(t, chats[t.id]).level < 2);
+  return { ...s, chats, blocked, canWait, needsYou, running, results, smallRunning };
 }
 
 /** Live state of a task chat for the sidebar and the chat view; undefined for chats that are not tasks. */
-export function taskState(id: string, n: { blocked: Task[]; canWait: Task[]; running: Task[] }) {
+export function taskState(
+  id: string,
+  n: { blocked: Task[]; canWait: Task[]; running: Task[]; results: Task[]; smallRunning: Task[] },
+) {
   if (n.blocked.some((t) => t.id === id)) return { waiting: "blocked" as const, running: false };
   if (n.canWait.some((t) => t.id === id)) return { waiting: "canWait" as const, running: true };
-  if (n.running.some((t) => t.id === id)) return { waiting: undefined, running: true };
+  if (n.results.some((t) => t.id === id)) return { waiting: "result" as const, running: false };
+  if (n.running.some((t) => t.id === id) || n.smallRunning.some((t) => t.id === id)) return { waiting: undefined, running: true };
   return undefined;
 }

@@ -1,7 +1,9 @@
 import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
 import type { Block } from "../data/transcripts";
-import { money, planTotal, type Assumption, type Gate, type PlanItem, type Stage } from "../data/chatTasks";
+import { costRange, currentGate, gateText, money, type Assumption } from "../data/task";
+import { useInbox } from "../data/inboxStore";
+import { PlanPane } from "./PlanPane";
 import {
   accept,
   addCriterion,
@@ -31,36 +33,18 @@ export const ChatTaskContext = createContext<{ view?: ChatTaskView; setTab: (t: 
 
 /* ------------------------------------------------------------ Derived plan */
 
-type LiveItem = PlanItem & { removed: boolean };
-type LiveStage = Omit<Stage, "items"> & { items: LiveItem[] };
-
-/** The plan as it stands now: edits applied, and after launch the gate passed and the next item running. */
-function livePlan(view: ChatTaskView): LiveStage[] {
-  const plan = view.task.plan;
-  if (!plan) return [];
-  let started = false;
-  return plan.stages.map((st) => ({
-    ...st,
-    items: st.items.map((i) => {
-      const removed = view.removed.has(i.id);
-      let state = i.state;
-      if (view.launched && !started && state === "ahead" && !removed) {
-        state = "running";
-        started = true;
-      }
-      return { ...i, state, removed };
-    }),
-    gate: st.gate && { ...st.gate, state: view.launched && st.gate.state === "current" ? "passed" : st.gate.state },
-  }));
-}
-
-function currentGate(view: ChatTaskView): Gate | undefined {
-  return view.task.plan?.stages.find((s) => s.gate?.state === "current")?.gate;
-}
-
+/** What is left to spend: forecasts of the steps not done and not removed, against the envelope limit. */
 function totals(view: ChatTaskView) {
-  const t = view.task.plan ? planTotal(view.task.plan, view.removed) : { min: 0, max: 0 };
-  return { ...t, over: t.max > view.envelope.limit };
+  let min = 0;
+  let max = 0;
+  for (const st of view.live.stages)
+    for (const p of st.steps) {
+      if (p.status === "done" || !p.work || view.removed.has(p.id)) continue;
+      const r = costRange(p.work.cost);
+      min += r.min;
+      max += r.max;
+    }
+  return { min, max, over: max > view.envelope.limit };
 }
 
 /* ---------------------------------------------------------------- Tab bar */
@@ -79,20 +63,18 @@ function ChangedDot() {
 
 /** "Chat · Brief · Plan" above the feed, and where the task stands (neutral: the gate bar carries the accent). */
 export function TaskTabsBar({ view, tab, onTab }: { view: ChatTaskView; tab: TaskTab; onTab: (t: TaskTab) => void }) {
-  const gate = currentGate(view);
-  const running = livePlan(view)
-    .flatMap((s) => s.items.map((i) => ({ stage: s.title, i })))
-    .find((x) => x.i.state === "running");
+  const gate = currentGate(view.live);
+  const running = view.live.stages.find((st) => st.steps.some((p) => p.status === "running"));
   const status =
     view.atGate && gate ? (
       <>
         <StatusMark status="myGate" />
-        Your gate · {gate.title}
+        {gateText(gate)}
       </>
     ) : running ? (
       <>
         <StatusMark status="running" />
-        {running.stage}
+        {running.title}
       </>
     ) : null;
   return (
@@ -358,93 +340,31 @@ export function BriefView({ view }: { view: ChatTaskView }) {
 
 /* ------------------------------------------------------------------- Plan */
 
-function ForecastText({ item }: { item: LiveItem }) {
-  if (item.state === "done") return <span className="text-muted">${item.spent?.toFixed(2)}</span>;
-  if (!item.forecast) return null;
-  return (
-    <Hint text={`Forecast · ${item.forecast.basis}`}>
-      ≈ {money(item.forecast.min, item.forecast.max)}
-    </Hint>
-  );
-}
-
-function GateRow({ gate }: { gate: Gate }) {
-  const mine = gate.kind === "mine";
-  return (
-    <li className="flex items-center gap-sm py-1">
-      <span className="flex w-3 justify-center">
-        {gate.state === "passed" ? <StatusMark status="done" /> : <StatusMark status={mine ? "myGate" : "gate"} className={gate.state === "current" ? "!text-clay" : undefined} />}
-      </span>
-      <span className={cx("min-w-0 flex-1 text-body", gate.state === "ahead" ? "text-secondary" : "text-primary")}>
-        {mine ? "Your gate" : "Automatic gate"} · {gate.title}
-      </span>
-      <span className={cx("shrink-0 text-footnote", gate.state === "current" ? "text-clay" : "text-muted")}>
-        {gate.state === "passed" ? "passed" : gate.state === "current" ? "waiting for you" : mine ? "you approve" : "a check I can't skip"}
-      </span>
-    </li>
-  );
-}
-
-/** "Plan" tab: total against the envelope, stages with items and gates, plan rules. */
+/** "Plan" tab: the same plan as in the Inbox pane, headed by what is left against the envelope. */
 export function PlanView({ view }: { view: ChatTaskView }) {
-  const plan = view.task.plan;
-  if (!plan) return null;
-  const stages = livePlan(view);
+  const { answers } = useInbox();
   const t = totals(view);
-  const spent = stages.flatMap((s) => s.items).reduce((sum, i) => sum + (i.state === "done" ? i.spent ?? 0 : 0), 0);
-  const titled = view.level >= 3;
-
+  const spent = view.live.stages.flatMap((st) => st.steps).reduce((n, p) => n + (p.status === "done" && p.work ? costRange(p.work.cost).min : 0), 0);
   return (
-    <div className={cx("flex flex-col gap-xl pt-lg pb-xl", CODE)}>
-      <header className="flex flex-col gap-0.5">
-        <p className="text-heading text-primary">
-          ≈ {money(t.min, t.max)} <span className="text-secondary">of the ${view.envelope.limit} limit</span>
-        </p>
-        <p className="text-footnote text-muted">
-          Forecast for what is left{spent > 0 && ` · $${spent.toFixed(2)} spent`}
-        </p>
-        {t.over && (
-          <p className="pt-xs text-footnote text-clay">
-            Doesn't fit the envelope: up to ${t.max} against ${view.envelope.limit}. Raise the limit in the chip under the field, or cut scope.
-          </p>
-        )}
-      </header>
-
-      {stages.map((st, n) => (
-        <section key={st.id} className="flex flex-col gap-xs">
-          {titled && (
-            <h2 className="text-footnote text-muted">
-              {n + 1} · {st.title}
-            </h2>
-          )}
-          <ul className="flex flex-col">
-            {st.items.map((i) => (
-              <li key={i.id} className="flex items-baseline gap-sm py-1">
-                <span className="flex translate-y-[2px]">
-                  <TaskDot state={i.state === "running" ? "running" : i.state === "done" ? "done" : "ahead"} />
-                </span>
-                <span className={cx("min-w-0 flex-1 text-body", i.removed ? "text-muted line-through" : i.state === "ahead" ? "text-secondary" : "text-primary")}>
-                  <Inline text={i.title} />
-                  {i.removed && <Chip>Removed</Chip>}
-                </span>
-                <span className={cx("shrink-0 text-footnote tabular-nums text-secondary", i.removed && "line-through text-muted")}>
-                  <ForecastText item={i} />
-                </span>
-              </li>
-            ))}
-            {st.gate && <GateRow gate={st.gate} />}
-          </ul>
-        </section>
-      ))}
-
-      {plan.rules && (
-        <section className="flex flex-col gap-0.5 border-t border-alpha-2 pt-md text-footnote">
-          <span className="text-muted">Plan rules</span>
-          <span className="text-secondary">
-            I change myself: {plan.rules.self}. I'll ask about: {plan.rules.ask}.
-          </span>
-        </section>
-      )}
+    <div className={cx("-mx-[var(--cds-gap-lg)] pt-md [--plan-surface:var(--cds-surface-1)]", CODE)}>
+      <PlanPane
+        task={view.live}
+        answers={answers}
+        edits={view.planEdits}
+        header={
+          <header className="flex flex-col gap-0.5">
+            <p className="text-heading text-primary">
+              ≈ {money(t.min, t.max)} <span className="text-secondary">of the ${view.envelope.limit} limit</span>
+            </p>
+            <p className="text-footnote text-muted">Forecast for what is left{spent > 0 && ` · $${spent.toFixed(2)} spent`}</p>
+            {t.over && (
+              <p className="pt-xs text-footnote text-clay">
+                Doesn't fit the envelope: up to ${t.max} against ${view.envelope.limit}. Raise the limit in the chip under the field, or cut scope.
+              </p>
+            )}
+          </header>
+        }
+      />
     </div>
   );
 }
@@ -453,14 +373,14 @@ export function PlanView({ view }: { view: ChatTaskView }) {
 
 /** Pinned over the composer while a gate waits; visible from every tab. */
 export function GateBar({ view, onOpenBrief }: { view: ChatTaskView; onOpenBrief: () => void }) {
-  const gate = currentGate(view);
+  const gate = currentGate(view.live);
   if (!view.atGate || !gate) return null;
   const left = view.unmarked.length;
   const t = totals(view);
   return (
     <div className="mb-xs flex h-[var(--cds-h-control--lg)] items-center gap-sm rounded-lg bg-alpha-1 ps-md pe-xs text-body">
       <StatusMark status="myGate" className="!text-clay" />
-      <span className="shrink-0 text-primary">{gate.title}</span>
+      <span className="shrink-0 text-primary">{gateText(gate)}</span>
       {left > 0 ? (
         <button type="button" onClick={onOpenBrief} className="min-w-0 truncate rounded-sm text-clay outline-none hover:underline focus-visible:shadow-focus">
           {left === 1 ? "1 assumption left to mark" : `${left} assumptions left to mark`}
@@ -542,7 +462,7 @@ function ResultCard({ view }: { view: ChatTaskView }) {
 function EscalationCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) => void }) {
   const esc = view.task.escalation;
   if (!esc) return null;
-  const stages = view.task.plan?.stages.length ?? 0;
+  const stages = view.task.stages.length;
   return (
     <div className={CARD}>
       {!view.escalation && <span className="text-footnote text-clay">Bigger than it looked</span>}

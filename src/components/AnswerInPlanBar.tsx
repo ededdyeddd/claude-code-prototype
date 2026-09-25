@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { TASKS, questionsOf } from "../data/inbox";
+import { TASKS } from "../data/inbox";
+import { questionsOf } from "../data/task";
 import { answerKey, useInbox } from "../data/inboxStore";
 import { Button } from "../ui";
 import { TaskDot } from "./StatusMark";

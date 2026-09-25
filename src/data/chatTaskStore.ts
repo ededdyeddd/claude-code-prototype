@@ -1,13 +1,14 @@
 import { useSyncExternalStore } from "react";
 import type { Turn } from "./transcripts";
-import { CHAT_TASKS, DEFAULT_ENVELOPE, type ChatTask, type Envelope, type Level } from "./chatTasks";
+import { CHAT_TASKS, DEFAULT_ENVELOPE, type Envelope } from "./chatTasks";
+import { currentGate, type Level, type PlanDiff, type Task } from "./task";
 
 /** A risky assumption the person marked: right, or fixed with their words. */
 export type Mark = { ok: true } | { ok: false; note: string };
 
 export type TaskTab = "chat" | "brief" | "plan";
 
-type TaskState = {
+export type TaskState = {
   marks: Record<string, Mark>;
   /** Chat edits applied (ChatEdit ids). */
   edits: string[];
@@ -25,7 +26,7 @@ type TaskState = {
 
 type State = Record<string, TaskState>;
 
-const EMPTY: TaskState = { marks: {}, edits: [], criteria: [], launched: false, accepted: false, turns: [], changed: [] };
+export const EMPTY: TaskState = { marks: {}, edits: [], criteria: [], launched: false, accepted: false, turns: [], changed: [] };
 
 // Shared by the chat, its tabs and the sidebar: a small external store, like inboxStore.
 let state: State = {};
@@ -119,44 +120,74 @@ function useStore() {
   );
 }
 
-/** Everything the chat needs about its task, derived from the mock and the session state. */
-export function deriveTask(id: string, task: ChatTask, s: TaskState = state[id] ?? EMPTY) {
+/** Session state of every task chat, for the Inbox groups and the sidebar. */
+export function useChatStates() {
+  return useStore();
+}
+
+/**
+ * The task as it stands now, for the plan wherever it is shown (Inbox pane, chat tab):
+ * after launch the current gate is passed and the first step ahead is running.
+ */
+export function liveTask(task: Task, s: TaskState = EMPTY): Task {
+  if (!s.launched) return task;
+  let started = false;
+  const stages = task.stages.map((st) => ({
+      ...st,
+      steps: st.steps.map((p) => {
+        if (started || p.status !== "ahead" || (task.edits ?? []).some((e) => s.edits.includes(e.id) && e.removes?.includes(p.id))) return p;
+        started = true;
+        return { ...p, status: "running" as const };
+      }),
+      gate: st.gate?.status === "current" ? { ...st.gate, status: "passed" as const } : st.gate,
+  }));
+  // The Inbox row reads where the task is now: the stage and step that started, no longer waiting.
+  const stage = stages.find((st) => st.steps.some((p) => p.status === "running"));
+  const step = stage?.steps.find((p) => p.status === "running");
+  return stage && step ? { ...task, stages, stage: stage.title, now: `${stage.title} · ${step.title}`, waitingFor: undefined } : { ...task, stages };
+}
+
+/** Everything about a task's session, derived from the mock and the session state. */
+export function deriveTask(task: Task, s: TaskState = EMPTY) {
   const applied = (task.edits ?? []).filter((e) => s.edits.includes(e.id));
   const removed = new Set(applied.flatMap((e) => e.removes ?? []));
   const rejected = new Map(applied.flatMap((e) => (e.rejects ? [[e.rejects.assumption, e.rejects.note] as const] : [])));
+  // Chat edits reach the plan the same way answers do: as plan changes (struck through, "Removed").
+  const planEdits: PlanDiff[] = applied.flatMap((e) => (e.removes ?? []).map((step) => ({ kind: "remove" as const, step, text: e.reply })));
   const risky = (task.brief?.assumptions ?? []).filter((a) => a.risky && !rejected.has(a.id));
   const unmarked = risky.filter((a) => !s.marks[a.id]);
-  // Level goes up only with the person's consent; it never goes down on its own.
-  const level: Level = s.escalation === "agreed" && task.escalation ? task.escalation.to : task.level;
-  const tabs: TaskTab[] = level >= 3 ? ["chat", "brief", "plan"] : level === 2 ? ["chat", "plan"] : [];
+  // Level goes up only with the person's consent; it never goes down on its own. Inbox tasks without a level are full tasks.
+  const level: Level = s.escalation === "agreed" && task.escalation ? task.escalation.to : task.level ?? 3;
+  const tabs: TaskTab[] = task.level === undefined ? [] : level >= 3 ? ["chat", "brief", "plan"] : level === 2 ? ["chat", "plan"] : [];
   // A gate waits for the person until they pass it: the brief gate right away, the escalation's after consent.
-  const atGate = level >= 2 && !s.launched && !!task.plan;
-  return { ...s, level, tabs, removed, rejected, risky, unmarked, atGate, envelope: s.envelope ?? DEFAULT_ENVELOPE };
+  const atGate = task.level !== undefined && level >= 2 && !s.launched && currentGate(task)?.mine === true;
+  const escalationPending = !!task.escalation && !s.escalation;
+  const resultPending = level === 1 && !!task.result && !s.accepted;
+  return {
+    ...s,
+    live: liveTask(task, s),
+    level,
+    tabs,
+    removed,
+    rejected,
+    planEdits,
+    risky,
+    unmarked,
+    atGate,
+    escalationPending,
+    resultPending,
+    envelope: s.envelope ?? DEFAULT_ENVELOPE,
+  };
 }
 
 export function useChatTask(id: string | undefined) {
   const s = useStore();
   const task = id ? CHAT_TASKS[id] : undefined;
   if (!id || !task) return undefined;
-  return { id, task, ...deriveTask(id, task, s[id]) };
+  return { id, task, ...deriveTask(task, s[id]) };
 }
 
 export type ChatTaskView = NonNullable<ReturnType<typeof useChatTask>>;
-
-/** Sidebar status of a task chat: blocked while a gate waits, "done" dot while a result waits for acceptance, running once started. */
-export function useChatTaskStatus() {
-  const s = useStore();
-  return (id: string): "blocked" | "result" | "running" | undefined => {
-    const task = CHAT_TASKS[id];
-    if (!task) return undefined;
-    const d = deriveTask(id, task, s[id]);
-    if (d.atGate) return "blocked";
-    if (task.level === 1 && task.result && !d.accepted) return "result";
-    if (task.escalation && !d.escalation) return "blocked";
-    if (d.launched || d.escalation === "declined") return "running";
-    return undefined;
-  };
-}
 
 /** Envelope of the new chat on /code (S2), before a task exists. */
 export const NEW_CHAT = "new";

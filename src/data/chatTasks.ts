@@ -1,13 +1,10 @@
 /**
  * Chat levels: the chat screen stays the base, and task UI (tabs, brief, plan, gates, forecasts)
  * appears only when a task has something to show in it. See docs/CHAT_LEVELS.md.
- *
- * 0 = plain chat, 1 = small task (result card), 2 = task (Chat · Plan, flat plan, one "Acceptance" gate),
- * 3 = large task (Chat · Brief · Plan, stages and gates).
+ * The tasks here use the same model as the Inbox (task.ts) and are listed there too.
  */
 import type { Turn } from "./transcripts";
-
-export type Level = 0 | 1 | 2 | 3;
+import type { Level, Task } from "./task";
 
 /* ---------------------------------------------------------------- Envelope */
 
@@ -53,128 +50,30 @@ export function envelopeScope(e: Envelope) {
   return writes.length > 1 ? `${writes[0]} +${writes.length - 1}` : writes[0];
 }
 
-/* ------------------------------------------------------------------- Brief */
-
-export type Assumption = {
-  id: string;
-  text: string;
-  /** Risky: the agent cannot check it and asks the person to mark it (right / fix). Safe ones are just listed. */
-  risky?: boolean;
-  /** Why it is risky, shown under the text. */
-  why?: string;
-};
-
-export type Criterion = {
-  id: string;
-  text: string;
-  /** Protected: the agent cannot weaken it (tests, consent). Criteria the person adds are protected too. */
-  locked?: boolean;
-};
-
-export type Brief = {
-  /** "How I understood the task", 2–3 lines in the agent's words. */
-  understanding: string;
-  assumptions: Assumption[];
-  /** "What I won't touch": the envelope territory in words. */
-  boundaries: string[];
-  doneWhen: Criterion[];
-};
-
-/* -------------------------------------------------------------------- Plan */
-
-/** Forecast with its source: "$1–3 · 23 similar tasks", or "size M · agent's estimate" without history. */
-export type Forecast = { min: number; max: number; basis: string };
-
-export type PlanItem = {
-  id: string;
-  title: string;
-  /** Plan state: done (✓), running (●), ahead (○). */
-  state: "done" | "running" | "ahead";
-  forecast?: Forecast;
-  /** Actual cost of a done item. */
-  spent?: number;
-  /** Removed by an edit of the person: struck through, not counted. */
-  removedBy?: string;
-};
-
-export type Gate = {
-  id: string;
-  title: string;
-  /** ◆ yours (the person approves), ◇ automatic (a check the agent cannot skip). */
-  kind: "mine" | "auto";
-  state: "passed" | "current" | "ahead";
-};
-
-export type Stage = { id: string; title: string; items: PlanItem[]; gate?: Gate };
-
-export type Plan = {
-  /** Level 3 has stages; level 2 uses one untitled stage (a flat list). */
-  stages: Stage[];
-  rules?: { self: string; ask: string };
-};
-
-/* -------------------------------------------------------------- Chat edits */
-
-/**
- * A text edit of the brief or plan sent in the chat ("Apple Pay не нужен").
- * Mock: matched by keywords; applying it rejects an assumption and/or removes plan items.
- */
-export type ChatEdit = {
-  id: string;
-  match: RegExp;
-  /** Assumption it rejects, with the person's correction shown under the struck text. */
-  rejects?: { assumption: string; note: string };
-  removes?: string[];
-  /** The agent's one-line reply in the feed. */
-  reply: string;
-};
-
-/* -------------------------------------------------------- Result (level 1) */
-
-export type ResultClaim = { text: string; evidence: string };
-
-/* --------------------------------------------------------------- Scenario */
-
-export type ChatTask = {
-  level: Level;
-  /** Why the task got its level (size from similar tasks, risk). Shown in a tooltip next to the tabs. */
-  levelReason?: string;
-  brief?: Brief;
-  plan?: Plan;
-  edits?: ChatEdit[];
-  /** Level 1: the result card at the end of the chat. */
-  result?: { claims: ResultClaim[] };
-  /** Escalation offered in the feed: level jumps to `to` once the person agrees. */
-  escalation?: { to: Level; text: string; afterAgree: Turn[]; afterDecline: string };
-  /** Agent message after the gate is passed. */
-  launched?: Turn;
-};
-
-/** Sum of forecasts of the items still in the plan and not done. */
-export function planTotal(plan: Plan, removed: Set<string>) {
-  let min = 0;
-  let max = 0;
-  for (const s of plan.stages)
-    for (const i of s.items) {
-      if (removed.has(i.id) || !i.forecast || i.state === "done") continue;
-      min += i.forecast.min;
-      max += i.forecast.max;
-    }
-  return { min, max };
-}
-
-export const money = (min: number, max: number) => (min === max ? `$${min}` : `$${min}–${max}`);
-
 /* ------------------------------------------------------------------- Mocks */
 
-const READ = "\uE06C";
-const RUN = "\uE051";
-const SEARCH = "\uE0D3";
+const READ = "";
+const RUN = "";
+const SEARCH = "";
 
-/** S3: a large task (payments) right after the first message: gate "Brief and plan". */
-const ONE_CLICK: ChatTask = {
+const RULES = { self: "subtasks and their order within a stage", ask: "a new stage or gate, scope, anything over +$2" };
+
+/** S3: a large task (payments) right after the first message: the gate on the brief and plan. */
+const ONE_CLICK: Task = {
+  id: "one-click-pay",
+  title: "Оплата в один клик",
+  summary: "Повторный заказ — одним нажатием сохранённой картой. Готово, когда 3-D Secure проходит в тесте, а без согласия карта не сохраняется.",
+  project: "storefront",
+  stage: "Scope",
+  now: "Scope · waiting on the brief",
+  waitingFor: "1m",
+  agent: "payments-engineer",
+  model: "Opus 5.5",
+  spent: "$0.70",
+  tokens: "210K",
+  delivery: "push",
   level: 3,
-  levelReason: "Payments: risky zone · 4 modules, like 23 similar tasks",
+  levelReason: "payments are a risky zone, and 23 similar tasks touched 4 modules",
   brief: {
     understanding:
       "Покупатель, который уже платил, оплачивает следующий заказ в один клик: сохранённая карта выбрана заранее, CVC не спрашиваем, 3-D Secure — только когда требует банк. Карты хранит Stripe, у нас — токен и последние 4 цифры.",
@@ -201,40 +100,36 @@ const ONE_CLICK: ChatTask = {
       { id: "tests", text: "Все тесты чекаута зелёные, ни один не пропущен", locked: true },
     ],
   },
-  plan: {
-    stages: [
-      {
-        id: "scope",
-        title: "Scope",
-        items: [
-          { id: "read", title: "Прочитать чекаут и интеграцию со Stripe", state: "done", spent: 0.4 },
-          { id: "brief", title: "Бриф и план", state: "done", spent: 0.3 },
-        ],
-        gate: { id: "g-brief", title: "Brief and plan", kind: "mine", state: "current" },
-      },
-      {
-        id: "build",
-        title: "Build",
-        items: [
-          { id: "save-card", title: "Сохранение карты в Stripe Customer по согласию", state: "ahead", forecast: { min: 1, max: 3, basis: "23 similar tasks" } },
-          { id: "pick-card", title: "Выбор сохранённой карты в чекауте", state: "ahead", forecast: { min: 2, max: 3, basis: "14 similar tasks" } },
-          { id: "3ds", title: "3-D Secure для повторной оплаты", state: "ahead", forecast: { min: 1, max: 2, basis: "size M · agent's estimate" } },
-          { id: "wallets", title: "Apple Pay и Google Pay через Payment Request", state: "ahead", forecast: { min: 1, max: 2, basis: "6 similar tasks" } },
-        ],
-        gate: { id: "g-tests", title: "Checkout tests green", kind: "auto", state: "ahead" },
-      },
-      {
-        id: "verify",
-        title: "Verify",
-        items: [{ id: "e2e", title: "E2E: повторная оплата в тестовом режиме", state: "ahead", forecast: { min: 1, max: 1, basis: "31 similar tasks" } }],
-        gate: { id: "g-accept", title: "Acceptance", kind: "mine", state: "ahead" },
-      },
-    ],
-    rules: {
-      self: "subtasks and their order within a stage",
-      ask: "a new stage or gate, scope, anything over +$2",
+  stages: [
+    {
+      id: "scope",
+      title: "Scope",
+      steps: [
+        { id: "read", status: "done", title: "Прочитать чекаут и интеграцию со Stripe", work: { agent: "planner", cost: "$0.40", time: "6m" } },
+        { id: "brief", status: "done", title: "Бриф и план", work: { agent: "planner", cost: "$0.30", time: "3m" } },
+      ],
+      gate: { title: "the brief and plan", mine: true, status: "current" },
     },
-  },
+    {
+      id: "build",
+      title: "Build",
+      steps: [
+        { id: "save-card", status: "ahead", title: "Сохранение карты в Stripe Customer по согласию", work: { agent: "payments-engineer", cost: "~$1–3", basis: "23 similar tasks" } },
+        { id: "pick-card", status: "ahead", title: "Выбор сохранённой карты в чекауте", work: { agent: "payments-engineer", cost: "~$2–3", basis: "14 similar tasks" } },
+        { id: "3ds", status: "ahead", title: "3-D Secure для повторной оплаты", work: { agent: "payments-engineer", cost: "~$1–2", basis: "size M, the agent's estimate" } },
+        { id: "wallets", status: "ahead", title: "Apple Pay и Google Pay через Payment Request", work: { agent: "payments-engineer", cost: "~$1–2", basis: "6 similar tasks" } },
+      ],
+      gate: { title: "checkout tests pass", status: "ahead" },
+    },
+    {
+      id: "verify",
+      title: "Verify",
+      steps: [{ id: "e2e", status: "ahead", title: "E2E: повторная оплата в тестовом режиме", work: { agent: "test-fixer", cost: "~$1", basis: "31 similar tasks" } }],
+      gate: { title: "the result", mine: true, status: "ahead" },
+    },
+  ],
+  rules: RULES,
+  autoDecisions: [],
   edits: [
     {
       id: "no-wallets",
@@ -252,8 +147,26 @@ const ONE_CLICK: ChatTask = {
 };
 
 /** Level 1: a small task that ends with a result card instead of "Done". */
-const REORDER_BUTTON: ChatTask = {
+const REORDER_BUTTON: Task = {
+  id: "reorder-button",
+  title: "Кнопка «Повторить заказ» на мобильном",
+  summary: "Кнопка уезжала за край на узких экранах; перенёс её под сумму.",
+  project: "storefront",
+  stage: "Done",
+  now: "Result · waiting for acceptance",
+  agent: "ui-engineer",
+  model: "Opus 5.5",
+  spent: "$0.35",
+  tokens: "90K",
   level: 1,
+  stages: [
+    {
+      id: "fix",
+      title: "Fix",
+      steps: [{ id: "fix", status: "done", title: "Кнопка под суммой на узких экранах", work: { agent: "ui-engineer", cost: "$0.35", time: "7m" } }],
+    },
+  ],
+  autoDecisions: [],
   result: {
     claims: [
       { text: "Кнопка «Повторить заказ» видна на экранах от 320px", evidence: "Screenshots 320 / 375 / 768 before and after" },
@@ -264,9 +177,21 @@ const REORDER_BUTTON: ChatTask = {
 };
 
 /** Level 1 that turned out bigger: the agent offers stages and a gate before the migration. */
-const LOYALTY: ChatTask = {
+const LOYALTY: Task = {
+  id: "loyalty",
+  title: "Скидка постоянным покупателям",
+  summary: "Скидка 5% в корзине покупателям от 3 оплаченных заказов. Готово, когда скидка видна в корзине и в письме о заказе.",
+  project: "storefront",
+  stage: "Migration",
+  now: "Migration · waiting on your approval",
+  waitingFor: "8m",
+  agent: "payments-engineer",
+  model: "Opus 5.5",
+  spent: "$2.00",
+  tokens: "480K",
+  delivery: "push",
   level: 1,
-  levelReason: "Grew in progress: needs a migration (irreversible)",
+  levelReason: "it grew in progress and needs a migration, which is irreversible",
   escalation: {
     to: 3,
     text: "Задача оказалась больше, чем выглядела: скидке нужна история заказов, а её нет в схеме. Предлагаю 3 этапа с гейтом перед миграцией.",
@@ -292,41 +217,38 @@ const LOYALTY: ChatTask = {
       { id: "tests", text: "Тесты корзины зелёные", locked: true },
     ],
   },
-  plan: {
-    stages: [
-      {
-        id: "scope",
-        title: "Scope",
-        items: [
-          { id: "rule", title: "Правило скидки в корзине", state: "done", spent: 1.2 },
-          { id: "ui", title: "Строка скидки в корзине", state: "done", spent: 0.8 },
-        ],
-      },
-      {
-        id: "migrate",
-        title: "Migration",
-        items: [
-          { id: "column", title: "Колонка `orders_count` у покупателя", state: "ahead", forecast: { min: 1, max: 2, basis: "9 similar tasks" } },
-          { id: "backfill", title: "Заполнить по истории заказов", state: "ahead", forecast: { min: 1, max: 3, basis: "size M · agent's estimate" } },
-        ],
-        gate: { id: "g-migrate", title: "Before the migration", kind: "mine", state: "current" },
-      },
-      {
-        id: "verify",
-        title: "Verify",
-        items: [{ id: "email", title: "Скидка в письме о заказе", state: "ahead", forecast: { min: 1, max: 1, basis: "12 similar tasks" } }],
-        gate: { id: "g-accept", title: "Acceptance", kind: "mine", state: "ahead" },
-      },
-    ],
-    rules: { self: "subtasks and their order within a stage", ask: "a new stage or gate, scope, anything over +$2" },
-  },
+  stages: [
+    {
+      id: "scope",
+      title: "Cart",
+      steps: [
+        { id: "rule", status: "done", title: "Правило скидки в корзине", work: { agent: "payments-engineer", cost: "$1.20", time: "14m" } },
+        { id: "ui", status: "done", title: "Строка скидки в корзине", work: { agent: "payments-engineer", cost: "$0.80", time: "9m" } },
+      ],
+    },
+    {
+      id: "migrate",
+      title: "Migration",
+      steps: [
+        { id: "column", status: "ahead", title: "Колонка `orders_count` у покупателя", work: { agent: "payments-engineer", cost: "~$1–2", basis: "9 similar tasks" } },
+        { id: "backfill", status: "ahead", title: "Заполнить по истории заказов", work: { agent: "payments-engineer", cost: "~$1–3", basis: "size M, the agent's estimate" } },
+      ],
+      gate: { title: "the migration", mine: true, status: "current" },
+    },
+    {
+      id: "verify",
+      title: "Verify",
+      steps: [{ id: "email", status: "ahead", title: "Скидка в письме о заказе", work: { agent: "payments-engineer", cost: "~$1", basis: "12 similar tasks" } }],
+      gate: { title: "the result", mine: true, status: "ahead" },
+    },
+  ],
+  rules: RULES,
+  autoDecisions: [],
 };
 
-export const CHAT_TASKS: Record<string, ChatTask> = {
-  "one-click-pay": ONE_CLICK,
-  "reorder-button": REORDER_BUTTON,
-  loyalty: LOYALTY,
-};
+export const CHAT_TASK_LIST: Task[] = [ONE_CLICK, REORDER_BUTTON, LOYALTY];
+
+export const CHAT_TASKS: Record<string, Task> = Object.fromEntries(CHAT_TASK_LIST.map((t) => [t.id, t]));
 
 /** First message of the S3 scenario; the S2 demo prefills it so sending leads to that chat. */
 export const ONE_CLICK_PROMPT =
