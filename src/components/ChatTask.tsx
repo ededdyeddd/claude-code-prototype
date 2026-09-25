@@ -624,7 +624,10 @@ function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) 
  * An artifact in the agent's reply: one tile that opens it next to the chat (the review, the brief and plan).
  * Concentric corners: the tile's radius is the icon box's radius plus the padding around it.
  */
-export function ArtifactTile({ icon, title, meta, onOpen }: { icon: string; title: string; meta: ReactNode; onOpen: () => void }) {
+/** Task icon, shared by the Plan tile and the live step card. */
+export const TASK_ICON = TASK;
+
+export function ArtifactTile({ icon, title, meta, onOpen }: { icon: string; title: ReactNode; meta: ReactNode; onOpen: () => void }) {
   return (
     <button
       type="button"
@@ -635,8 +638,8 @@ export function ArtifactTile({ icon, title, meta, onOpen }: { icon: string; titl
         <Icon glyph={icon} className="!text-secondary" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="text-body text-primary">{title}</span>
-        <span className="text-footnote text-muted">{meta}</span>
+        <span className="flex min-w-0 items-center gap-sm text-body text-primary">{title}</span>
+        <span className="truncate text-footnote text-muted">{meta}</span>
       </span>
       <Icon glyph={CHEVRON} size="sm" className="!text-muted" />
     </button>
