@@ -125,6 +125,37 @@ export type CustomAnswer = { text: string; ready: boolean };
 const fieldClass =
   "w-full resize-none rounded border border-alpha-2 bg-fill-field px-sm py-xs text-body text-primary outline-none placeholder:text-muted focus-visible:shadow-focus";
 
+/** Plan changes spelled out for the chat, where the plan itself is not in view to preview them. */
+const EFFECT_WORD: Record<PlanDiff["kind"], string> = { add: "Adds step", remove: "Drops step", change: "Changes step", gate: "Adds check" };
+
+/**
+ * What picking this option does to the plan, inside the picked option's row: one line per change, the kind of
+ * change in plain words first, then the step, then what a new step costs. Indented to the option's text.
+ */
+function OptionEffects({ task, diff }: { task: Task; diff: PlanDiff[] }) {
+  return (
+    <ul
+      aria-label="What this does to the plan"
+      className="grid grid-cols-[auto_1fr] gap-x-sm gap-y-0.5 pb-sm ps-[calc(var(--cds-gap-sm)*2+12px)] pe-sm text-footnote"
+    >
+      {diff.map((d) => (
+        <li key={d.kind + d.text} className="col-span-2 grid grid-cols-subgrid">
+          <span className="text-muted">{EFFECT_WORD[d.kind]}</span>
+          <span className="min-w-0 text-secondary">
+            {d.text}
+            {(d.cost || d.time) && (
+              <span className="tabular-nums text-muted">
+                {" · "}
+                <Forecast cost={d.cost} time={d.time} basis={d.basis} model={task.model} />
+              </span>
+            )}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
  * The only place to answer a question: pick an option, or give your own answer, which comes back as a plan
  * change to apply. "Ask" is a thread about the question; it never answers it.
@@ -139,6 +170,7 @@ export function QuestionCard({
   onAnswered,
   showChanges,
   bare,
+  corner,
 }: {
   task: Task;
   question: Question;
@@ -152,6 +184,8 @@ export function QuestionCard({
   showChanges?: boolean;
   /** Inside a frame of its own (the question dock of the chat): no border or padding here. */
   bare?: boolean;
+  /** On the label's line, at the right: the dock's "1 of N" navigation. */
+  corner?: ReactNode;
 }) {
   // A stale choice (another question, another task) falls back to the first option instead of breaking the card.
   const chosen = question.options.find((o) => o.id === choice) ?? question.options[0];
@@ -189,9 +223,12 @@ export function QuestionCard({
       className={cx("flex scroll-mt-[var(--cds-gap-xl)] flex-col gap-lg", !bare && "rounded-lg border border-alpha-2 p-lg")}
     >
       <div className="flex flex-col gap-xs">
-        <span className={cx("text-footnote", question.blocking ? "text-clay" : "text-muted")}>
-          {question.blocking ? "Blocking" : "Can wait"}
-        </span>
+        <div className="flex min-h-5 items-center justify-between gap-sm">
+          <span className={cx("text-footnote", question.blocking ? "text-clay" : "text-muted")}>
+            {question.blocking ? "Blocking" : "Can wait"}
+          </span>
+          {corner}
+        </div>
         <p className="text-body font-medium text-primary">{question.text}</p>
         {question.context && <p className="text-footnote text-muted">{question.context}</p>}
       </div>
@@ -256,6 +293,8 @@ export function QuestionCard({
                     </span>
                   </span>
                 </button>
+                {/* In the chat the plan is not beside the card: what the picked option does to it, under that option. */}
+                {showChanges && on && o.diff.length > 0 && <OptionEffects task={task} diff={o.diff} />}
               </div>
             );
           })}
@@ -282,19 +321,6 @@ export function QuestionCard({
           aria-label={mode === "other" ? "Your answer" : "Ask about this question"}
           className={fieldClass}
         />
-      )}
-
-      {showChanges && mode === "choose" && !custom && chosen.diff.length > 0 && (
-        <div className="flex flex-col gap-xs">
-          <span className="text-footnote text-muted">Changes in the plan</span>
-          <ul className="flex flex-col gap-0.5">
-            {chosen.diff.map((d) => (
-              <li key={d.kind + d.text} className={cx("text-footnote", d.kind === "remove" ? "text-muted line-through" : "text-secondary")}>
-                <WithChip text={d.text} kind={d.kind} />
-              </li>
-            ))}
-          </ul>
-        </div>
       )}
 
       <div className="flex items-center justify-end gap-xs">
@@ -598,7 +624,7 @@ export function PlanPane({
         <li key={item.key} className="relative flex items-start gap-md pb-[var(--cds-gap-lg)]">
           {rail}
           <span className="relative mt-[4px] flex bg-[var(--plan-surface,var(--cds-surface-2))]">
-            {/* Gates are the one place with ◆ (you approve) / ◇ (a check the agent can't skip); passed ones get ✓. */}
+            {/* Gates take the same dots as steps: who approves is said by the text ("You approve …" / "Check: …"). */}
             <GateMark gate={item.gate} />
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-sm">
@@ -859,9 +885,10 @@ export function PlanPane({
 const minutes = (t: string) => (t.startsWith("~") ? 0 : Number(t.match(/(\d+)h/)?.[1] ?? 0) * 60 + Number(t.match(/(\d+)m/)?.[1] ?? 0));
 /** Minutes from "18m" / "~1h 20m", estimates included. */
 const anyMinutes = (t: string) => Number(t.match(/(\d+)h/)?.[1] ?? 0) * 60 + Number(t.match(/(\d+)m/)?.[1] ?? 0);
+/** Passed = grey dot, waits for you = clay dot, ahead (or an automatic check running) = grey ring. */
 function GateMark({ gate }: { gate: Gate }) {
-  if (gate.status === "passed") return <StatusMark status="done" />;
-  return <StatusMark status={gate.mine ? "myGate" : "gate"} className={gate.status === "current" && gate.mine ? "!text-clay" : undefined} />;
+  if (gate.status === "passed") return <TaskDot state="done" />;
+  return <TaskDot state={gate.status === "current" && gate.mine ? "blocked" : "ahead"} />;
 }
 
 /** Actual sums keep cents ("$1.60"); ranges read as ranges ("$4–7"). */

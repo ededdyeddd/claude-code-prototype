@@ -124,8 +124,12 @@ function Chip({ children }: { children: ReactNode }) {
   return <span className="ms-sm inline-block rounded-sm bg-alpha-3 px-1.5 align-baseline text-footnote leading-5 text-secondary">{children}</span>;
 }
 
-/** Risky assumption: "Right" / "Fix…" until marked; an unmarked one is the accent of the brief. */
-function RiskyAssumption({ view, a, bare }: { view: ChatTaskView; a: Assumption; /** Inside another card: no own frame. */ bare?: boolean }) {
+/**
+ * A risky assumption at the gate, as a row like an option of a question card: unmarked, it sits on a soft
+ * fill with the clay dot (needs you) and its own small "Right" / "Fix…"; marked, it drops the fill and gets ✓
+ * with your words. The row's buttons stay xs and inside the row, so the card's footer keeps the one primary.
+ */
+function RiskyAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
   const mark = view.marks[a.id];
   const [fixing, setFixing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -135,14 +139,15 @@ function RiskyAssumption({ view, a, bare }: { view: ChatTaskView; a: Assumption;
     markAssumption(view.id, a.id, { ok: false, note: draft.trim() });
     setFixing(false);
   };
+  const row = "flex items-start gap-sm rounded px-sm py-sm";
 
   if (mark && !fixing)
     return (
-      <li className="group/row flex items-start gap-sm py-1">
-        <span className="mt-[5px] flex">
+      <li className={cx(row, "group/row")}>
+        <span className="mt-[4px] flex">
           <StatusMark status="done" />
         </span>
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <p className={cx("text-body", mark.ok ? "text-primary" : "text-muted line-through")}>
             <Inline text={a.text} />
           </p>
@@ -151,7 +156,7 @@ function RiskyAssumption({ view, a, bare }: { view: ChatTaskView; a: Assumption;
         {editable && (
           <Button
             size="xs"
-            className="opacity-0 transition-opacity duration-fast group-hover/row:opacity-100 focus-visible:opacity-100"
+            className="-my-0.5 opacity-0 transition-opacity duration-fast group-hover/row:opacity-100 focus-visible:opacity-100"
             onClick={() => markAssumption(view.id, a.id, undefined)}
           >
             Change
@@ -161,47 +166,51 @@ function RiskyAssumption({ view, a, bare }: { view: ChatTaskView; a: Assumption;
     );
 
   return (
-    <li className={cx("flex flex-col gap-sm", !bare && "rounded-lg border border-alpha-2 p-md")}>
-      <div className="flex flex-col gap-0.5">
-        {!bare && <span className="text-footnote text-clay">Can't check this myself</span>}
-        <p className="text-body text-primary">
-          <Inline text={a.text} />
-        </p>
-        {a.why && <p className="text-footnote text-muted">{a.why}</p>}
-      </div>
-      {fixing ? (
-        <div className="flex flex-col gap-xs">
-          <input
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") saveFix();
-              if (e.key === "Escape") setFixing(false);
-            }}
-            placeholder="How it should be, in your words"
-            aria-label="Your correction"
-            className={fieldClass}
-          />
-          <div className="flex justify-end gap-xs">
-            <Button size="sm" variant="secondary" onClick={() => setFixing(false)}>
-              Cancel
+    <li className={cx(row, "bg-alpha-2")}>
+      <span className="mt-[4px] flex">
+        <TaskDot state="blocked" />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-sm">
+        <div className="flex flex-col gap-0.5">
+          <p className="text-body text-primary">
+            <Inline text={a.text} />
+          </p>
+          {a.why && <p className="text-footnote text-muted">{a.why}</p>}
+        </div>
+        {fixing ? (
+          <div className="flex flex-col gap-xs">
+            <input
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveFix();
+                if (e.key === "Escape") setFixing(false);
+              }}
+              placeholder="How it should be, in your words"
+              aria-label="Your correction"
+              className={fieldClass}
+            />
+            <div className="flex gap-xs">
+              <Button size="xs" variant="secondary" disabled={!draft.trim()} onClick={saveFix}>
+                Save
+              </Button>
+              <Button size="xs" onClick={() => setFixing(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-xs">
+            <Button size="xs" variant="secondary" onClick={() => markAssumption(view.id, a.id, { ok: true })}>
+              Right
             </Button>
-            <Button size="sm" variant="primary" disabled={!draft.trim()} onClick={saveFix}>
-              Save
+            <Button size="xs" onClick={() => (setDraft(""), setFixing(true))}>
+              Fix…
             </Button>
           </div>
-        </div>
-      ) : (
-        <div className="flex gap-xs">
-          <Button size="sm" variant="secondary" onClick={() => markAssumption(view.id, a.id, { ok: true })}>
-            Right
-          </Button>
-          <Button size="sm" onClick={() => (setDraft(""), setFixing(true))}>
-            Fix…
-          </Button>
-        </div>
-      )}
+        )}
+      </div>
     </li>
   );
 }
@@ -376,8 +385,10 @@ export function PlanView({ view }: { view: ChatTaskView }) {
 /* -------------------------------------------------------------- Gate card */
 
 /**
- * The decision at a gate, opened on its row in the plan: in the Inbox pane and in the chat's Plan tab.
- * Mark the risky assumptions and start, right here; the full brief is a link for context, not a step.
+ * The decision at a gate, opened on its row in the plan: in the Inbox pane.
+ * The row above already says what is decided and that it waits for you, so the card has no label or title of
+ * its own: what I understood (with the full brief a link away), the assumptions to mark as rows, then one
+ * footer with what still blocks the start (or the forecast) right next to the one primary action.
  * An escalation offer takes the same place: split the task into stages, or finish it as is.
  */
 export function GateCard({ view, onOpenBrief, onDone }: { view: ChatTaskView; onOpenBrief?: () => void; onDone?: () => void }) {
@@ -390,45 +401,86 @@ export function GateCard({ view, onOpenBrief, onDone }: { view: ChatTaskView; on
   const gate = currentGate(view.live);
   if (!view.atGate || !gate) return null;
   const left = view.unmarked.length;
-  const t = totals(view);
+  const brief = view.task.brief;
   return (
     <DecisionCard
-      label="Your gate"
-      title={`Approve ${gate.title}?`}
-      context={view.task.brief && <Inline text={view.task.brief.understanding} />}
-      aside={
-        onOpenBrief && (
-          <Button size="sm" onClick={onOpenBrief}>
-            Full brief in chat
-          </Button>
-        )
-      }
-      meta={
-        <span className={t.over ? "text-clay" : undefined}>
-          ≈ {money(t.min, t.max)} of ${view.envelope.limit}
-        </span>
-      }
+      meta={<GateStatus view={view} />}
       actions={
         <Button size="sm" variant="primary" disabled={left > 0} onClick={() => (launch(view.id), onDone?.())}>
-          Pass the gate and start
+          Approve and start
         </Button>
       }
     >
+      {brief && (
+        <div className="flex flex-col gap-xs">
+          <p className="text-body text-secondary">
+            <Inline text={brief.understanding} />
+          </p>
+          {onOpenBrief && <TextLink onClick={onOpenBrief}>Full brief in chat</TextLink>}
+        </div>
+      )}
       {view.risky.length > 0 && (
-        <ul className="flex flex-col gap-md">
-          {view.risky.map((a) => (
-            <RiskyAssumption key={a.id} view={view} a={a} bare />
-          ))}
-        </ul>
+        <div className="flex flex-col gap-xs">
+          <span className="text-footnote text-muted">{view.risky.length === 1 ? "Can't check this myself" : "Can't check these myself"}</span>
+          <ul className="flex flex-col gap-xs">
+            {view.risky.map((a) => (
+              <RiskyAssumption key={a.id} view={view} a={a} />
+            ))}
+          </ul>
+        </div>
       )}
     </DecisionCard>
   );
 }
 
+/** A quiet inline link inside a card: to the full brief, or "Details" that unfold under it. */
+function TextLink({ onClick, children, ...rest }: { onClick: () => void; children: ReactNode; "aria-expanded"?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      {...rest}
+      className="flex w-fit items-center gap-0.5 rounded-sm text-left text-footnote text-muted underline decoration-alpha-4 underline-offset-2 outline-none hover:text-primary focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
+    >
+      {children}
+    </button>
+  );
+}
+
 /**
- * One frame for every decision card, the same as the question card in the Inbox: clay label, the decision as
- * the title, context in small muted text, the body, then one footer row — a quiet link on the left, the
- * consequence (cost) and the buttons on the right, the committing one last and white.
+ * What approving costs: the forecast for what is left in the plan against the task's spend limit.
+ * Muted, explained on hover; clay only when the upper bound is over the limit.
+ */
+function Budget({ view }: { view: ChatTaskView }) {
+  const t = totals(view);
+  const limit = view.envelope.limit;
+  return (
+    <Hint
+      text={
+        <>
+          {t.over && <>Over the limit: raise it in the chip under the chat field, or cut scope. </>}
+          Forecast for what is left in the plan, summed from its steps. The limit is the task's spend cap from its autonomy envelope.
+        </>
+      }
+      className={cx("tabular-nums", t.over && "text-clay")}
+    >
+      ≈ {money(t.min, t.max)} of the ${limit} limit
+    </Hint>
+  );
+}
+
+/** Next to the gate's primary: what still blocks it; once nothing does, what it costs. */
+function GateStatus({ view }: { view: ChatTaskView }) {
+  const left = view.unmarked.length;
+  if (left === 0) return <Budget view={view} />;
+  return <span>{left === 1 ? "1 assumption to mark" : `${left} assumptions to mark`}</span>;
+}
+
+/**
+ * One frame for every decision card, the same as the question card: an optional label and title (dropped when
+ * the card sits under a plan row that already says it), context in small muted text, the body, then one footer
+ * row, right-aligned — the status of the decision (what blocks it, or what it costs) right before the buttons,
+ * the committing one last and white. An optional quiet control goes on the left.
  */
 function DecisionCard({
   label,
@@ -439,10 +491,13 @@ function DecisionCard({
   actions,
   children,
   bare,
+  corner,
 }: {
   bare?: boolean;
-  label: string;
-  title: ReactNode;
+  /** On the label's line, at the right: the dock's "1 of N" navigation. */
+  corner?: ReactNode;
+  label?: string;
+  title?: ReactNode;
   context?: ReactNode;
   aside?: ReactNode;
   meta?: ReactNode;
@@ -451,22 +506,29 @@ function DecisionCard({
 }) {
   return (
     <section className={cx("not-prose flex flex-col gap-lg", !bare && "rounded-lg border border-alpha-2 p-lg", CODE)}>
-      <div className="flex flex-col gap-xs">
-        <span className="text-footnote text-clay">{label}</span>
-        <p className="text-body font-medium text-primary">{title}</p>
-        {context && <p className="text-footnote text-muted">{context}</p>}
-      </div>
+      {(label || title || context) && (
+        <div className="flex flex-col gap-xs">
+          {(label || corner) && (
+            <div className="flex min-h-5 items-center justify-between gap-sm">
+              {label && <span className="text-footnote text-clay">{label}</span>}
+              {corner}
+            </div>
+          )}
+          {title && <p className="text-body font-medium text-primary">{title}</p>}
+          {context && <div className="text-footnote text-muted">{context}</div>}
+        </div>
+      )}
       {children}
-      <div className="flex flex-wrap items-center justify-end gap-xs">
+      <div className="flex flex-wrap items-center justify-end gap-x-xs gap-y-sm">
         {aside && <span className="me-auto">{aside}</span>}
-        {meta && <span className="me-xs text-footnote tabular-nums text-muted">{meta}</span>}
-        {actions}
+        {meta && <span className="me-xs text-footnote text-muted">{meta}</span>}
+        <span className="flex gap-xs">{actions}</span>
       </div>
     </section>
   );
 }
 
-/** The escalation offer as a decision: split the task into stages, or finish it as is; details unfold. */
+/** The escalation offer as a decision: split the task into stages, or finish it as is; details unfold under the context. */
 function EscalationDecision({
   view,
   open,
@@ -481,14 +543,17 @@ function EscalationDecision({
   onDecline: () => void;
 }) {
   const esc = view.task.escalation!;
-  const t = totals(view);
   return (
     <DecisionCard
       label="Bigger than it looked"
       title={`Split it into ${view.task.stages.length} stages?`}
-      context={esc.text}
-      aside={<DetailsToggle open={open} onToggle={() => setOpen(!open)} />}
-      meta={`≈ ${money(t.min, t.max)} of $${view.envelope.limit}`}
+      context={
+        <div className="flex flex-col gap-xs">
+          <p>{esc.text}</p>
+          <DetailsToggle open={open} onToggle={() => setOpen(!open)} />
+        </div>
+      }
+      meta={<Budget view={view} />}
       actions={
         <>
           <Button size="sm" variant="secondary" onClick={onDecline}>
@@ -649,7 +714,7 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
       )}
       <div className="flex flex-col gap-1">
         <span className="text-footnote text-muted">
-          What I propose · ≈ {money(t.min, t.max)} of the ${view.envelope.limit} limit
+          What I propose{inFeed && ` · ≈ ${money(t.min, t.max)} of the $${view.envelope.limit} limit`}
         </span>
         {ahead.map((st) => (
           <div key={st.id} className="flex flex-col gap-1">
@@ -671,7 +736,7 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
               ))}
             {st.gate && (
               <div className={cx(row, "ps-md")}>
-                <StatusMark status={st.gate.mine ? "myGate" : "gate"} />
+                <TaskDot state="ahead" />
                 <span className="text-secondary">{gateText(st.gate)}</span>
               </div>
             )}
@@ -688,13 +753,13 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
   );
 }
 
-/** "Details" toggle for a card: chevron after the label, turned when open (as on plan steps). */
+/** "Details" toggle for a card: a quiet link with a chevron after it, turned when open (as on plan steps). */
 function DetailsToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
-    <Button size="sm" aria-expanded={open} onClick={onToggle}>
+    <TextLink aria-expanded={open} onClick={onToggle}>
       Details
-      <Icon glyph={CHEVRON} size="sm" className={cx("ms-1 !text-muted transition-transform duration-fast", open && "rotate-90")} />
-    </Button>
+      <Icon glyph={CHEVRON} size="sm" className={cx("!text-muted transition-transform duration-fast", open && "rotate-90")} />
+    </TextLink>
   );
 }
 
@@ -758,13 +823,14 @@ function QuestionLine({ chatId, questionId }: { chatId: string; questionId: stri
 }
 
 /** A risky assumption as a decision in the dock: right, or fix it in your words. */
-function AssumptionDecision({ view, a }: { view: ChatTaskView; a: Assumption }) {
+function AssumptionDecision({ view, a, corner }: { view: ChatTaskView; a: Assumption; corner?: ReactNode }) {
   const [fixing, setFixing] = useState(false);
   const [draft, setDraft] = useState("");
   const save = () => draft.trim() && markAssumption(view.id, a.id, { ok: false, note: draft.trim() });
   return (
     <DecisionCard
       bare
+      corner={corner}
       label="Can't check this myself"
       title={<Inline text={a.text} />}
       context={a.why}
@@ -837,16 +903,27 @@ export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: 
   const i = Math.min(index, items.length - 1);
   const item = items[i];
 
+  // "1 of N" sits on the label's line of the card, not as a header of its own above it.
+  const corner = items.length > 1 && (
+    <span className="-my-xs flex shrink-0 items-center gap-0.5 text-footnote tabular-nums text-muted">
+      <span className="me-xs">
+        {i + 1} of {items.length}
+      </span>
+      <Button size="xs" icon={CHEVRON_LEFT} aria-label="Previous" disabled={i === 0} onClick={() => setIndex(i - 1)} />
+      <Button size="xs" icon={CHEVRON} aria-label="Next" disabled={i === items.length - 1} onClick={() => setIndex(i + 1)} />
+    </span>
+  );
+
   let body: ReactNode = null;
   if (item.kind === "escalation" && view) {
-    const t = totals(view);
     body = (
       <DecisionCard
         bare
+        corner={corner}
         label="Bigger than it looked"
         title={`Split it into ${view.task.stages.length} stages?`}
         context="The details are in my message above."
-        meta={`≈ ${money(t.min, t.max)} of $${view.envelope.limit}`}
+        meta={<Budget view={view} />}
         actions={
           <>
             <Button size="sm" variant="secondary" onClick={() => escalate(view.id, false)}>
@@ -860,33 +937,41 @@ export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: 
       />
     );
   } else if (item.kind === "assumption" && view) {
-    body = <AssumptionDecision key={item.a.id} view={view} a={item.a} />;
+    body = <AssumptionDecision key={item.a.id} view={view} a={item.a} corner={corner} />;
   } else if (item.kind === "gate" && view) {
     const gate = currentGate(view.live);
-    const t = totals(view);
     const left = view.unmarked.length;
     body = (
       <DecisionCard
         bare
+        corner={corner}
         label="Your gate"
         title={`Approve ${gate?.title ?? "the plan"}?`}
-        context={left > 0 ? `Mark ${left === 1 ? "1 assumption" : `${left} assumptions`} first.` : "Edits you typed in the chat are in the brief and plan."}
-        aside={
-          <span className="flex gap-xs">
+        context={
+          <p className="flex flex-wrap items-baseline gap-x-1">
+            Edits you typed in the chat are in the
             {view.tabs.includes("brief") && (
-              <Button size="sm" onClick={() => setTab("brief")}>
-                Brief
-              </Button>
+              <>
+                <TextLink onClick={() => setTab("brief")}>brief</TextLink>
+                and the
+              </>
             )}
-            <Button size="sm" onClick={() => setTab("plan")}>
-              Plan
-            </Button>
-          </span>
+            <TextLink onClick={() => setTab("plan")}>plan</TextLink>
+          </p>
         }
-        meta={<span className={t.over ? "text-clay" : undefined}>≈ {money(t.min, t.max)} of ${view.envelope.limit}</span>}
+        meta={
+          left > 0 ? (
+            // What blocks the start, as a way back to it: the assumptions come before the gate in the dock.
+            <TextLink onClick={() => setIndex(items.findIndex((d) => d.kind === "assumption"))}>
+              {left === 1 ? "1 assumption to mark" : `${left} assumptions to mark`}
+            </TextLink>
+          ) : (
+            <Budget view={view} />
+          )
+        }
         actions={
           <Button size="sm" variant="primary" disabled={left > 0} onClick={() => launch(view.id)}>
-            Pass the gate and start
+            Approve and start
           </Button>
         }
       />
@@ -907,21 +992,13 @@ export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: 
         onAnswered={() => {}}
         showChanges
         bare
+        corner={corner}
       />
     );
   }
 
   return (
-    <div className="mb-xs flex max-h-[min(60vh,520px)] flex-col gap-sm overflow-y-auto rounded-lg bg-surface-2 p-lg shadow-panel-sm dark:outline dark:outline-1 dark:outline-alpha-2">
-      {items.length > 1 && (
-        <div className="-mb-xs flex items-center justify-end gap-0.5 text-footnote tabular-nums text-muted">
-          <span className="me-xs">
-            {i + 1} of {items.length}
-          </span>
-          <Button size="xs" icon={CHEVRON_LEFT} aria-label="Previous" disabled={i === 0} onClick={() => setIndex(i - 1)} />
-          <Button size="xs" icon={CHEVRON} aria-label="Next" disabled={i === items.length - 1} onClick={() => setIndex(i + 1)} />
-        </div>
-      )}
+    <div className="mb-xs flex max-h-[min(60vh,520px)] flex-col overflow-y-auto rounded-lg bg-surface-2 p-lg shadow-panel-sm dark:outline dark:outline-1 dark:outline-alpha-2">
       {body}
     </div>
   );

@@ -7,8 +7,8 @@ import type { Turn } from "./transcripts";
 
 /* ------------------------------------------------------------------- Plan */
 
-/** Status is shown by shape, not color: ✓ done, ● running, ○ ahead, ‖ waits for you, ◇ gate, ◆ your gate. */
-export type Status = "done" | "running" | "ahead" | "waiting" | "gate" | "myGate";
+/** Status is shown by shape, not color: ✓ done, ● running, ○ ahead, ‖ waits for you. */
+export type Status = "done" | "running" | "ahead" | "waiting";
 
 /**
  * What an option (or an edit) does to the plan. `step` is the plan step it touches: removed or changed for

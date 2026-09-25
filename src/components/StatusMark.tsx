@@ -4,8 +4,8 @@ import type { Status } from "../data/task";
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
 /**
- * Status is carried by shape, not color: ✓ done, ● running, ○ ahead, ‖ waits for you, ◇ gate, ◆ your gate.
- * Anthropicons has no pause or filled-diamond glyph, so the set is one small SVG family in currentColor.
+ * Status is carried by shape, not color: ✓ done, ● running, ○ ahead, ‖ waits for you. Gates take the plan's dots (TaskDot).
+ * Anthropicons has no pause glyph, so the set is one small SVG family in currentColor.
  * Only "waits for you" takes the clay accent.
  */
 export function StatusMark({ status, className }: { status: Status; className?: string }) {
@@ -21,10 +21,8 @@ export function StatusMark({ status, className }: { status: Status; className?: 
         <rect x="7" y="2.5" width="2" height="7" rx="0.75" />
       </g>
     ),
-    gate: <path d="M6 1.9 10.1 6 6 10.1 1.9 6Z" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" />,
-    myGate: <path d="M6 1.4 10.6 6 6 10.6 1.4 6Z" fill="currentColor" />,
   };
-  const tone = status === "waiting" ? "text-clay" : status === "ahead" || status === "gate" ? "text-muted" : "text-secondary";
+  const tone = status === "waiting" ? "text-clay" : status === "ahead" ? "text-muted" : "text-secondary";
   return (
     <svg
       width="12"
@@ -44,8 +42,6 @@ const STATUS_LABEL: Record<Status, string> = {
   running: "Running",
   ahead: "Up next",
   waiting: "Waiting for you",
-  gate: "Automatic check",
-  myGate: "Your approval",
 };
 
 /**
