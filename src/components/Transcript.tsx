@@ -175,7 +175,7 @@ function MessageActions() {
 }
 
 /** Chat transcript: user bubbles, assistant turns with status, prose answer and actions. */
-export function Transcript({ turns }: { turns: Turn[] }) {
+export function Transcript({ turns, working = false }: { turns: Turn[]; working?: boolean }) {
   return (
     <div className="flex flex-col gap-lg pt-lg pb-xl">
       {turns.map((t, i) =>
@@ -193,9 +193,12 @@ export function Transcript({ turns }: { turns: Turn[] }) {
           </div>
         )
       )}
-      {/* Claude is idle and waiting for the next message */}
-      <div className="flex h-[22px] items-center">
-        <Irregular_radiating_starburst />
+      {/* Spark: static when Claude waits for the next message, pulsing while it works */}
+      <div className="flex h-[22px] items-center gap-sm">
+        <span className="flex" style={working ? { animation: "working-dot-pulse 2.4s infinite" } : undefined}>
+          <Irregular_radiating_starburst />
+        </span>
+        {working && <span className="text-body text-muted">Working…</span>}
       </div>
     </div>
   );

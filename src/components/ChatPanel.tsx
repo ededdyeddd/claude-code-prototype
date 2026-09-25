@@ -28,7 +28,7 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
           <ScrollFadeContainer>
             {transcript && (
               <div className={TRANSCRIPT_COLUMN}>
-                <Transcript turns={transcript} />
+                <Transcript turns={transcript} working={chat?.running} />
               </div>
             )}
           </ScrollFadeContainer>
