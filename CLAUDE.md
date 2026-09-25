@@ -12,6 +12,9 @@ React prototype of the Claude Code desktop app (Vite + React 19 + TS + Tailwind 
 ## Inbox section
 - `/inbox` and its task pane are specified in `docs/INBOX.md` (PRD + design doc: principles, structure, architecture, decision log). Read it before changing the section; update it when a decision changes.
 
+## Chat levels
+- Task UI inside a chat (levels 0–3, S2 composer + autonomy envelope, S3 brief/plan gate, result and escalation cards) is specified in `docs/CHAT_LEVELS.md`. Demo routes are listed at its top.
+
 ## Don't
 - Don't edit `src/styles/design-system.css` (the original compiled CSS). Import order in `main.tsx` matters: design-system.css first, then tailwind.css.
 - Don't "fix" literal `&amp;` inside class strings in `src/components`: the original has them too, and fixing them changes layout.
