@@ -36,7 +36,13 @@ export type Turn =
     };
 
 /** What a running chat is doing right now: current step row + stats under the spark. */
-export type LiveStatus = { step: string; target?: string; stats: string };
+export type LiveStatus = {
+  step: string;
+  target?: string;
+  stats: string;
+  /** `step` is the plan step in progress (a task chat): shown as the lead, the file as a quiet note. */
+  planStep?: boolean;
+};
 
 import { YANGO_TRANSCRIPTS } from "./yangoTranscripts";
 import { TASK_LIVE_STATUS, TASK_TRANSCRIPTS } from "./taskTranscripts";

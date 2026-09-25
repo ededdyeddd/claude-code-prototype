@@ -605,7 +605,7 @@ function StepResultView({ result }: { result: StepResult }) {
  * One quiet meta line under the brief: status first, then where the task works and what it has used.
  * One size, one color; the only emphasis is the question count, which scrolls to the question.
  */
-function PaneMeta({ task, answers }: { task: Task; answers: Record<string, string> }) {
+export function PaneMeta({ task, answers }: { task: Task; answers: Record<string, string> }) {
   const open = openQuestions(task, answers).sort((a, b) => Number(b.blocking) - Number(a.blocking));
   const next = task.stages.flatMap((st) => st.steps).find((x) => x.status === "running" || x.status === "ahead");
   // Stopped at a gate of yours (a task chat): that is the status, not "Running".

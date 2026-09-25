@@ -304,7 +304,16 @@ export function Transcript({ turns, live }: { turns: Turn[]; live?: LiveStatus }
         )
       )}
       {/* Running: current step row, then a pulsing spark with stats. Finished: a static spark only. */}
-      {live && <TurnStatus label={live.step} target={live.target} />}
+      {live &&
+        (live.planStep ? (
+          // A task chat: the step of the plan leads, so the feed and the plan name the same thing; the file is a note.
+          <p className="text-body text-secondary">
+            {live.step}
+            {live.target && <span className="text-footnote text-muted"> · {live.target}</span>}
+          </p>
+        ) : (
+          <TurnStatus label={live.step} target={live.target} />
+        ))}
       <div className="flex h-[22px] items-center gap-sm [&_[data-cds=Spark]]:!size-4">
         <span className="flex motion-reduce:!animate-none" style={live ? { animation: "spark-breathe 1.2s infinite", willChange: "transform" } : undefined}>
           <Irregular_radiating_starburst />

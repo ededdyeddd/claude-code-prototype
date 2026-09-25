@@ -18,6 +18,7 @@ import { Button } from "../ui";
 import { NEW_CHAT, seeTab, sendMessage, useChatTask, type TaskTab } from "../data/chatTaskStore";
 import { ONE_CLICK_PROMPT, guessLevel } from "../data/chatTasks";
 import { useInbox } from "../data/inboxStore";
+import { planProgress } from "../data/task";
 import { ChatTaskContext, DecisionDock } from "./ChatTask";
 
 // Rough context estimate for the mock: characters in the transcript vs. a small window,
@@ -66,6 +67,10 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
     );
   };
   const turns = transcript && view ? [...transcript, ...view.turns] : transcript;
+  // The live row names the plan step in progress, so the feed and the plan say the same thing; the file stays as its target.
+  const running = (view ? planProgress(view.live) : undefined)?.running;
+  const liveBase = chat?.running ? LIVE_STATUS[chat.id] : undefined;
+  const live = liveBase && running ? { ...liveBase, step: running.title, planStep: true } : liveBase;
 
   const send = (text: string) => {
     if (view) return sendMessage(view.id, text);
@@ -102,7 +107,7 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
           <ScrollFadeContainer>
             {transcript && (
               <div className={TRANSCRIPT_COLUMN + " !static !h-auto !pointer-events-auto select-text"}>
-                <Transcript turns={turns!} live={chat?.running ? LIVE_STATUS[chat.id] : undefined} />
+                <Transcript turns={turns!} live={live} />
               </div>
             )}
           </ScrollFadeContainer>

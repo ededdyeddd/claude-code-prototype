@@ -1,14 +1,14 @@
 import { useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Button, EmptyState, Hint, Icon, Menu } from "../ui";
+import { Button, EmptyState, Hint, Icon, Menu, Tabs } from "../ui";
 import { SidePane, SIDE_PANE } from "../components/SidePane";
 import { TaskDot } from "../components/StatusMark";
 import { AttentionMenu } from "../components/AttentionMenu";
 import { usePersistentWidth } from "../data/usePersistentWidth";
 import { AWAY, TASKS } from "../data/inbox";
 import { currentGate, gateText, type Task } from "../data/task";
-import { PlanPane, whenHint } from "../components/PlanPane";
-import { GateCard } from "../components/ChatTask";
+import { PaneMeta, PlanPane, whenHint } from "../components/PlanPane";
+import { BriefView, GateCard } from "../components/ChatTask";
 import { deriveTask, type TaskState } from "../data/chatTaskStore";
 import { openQuestions, useInbox, type Attention } from "../data/inboxStore";
 
@@ -390,6 +390,14 @@ export function InboxPage() {
   const { search } = useLocation();
   const [selectedId, setSelectedId] = useState<string | null>(() => new URLSearchParams(search).get("task") ?? needsYou[0]?.id ?? null);
   const [expanded, setExpanded] = useState(false);
+  // Same pane as beside a task chat: Plan first, Brief a tab away for tasks that have one.
+  const [paneTab, setPaneTab] = useState<"plan" | "brief">("plan");
+  // Another task opens on its plan.
+  const [tabFor, setTabFor] = useState(selectedId);
+  if (tabFor !== selectedId) {
+    setTabFor(selectedId);
+    setPaneTab("plan");
+  }
   const navigate = useNavigate();
   const [paneWidth, setPaneWidth] = usePersistentWidth("cc:side-pane-width", SIDE_PANE.default);
   // The list keeps at least 400px next to the pane.
@@ -453,6 +461,22 @@ export function InboxPage() {
         <SidePane
           key={selected.id}
           title={selected.title}
+          subheader={
+            <div className="flex flex-col gap-md pt-xs">
+              <p className="text-body text-secondary">{selected.summary}</p>
+              {selected.brief && (
+                <Tabs
+                  label="Plan and brief"
+                  value={paneTab}
+                  onChange={(t) => setPaneTab(t as "plan" | "brief")}
+                  items={[
+                    { value: "plan" as const, label: "Plan" },
+                    { value: "brief" as const, label: "Brief" },
+                  ]}
+                />
+              )}
+            </div>
+          }
           width={Math.min(paneWidth, Math.max(SIDE_PANE.min, paneMax))}
           maxWidth={paneMax}
           onResize={setPaneWidth}
@@ -469,23 +493,28 @@ export function InboxPage() {
             </Button>
           }
         >
-          <PlanPane
-            task={session?.live ?? selected}
-            answers={answers}
-            onTaskDone={openNext}
-            edits={session?.planEdits}
-            gateCard={
-              // A gate of a task chat is decided right here, like a question; the full brief stays a link.
-              session &&
-              selected.level !== undefined && (
-                <GateCard
-                  view={{ id: selected.id, task: selected, ...session }}
-                  onOpenBrief={selected.brief ? () => navigate(`/code/${selected.id}?tab=brief`) : undefined}
-                  onDone={openNext}
-                />
-              )
-            }
-          />
+          {paneTab === "brief" && selected.brief && session ? (
+            <BriefView view={{ id: selected.id, task: selected, ...session }} />
+          ) : (
+            <PlanPane
+              task={session?.live ?? selected}
+              answers={answers}
+              header={<PaneMeta task={session?.live ?? selected} answers={answers} />}
+              onTaskDone={openNext}
+              edits={session?.planEdits}
+              gateCard={
+                // A gate of a task chat is decided right here, like a question; the full brief stays a link.
+                session &&
+                selected.level !== undefined && (
+                  <GateCard
+                    view={{ id: selected.id, task: selected, ...session }}
+                    onOpenBrief={selected.brief ? () => setPaneTab("brief") : undefined}
+                    onDone={openNext}
+                  />
+                )
+              }
+            />
+          )}
         </SidePane>
       )}
     </div>

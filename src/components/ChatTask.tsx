@@ -2,7 +2,7 @@ import { createContext, useContext, useRef, useState } from "react";
 import { DockFrame, OptionList, OptionRow, RowField, type DockNav } from "./DecisionPanel";
 import type { ReactNode } from "react";
 import type { Block } from "../data/transcripts";
-import { costRange, currentGate, gateText, money, type Assumption, type Question, type ReviewTab } from "../data/task";
+import { costRange, currentGate, gateText, money, planProgress, type Assumption, type Question, type ReviewTab } from "../data/task";
 import { useInbox } from "../data/inboxStore";
 import { PANE_BODY, PlanPane, QuestionCard, answerLabel, type CustomAnswer } from "./PlanPane";
 import { TASKS } from "../data/inbox";
@@ -339,6 +339,7 @@ export function PlanView({ view }: { view: ChatTaskView }) {
   const { answers } = useInbox();
   const t = totals(view);
   const spent = view.live.stages.flatMap((st) => st.steps).reduce((n, p) => n + (p.status === "done" && p.work ? costRange(p.work.cost).min : 0), 0);
+  const progress = planProgress(view.live);
   return (
     <div className={CODE}>
       <PlanPane
@@ -346,11 +347,27 @@ export function PlanView({ view }: { view: ChatTaskView }) {
         answers={answers}
         edits={view.planEdits}
         header={
+          // At the gate the question is whether to let it run, so money leads. Once it runs, where it stands leads.
           <header className="flex flex-col gap-0.5">
-            <p className="text-heading text-primary">
-              ~{money(t.min, t.max)} <span className="text-secondary">of the ${view.envelope.limit} limit</span>
-            </p>
-            <p className="text-footnote text-muted">Forecast for what is left{spent > 0 && ` · $${spent.toFixed(2)} spent`}</p>
+            {view.atGate ? (
+              <>
+                <p className="text-heading text-primary">
+                  ~{money(t.min, t.max)} <span className="text-secondary">of the ${view.envelope.limit} limit</span>
+                </p>
+                <p className="text-footnote text-muted">Forecast for what is left{spent > 0 && ` · $${spent.toFixed(2)} spent`}</p>
+              </>
+            ) : (
+              <>
+                {/* Steps of the whole plan: the stage rows below have their own counts. */}
+                <p className="text-heading text-primary">
+                  {progress.done} of {progress.total} steps done
+                  {progress.yourTurn && <span className="text-secondary"> · your turn {progress.yourTurn}</span>}
+                </p>
+                <p className="text-footnote text-muted">
+                  ~{money(t.min, t.max)} more of the ${view.envelope.limit} limit{spent > 0 && ` · $${spent.toFixed(2)} spent`}
+                </p>
+              </>
+            )}
             {t.over && (
               <p className="pt-xs text-footnote text-clay">
                 May go over your limit: up to ${t.max} of ${view.envelope.limit}. Cut scope to fit.
@@ -597,7 +614,8 @@ function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) 
     <p className="not-prose flex flex-wrap items-center gap-x-sm pt-sm text-body text-secondary">
       <TaskDot state="done" />
       You approved the brief and plan
-      <TextLink onClick={() => setTab("brief")}>Open brief</TextLink>
+      {/* Once it runs, the plan is what you come back for: it shows the progress. */}
+      <TextLink onClick={() => setTab("plan")}>Open plan</TextLink>
     </p>
   );
 }
@@ -840,7 +858,7 @@ function QuestionLine({ chatId, questionId }: { chatId: string; questionId: stri
   // Set apart from the message: a rail and the same Blocking / Can wait tag as the dock. Clay only while it blocks you.
   const blocks = question.blocking && !picked;
   return (
-    <div className={cx("not-prose my-md flex flex-col gap-0.5 border-s-2 ps-md", blocks ? "border-clay" : "border-alpha-3")}>
+    <div className={cx("not-prose my-md flex flex-col gap-0.5 border-s ps-md", blocks ? "border-clay" : "border-alpha-3")}>
       <span className={cx("text-footnote", blocks ? "text-clay" : "text-muted")}>{question.blocking ? "Blocking" : "Can wait"}</span>
       <p className="text-body font-medium text-primary">{question.text}</p>
       {picked && (
