@@ -296,7 +296,7 @@ function PlanStepRow({ live, planStep }: { live: LiveStatus; planStep: { done: n
         title="Plan"
         // Said in words: a pulsing dot alone did not read as progress. The count is the whole plan's, the same as on
         // the Plan chip and in the plan's header ("3 of 6"), not the step's number, which read as a mismatch.
-        meta={[`In progress: ${live.step}`, `${planStep.done} of ${planStep.of} steps done`, live.target].filter(Boolean).join(" · ")}
+        meta={[`In progress: ${live.step}`, `${planStep.done}/${planStep.of}`, live.target].filter(Boolean).join(" · ")}
         onOpen={() => setTab("plan")}
       />
     </div>
