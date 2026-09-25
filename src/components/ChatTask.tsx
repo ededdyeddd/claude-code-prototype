@@ -538,7 +538,7 @@ function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) 
           <Inline text={brief.understanding} />
         </p>
         <p className="flex flex-wrap items-center gap-x-xs text-body text-secondary">
-          Собрал бриф и план — они во вкладках:
+          Собрал бриф и план:
           <Button size="xs" variant="secondary" onClick={() => setTab("brief")}>
             Brief
           </Button>
