@@ -301,7 +301,8 @@ export function BriefView({ view }: { view: ChatTaskView }) {
             ...view.criteria.map((text, i) => ({ id: `mine-${i}`, text, locked: true, mine: true })),
           ].map((c) => (
             <li key={c.id} className="flex items-start gap-sm text-body text-primary">
-              <span aria-hidden="true" className="mt-[4px] block size-3 shrink-0 rounded-[3px] border border-alpha-3" />
+              {/* A plain bullet, not a box: the agent's checks meet these, the person doesn't tick them. */}
+              <Bullet />
               {/* The lock sits right after its criterion, not at the far edge of the pane. */}
               <span className="min-w-0">
                 <Inline text={c.text} />
