@@ -30,7 +30,6 @@ export const SESSIONS: Session[] = [
   { id: "prototype-copy", title: "Prototype copy", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 9082, removed: 37 }, status: "active", env: "local", lastActivity: 1, created: 300, running: true },
   { id: "astrology", title: "Astrology app plan", project: null, status: "active", env: "cloud", lastActivity: 3000, created: 3500 },
   { id: "yango-interview", title: "Как пройти собеседование в yango", project: null, status: "active", env: "local", lastActivity: 5000, created: 7000 },
-  { id: "builtin", title: "Встроенные функции", project: null, other: true, status: "active", env: "local", lastActivity: 8000, created: 9000 },
 ];
 
 export type NavFilters = {
