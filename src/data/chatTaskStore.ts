@@ -70,10 +70,6 @@ export function escalate(id: string, agreed: boolean) {
   }));
 }
 
-export function setEnvelope(id: string, envelope: Envelope) {
-  patch(id, { envelope });
-}
-
 export function seeTab(id: string, tab: TaskTab) {
   if (!(state[id]?.changed ?? []).includes(tab)) return;
   patch(id, (s) => ({ changed: s.changed.filter((t) => t !== tab) }));
@@ -193,8 +189,3 @@ export type ChatTaskView = NonNullable<ReturnType<typeof useChatTask>>;
 /** Envelope of the new chat on /code (S2), before a task exists. */
 export const NEW_CHAT = "new";
 
-/** Envelope of any chat (task or not): the per-chat copy, or the project defaults. */
-export function useEnvelope(id: string) {
-  const s = useStore();
-  return s[id]?.envelope ?? DEFAULT_ENVELOPE;
-}

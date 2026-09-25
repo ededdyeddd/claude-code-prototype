@@ -12,13 +12,13 @@ import type { Turn } from "../data/transcripts";
 import type { Session } from "../data/sessions";
 import { RepoBar } from "./RepoBar";
 import { ContextUsage } from "./icons/Blue_dot_right_edge";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "../ui";
 import { NEW_CHAT, seeTab, sendMessage, useChatTask, type TaskTab } from "../data/chatTaskStore";
 import { ONE_CLICK_PROMPT, guessLevel } from "../data/chatTasks";
 import { useInbox } from "../data/inboxStore";
-import { BriefView, ChatTaskContext, DecisionDock, PlanView, TaskTabsBar } from "./ChatTask";
+import { ChatTaskContext, DecisionDock } from "./ChatTask";
 
 // Rough context estimate for the mock: characters in the transcript vs. a small window,
 // so a long chat fills the ring noticeably more than a short one.
@@ -51,23 +51,20 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
   const guess = guessLevel(draft);
   const bigTask = asTask ?? guess.level >= 3;
 
-  // The open tab lives in the URL (?tab=brief), so every state has a link.
-  const tabParam = params.get("tab") as TaskTab | null;
-  const tab: TaskTab = view && tabParam && view.tabs.includes(tabParam) ? tabParam : "chat";
+  // Brief and Plan open in the pane on the right of the chat (?panel=brief|plan, see ChatShell); the feed is always the chat.
   const setTab = (t: TaskTab) => {
-    if (view) seeTab(view.id, t);
-    setParams((p) => {
-      const next = new URLSearchParams(p);
-      if (t === "chat") next.delete("tab");
-      else next.set("tab", t);
-      return next;
-    }, { replace: true });
+    if (view && t !== "chat") seeTab(view.id, t);
+    setParams(
+      (p) => {
+        const next = new URLSearchParams(p);
+        next.delete("review");
+        if (t === "chat") next.delete("panel");
+        else next.set("panel", t);
+        return next;
+      },
+      { replace: true },
+    );
   };
-  // The open tab counts as seen, also when an edit lands while it is open.
-  const unseen = !!view?.changed.includes(tab);
-  useEffect(() => {
-    if (view && unseen) seeTab(view.id, tab);
-  }, [view, unseen, tab]);
   const turns = transcript && view ? [...transcript, ...view.turns] : transcript;
 
   const send = (text: string) => {
@@ -95,11 +92,6 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
     >
     <ContextUsage.Provider value={contextUsage(transcript)}>
     <div className="contents">
-      {view && view.tabs.length > 0 && (
-        <div className={COLUMN + " w-full shrink-0"}>
-          <TaskTabsBar view={view} tab={tab} onTab={setTab} />
-        </div>
-      )}
       <div className="contents">
         <div className={
             "epitaxy-chat-panel-body flex-1 min-h-0 relative w-full mx-auto [.epitaxy-chat-panel_&]:[@container_tile-slot_(max-width:560px)]:[--chat-gutter:16px] [--chat-column-gutter-start:var(--chat-gutter-start,var(--chat-gutter,32px))] [--chat-column-gutter-end:var(--chat-gutter-end,var(--chat-gutter,32px))] [[data-chat-gutter-start=shave]_&]:[--chat-column-gutter-start:var(--chat-gutter-start,calc(var(--chat-gutter)-(var(--tiles-gap)-var(--tiles-padding))))] [[data-chat-gutter-end=shave]_&]:[--chat-column-gutter-end:var(--chat-gutter-end,calc(var(--chat-gutter)-(var(--tiles-gap)-var(--tiles-padding))))] [[data-chat-gutter-end=bleed]_&]:[--chat-column-gutter-end:var(--chat-gutter-end,calc(var(--chat-gutter)+var(--tiles-padding)))] max-w-[calc(var(--max-content-width)+var(--chat-column-gutter-start)+var(--chat-column-gutter-end))] ps-[var(--chat-column-gutter-start)] pe-[var(--chat-column-gutter-end)] [[data-pane-overlay]_&]:[translate:var(--epitaxy-overlay-column-shift,none)] *:[--epitaxy-overlay-column-shift:none] [[data-pane-overlay]_&]:[transition:translate_var(--tile-overlay-duration)_var(--tile-overlay-ease)] [--max-content-width:var(--chat-column-measure,768px)] [[data-transcript-width=m]_&]:[--max-content-width:var(--chat-column-measure,960px)] [[data-transcript-width=l]_&]:[--max-content-width:var(--chat-column-measure,1280px)]" +
@@ -110,13 +102,7 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
           <ScrollFadeContainer>
             {transcript && (
               <div className={TRANSCRIPT_COLUMN + " !static !h-auto !pointer-events-auto select-text"}>
-                {view && tab === "brief" ? (
-                  <BriefView view={view} />
-                ) : view && tab === "plan" ? (
-                  <PlanView view={view} />
-                ) : (
-                  <Transcript turns={turns!} live={chat?.running ? LIVE_STATUS[chat.id] : undefined} />
-                )}
+                <Transcript turns={turns!} live={chat?.running ? LIVE_STATUS[chat.id] : undefined} />
               </div>
             )}
           </ScrollFadeContainer>
@@ -168,7 +154,7 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
                 onChange={hasContent ? undefined : (t) => (setDraft(t), t || setAsTask(undefined))}
                 onSend={send}
               />
-              <ChatComposerChin key={`chin:${chat?.id ?? NEW_CHAT}`} chatId={chat?.id ?? NEW_CHAT} envelopeOpen={scene === "s2"} />
+              <ChatComposerChin key={`chin:${chat?.id ?? NEW_CHAT}`} />
             </div>
           </div>
           <CdsRoot />

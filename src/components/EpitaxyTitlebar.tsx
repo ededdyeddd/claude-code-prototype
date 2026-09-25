@@ -8,7 +8,10 @@ const PANEL = "\uE113";
 const GLOBE = "\uE082";
 const MORE = "\uE062";
 
-export function EpitaxyTitlebar({ chat }: { chat?: Session }) {
+/** A button in the titlebar that opens a pane on the right of the chat (the task's Brief or Plan). */
+export type TitlebarPane = { id: string; label: string; open: boolean; changed?: boolean };
+
+export function EpitaxyTitlebar({ chat, panes, onPane }: { chat?: Session; panes?: TitlebarPane[]; onPane?: (id: string) => void }) {
   return (
     <div className="epitaxy-titlebar relative flex items-center h-[calc(2rem*var(--cds-rem-scale,1))] pl-0 pr-[12px] [[data-chat-gutter-end=shave]_&]:pr-0 [[data-tile-overflow-anchor=left]_&]:mr-[max(0px,var(--tile-overflow-min,0px)_-_100cqw)] [[data-tile-overflow-anchor=right]_&]:ml-[max(0px,var(--tile-overflow-min,0px)_-_100cqw)]">
       <div className="draggable absolute inset-0 -z-[1]" />
@@ -24,8 +27,25 @@ export function EpitaxyTitlebar({ chat }: { chat?: Session }) {
               <span className="truncate">{chat.title}</span>
               <Icon glyph={CHEVRON_DOWN} size="sm" className="!text-muted" />
             </button>
-            {chat.project && (
-              <span className="shrink-0 rounded-sm bg-alpha-2 px-1.5 text-footnote leading-5 text-secondary">{chat.project}</span>
+            {panes && panes.length > 0 && (
+              <div className="flex shrink-0 items-center gap-0.5">
+                {panes.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    aria-pressed={p.open}
+                    onClick={() => onPane?.(p.id)}
+                    className={
+                      "flex h-[var(--cds-h-control--xs)] items-center gap-1.5 rounded-sm px-sm text-body outline-none transition-colors duration-fast focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)] " +
+                      (p.open ? "bg-alpha-2 text-primary" : "text-muted hover:bg-alpha-1 hover:text-primary")
+                    }
+                  >
+                    {p.label}
+                    {/* Changed by an edit since last opened. */}
+                    {p.changed && <span aria-label="Changed" className="block size-[6px] rounded-full bg-muted" />}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         )}

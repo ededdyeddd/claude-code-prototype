@@ -1,12 +1,11 @@
 import { IconButton } from "./IconButton";
 import { Contents } from "./Contents";
 import { FileUploadInput } from "./FileUploadInput";
-import { EnvelopeChip } from "./EnvelopeChip";
+import { SelectorButton } from "./SelectorButton";
 import { SplitDropdownControl } from "./SplitDropdownControl";
 import { SelectorControls } from "./SelectorControls";
 
-/** Chips under the field; the autonomy envelope takes the place of the Auto switch. */
-export function ChatComposerChin({ chatId, envelopeOpen }: { chatId: string; envelopeOpen?: boolean }) {
+export function ChatComposerChin() {
   return (
     <div
       data-cds="ChatComposerChin"
@@ -25,7 +24,7 @@ export function ChatComposerChin({ chatId, envelopeOpen }: { chatId: string; env
               <SplitDropdownControl />
               <Contents />
               <span className="inline-flex min-w-0">
-                <EnvelopeChip chatId={chatId} defaultOpen={envelopeOpen} />
+                <SelectorButton dataId="0" />
               </span>
               <Contents />
             </div>

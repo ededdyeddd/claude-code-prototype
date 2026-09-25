@@ -9,29 +9,46 @@ import { useChatTask } from "../data/chatTaskStore";
 import type { ReviewTab } from "../data/task";
 import { usePersistentWidth } from "../data/usePersistentWidth";
 import { ReviewPane } from "./ReviewPane";
-import { SIDE_PANE } from "./SidePane";
+import { SIDE_PANE, SidePane } from "./SidePane";
+import { BriefView, ChatTaskContext, PlanView } from "./ChatTask";
+import { seeTab, type TaskTab } from "../data/chatTaskStore";
+import { useEffect } from "react";
 
 export function ChatShell({ name, transcript, chat }: { name: string; transcript?: Turn[]; chat?: Session }) {
-  // A review artifact opens on the right of the chat (?review=changes|screens|checks), like the task pane in the Inbox.
+  // One pane on the right of the chat, like the task pane in the Inbox: the task's brief or plan (?panel=brief|plan),
+  // or a result's review (?review=changes|screens|checks). The chat stays where it is; decisions stay in its dock.
   const [params, setParams] = useSearchParams();
   const view = useChatTask(chat?.id);
   const reviewTab = params.get("review") as ReviewTab | null;
   const review = view?.task.result?.review && reviewTab ? reviewTab : null;
-  const setReview = (t: ReviewTab | null) =>
+  const panelParam = params.get("panel") as TaskTab | null;
+  const panel = !review && view && panelParam && panelParam !== "chat" && view.tabs.includes(panelParam) ? panelParam : null;
+  const setPane = (key: "review" | "panel", value: string | null) =>
     setParams(
       (p) => {
         const next = new URLSearchParams(p);
-        if (t) next.set("review", t);
-        else next.delete("review");
+        next.delete("review");
+        next.delete("panel");
+        if (value) next.set(key, value);
         return next;
       },
       { replace: true },
     );
+  const setReview = (t: ReviewTab | null) => setPane("review", t);
+  const setPanel = (t: TaskTab | null) => {
+    if (t && t !== "chat" && view) seeTab(view.id, t);
+    setPane("panel", t && t !== "chat" ? t : null);
+  };
+  // An open panel counts as seen, also when an edit lands while it is open.
+  const unseen = !!(panel && view?.changed.includes(panel));
+  useEffect(() => {
+    if (view && panel && unseen) seeTab(view.id, panel);
+  }, [view, panel, unseen]);
   const [paneWidth, setPaneWidth] = usePersistentWidth("cc:review-pane-width", SIDE_PANE.default);
   const root = useRef<HTMLDivElement>(null);
   const paneMax = (root.current?.clientWidth ?? 1200) - 400;
   return (
-    <div ref={root} className={"absolute inset-0 flex gap-[var(--tiles-gap,12px)]" + (review ? " pe-[var(--tiles-padding,8px)]" : "")}>
+    <div ref={root} className={"absolute inset-0 flex gap-[var(--tiles-gap,12px)]" + (review || panel ? " pe-[var(--tiles-padding,8px)]" : "")}>
     <div className="relative min-w-0 flex-1">
     <div
       className="tiles-shell"
@@ -63,7 +80,17 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
           <div className="relative isolate min-w-0 epitaxy-chat-panel" data-chat-gutter-end="bleed">
             <div className="rounded-card bg-surface-2 shadow-panel-sm dark:shadow-sm dark:outline dark:outline-1 dark:outline-alpha-2 pointer-events-none absolute inset-0 -z-[1] opacity-0 transition-opacity duration-200 [.tiles-dragging_&]:opacity-100" />
             <div className="relative h-full min-w-0 flex flex-col">
-              <EpitaxyTitlebar chat={transcript ? chat : undefined} />
+              <EpitaxyTitlebar
+                chat={transcript ? chat : undefined}
+                panes={
+                  view && view.tabs.length > 0
+                    ? view.tabs
+                        .filter((t) => t !== "chat")
+                        .map((t) => ({ id: t, label: t === "brief" ? "Brief" : "Plan", open: panel === t, changed: view.changed.includes(t) && panel !== t }))
+                    : undefined
+                }
+                onPane={(id) => setPanel(panel === id ? null : (id as TaskTab))}
+              />
               <div className="relative">
                 {!transcript && <NextHeader name={name} />}
               </div>
@@ -74,6 +101,20 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
       </div>
     </div>
     </div>
+    {panel && view && (
+      <ChatTaskContext.Provider value={{ chatId: view.id, view, setTab: (t) => setPanel(t) }}>
+        <SidePane
+          title={panel === "brief" ? "Brief" : "Plan"}
+          meta={view.task.title}
+          width={Math.min(paneWidth, Math.max(SIDE_PANE.min, paneMax))}
+          maxWidth={paneMax}
+          onResize={setPaneWidth}
+          onClose={() => setPanel(null)}
+        >
+          {panel === "brief" ? <BriefView view={view} /> : <PlanView view={view} />}
+        </SidePane>
+      </ChatTaskContext.Provider>
+    )}
     {review && view && (
       <ReviewPane
         view={view}

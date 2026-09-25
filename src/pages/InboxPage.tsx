@@ -1,7 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button, EmptyState, Hint, Icon, Menu } from "../ui";
-import { SESSIONS } from "../data/sessions";
 import { SidePane, SIDE_PANE } from "../components/SidePane";
 import { TaskDot } from "../components/StatusMark";
 import { AttentionMenu } from "../components/AttentionMenu";
@@ -11,7 +10,7 @@ import { currentGate, gateText, type Task } from "../data/task";
 import { PlanPane, whenHint } from "../components/PlanPane";
 import { GateCard } from "../components/ChatTask";
 import { deriveTask, type TaskState } from "../data/chatTaskStore";
-import { answer, answerKey, openQuestions, setAttention, unanswer, useInbox, type Attention } from "../data/inboxStore";
+import { openQuestions, useInbox, type Attention } from "../data/inboxStore";
 
 // Anthropicons codepoints (see /tokens#icons)
 const I = {
