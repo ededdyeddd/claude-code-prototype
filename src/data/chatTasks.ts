@@ -146,74 +146,6 @@ const ONE_CLICK: Task = {
   },
 };
 
-/** Level 1: a small task that ends with a result card instead of "Done". */
-const REORDER_BUTTON: Task = {
-  id: "reorder-button",
-  title: "Кнопка «Повторить заказ» на мобильном",
-  summary: "Кнопка уезжала за край на узких экранах; перенёс её под сумму.",
-  project: "storefront",
-  stage: "Done",
-  now: "Result · waiting for you",
-  agent: "ui-engineer",
-  model: "Opus 5.5",
-  spent: "$0.35",
-  tokens: "90K",
-  level: 1,
-  stages: [
-    {
-      id: "fix",
-      title: "Fix",
-      steps: [{ id: "fix", status: "done", title: "Кнопка под суммой на узких экранах", work: { agent: "ui-engineer", cost: "$0.35", time: "7m" } }],
-    },
-  ],
-  autoDecisions: [],
-  result: {
-    claims: [
-      { text: "Кнопка «Повторить заказ» видна на экранах от 320px", evidence: "Screenshots at 320, 375 and 768 px, before and after", show: "screens" },
-      { text: "Остальные брейкпоинты не изменились", evidence: "42 visual snapshots, 0 changed", show: "checks" },
-      { text: "Поведение кнопки не менялось", evidence: "`order-history.test.ts` · 12 passed", show: "checks" },
-    ],
-    review: {
-      files: [
-        {
-          name: "src/orders/OrderRow.tsx",
-          added: 5,
-          removed: 3,
-          lines: [
-            "@@ -41,9 +41,11 @@ export function OrderRow({ order }: Props) {",
-            "   return (",
-            '-    <div className="order-row whitespace-nowrap">',
-            '+    <div className="order-row flex flex-wrap items-center gap-2">',
-            '       <span className="order-number">#{order.number}</span>',
-            '       <span className="order-date">{formatDate(order.date)}</span>',
-            '-      <span className="order-total">{formatMoney(order.total)}</span>',
-            "-      <ReorderButton order={order} />",
-            '+      <div className="ml-auto flex flex-col items-end gap-1 sm:flex-row sm:items-center">',
-            '+        <span className="order-total">{formatMoney(order.total)}</span>',
-            "+        <ReorderButton order={order} />",
-            "+      </div>",
-            "     </div>",
-            "   );",
-          ],
-        },
-      ],
-      screens: [320, 375, 768],
-      checks: [
-        {
-          label: "Visual snapshots",
-          result: "42 compared · 0 changed",
-          items: ["order-history · 320, 375, 768, 1280", "checkout · 4 widths", "cart · 4 widths", "…and 30 more"],
-        },
-        {
-          label: "order-history.test.ts",
-          result: "12 passed",
-          items: ["reorder adds all items to the cart", "reorder skips items out of stock", "button is hidden for cancelled orders", "…and 9 more"],
-        },
-      ],
-    },
-  },
-};
-
 /** Level 1 that turned out bigger: the agent offers stages and a gate before the migration. */
 const LOYALTY: Task = {
   id: "loyalty",
@@ -284,7 +216,7 @@ const LOYALTY: Task = {
   autoDecisions: [],
 };
 
-export const CHAT_TASK_LIST: Task[] = [ONE_CLICK, REORDER_BUTTON, LOYALTY];
+export const CHAT_TASK_LIST: Task[] = [ONE_CLICK, LOYALTY];
 
 export const CHAT_TASKS: Record<string, Task> = Object.fromEntries(CHAT_TASK_LIST.map((t) => [t.id, t]));
 
@@ -307,23 +239,6 @@ export const CHAT_TASK_TRANSCRIPTS: Record<string, Turn[]> = {
       blocks: [
         { type: "p", text: "Stripe уже подключён, карты можно хранить в Stripe Customer — своих таблиц не понадобится." },
         { type: "brief-card" },
-      ],
-    },
-  ],
-  "reorder-button": [
-    { role: "user", text: "На мобильном не видно кнопку «Повторить заказ» в истории заказов, почини." },
-    {
-      role: "assistant",
-      thought: "Edited 1 file, ran 2 commands",
-      time: "3 minutes ago",
-      steps: [
-        { icon: READ, label: "Read OrderHistory.tsx" },
-        { icon: RUN, label: "Ran visual snapshots" },
-        { icon: RUN, label: "Ran order-history tests" },
-      ],
-      blocks: [
-        { type: "p", text: "Кнопка уезжала за край: у строки заказа был `white-space: nowrap`. Перенёс кнопку под сумму на узких экранах." },
-        { type: "result-card" },
       ],
     },
   ],

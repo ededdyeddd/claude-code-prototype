@@ -2,7 +2,7 @@
 
 Экран чата Claude Code остаётся основой и не заменяется. Элементы задачи (табы, бриф, план, гейты, прогнозы) появляются только тогда, когда задаче есть что в них показать. Всё начинается как обычный чат.
 
-- Маршруты демо: `/code?scene=s2` (S2), `/code/one-click-pay` (S3; бриф и план — `?panel=brief|plan`), `/code/reorder-button` (уровень 1), `/code/loyalty` (эскалация).
+- Маршруты демо: `/code?scene=s2` (S2), `/code/one-click-pay` (S3; бриф и план — `?panel=brief|plan`), `/code/loyalty` (эскалация).
 - Код: модель `src/data/task.ts` (общая с Inbox), моки `src/data/chatTasks.ts`, состояние `src/data/chatTaskStore.ts`, экран `src/components/ChatTask.tsx`, план `src/components/PlanPane.tsx` (общий с Inbox), конверт `src/components/EnvelopeChip.tsx`, сборка в `src/components/ChatPanel.tsx`.
 - Принципы Inbox (`docs/INBOX.md`, §1) действуют и здесь: прогноз подписан, терракота значит только «нужен ты», тише со временем.
 
