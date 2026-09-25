@@ -15,6 +15,7 @@ const CLOSE = "";
  * element (a task, an artifact). Same card as a tile: surface-2, hairline outline.
  */
 export function SidePane({
+  id,
   title,
   meta,
   width,
@@ -27,6 +28,8 @@ export function SidePane({
   footer,
   children,
 }: {
+  /** For aria-controls on the toggle that opens it. */
+  id?: string;
   title: ReactNode;
   meta?: ReactNode;
   width: number;
@@ -68,6 +71,7 @@ export function SidePane({
         />
       )}
       <section
+        id={id}
         aria-label="Side pane"
         className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-card bg-surface-2 shadow-panel-sm dark:shadow-sm dark:outline dark:outline-1 dark:outline-alpha-2"
       >

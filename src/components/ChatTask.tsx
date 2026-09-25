@@ -22,6 +22,7 @@ const LOCK = "";
 const CHEVRON = "\uE02A";
 const CHEVRON_LEFT = "\uE029";
 const FILES = "\uE02D";
+const TASK = "\uE041";
 const PEN = "";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
@@ -528,6 +529,19 @@ function EscalationDecision({
  * The brief in the feed: the agent's words and where the full brief and plan are. The decisions on them
  * (assumptions, the gate) are asked in the dock over the composer.
  */
+/** "3 stages · 2 approvals · ~$6–11 of $12": what the tile opens, in one line. */
+function briefMeta(view: ChatTaskView) {
+  const t = totals(view);
+  const approvals = view.live.stages.filter((st) => st.gate?.mine).length;
+  return [
+    `${view.live.stages.length} ${view.live.stages.length === 1 ? "stage" : "stages"}`,
+    approvals > 0 && `${approvals} ${approvals === 1 ? "approval" : "approvals"}`,
+    `~${money(t.min, t.max)} of $${view.envelope.limit}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) => void }) {
   const brief = view.task.brief;
   if (view.atGate && brief)
@@ -536,25 +550,45 @@ function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) 
         <p className="text-body text-primary">
           <Inline text={brief.understanding} />
         </p>
-        <p className="flex flex-wrap items-center gap-x-xs text-body text-secondary">
-          Собрал бриф и план:
-          <Button size="xs" variant="secondary" onClick={() => setTab("brief")}>
-            Brief
-          </Button>
-          <Button size="xs" variant="secondary" onClick={() => setTab("plan")}>
-            Plan
-          </Button>
-        </p>
+        <div className="pt-xs">
+          <ArtifactTile
+            icon={TASK}
+            title="Brief and plan"
+            meta={briefMeta(view)}
+            onOpen={() => setTab("brief")}
+          />
+        </div>
       </div>
     );
   return (
     <p className="not-prose flex flex-wrap items-center gap-x-sm pt-sm text-body text-secondary">
       <TaskDot state="done" />
       You approved the brief and plan
-      <Button size="xs" variant="secondary" onClick={() => setTab("brief")}>
-        Open brief
-      </Button>
+      <TextLink onClick={() => setTab("brief")}>Open brief</TextLink>
     </p>
+  );
+}
+
+/**
+ * An artifact in the agent's reply: one tile that opens it next to the chat (the review, the brief and plan).
+ * Concentric corners: the tile's radius is the icon box's radius plus the padding around it.
+ */
+export function ArtifactTile({ icon, title, meta, onOpen }: { icon: string; title: string; meta: ReactNode; onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full items-center gap-md rounded-[calc(var(--cds-radius)+var(--cds-gap-sm))] bg-alpha-1 p-[var(--cds-gap-sm)] pe-md text-left outline-none hover:bg-alpha-2 focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
+    >
+      <span className="flex size-8 shrink-0 items-center justify-center rounded bg-alpha-2">
+        <Icon glyph={icon} className="!text-secondary" />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-body text-primary">{title}</span>
+        <span className="text-footnote text-muted">{meta}</span>
+      </span>
+      <Icon glyph={CHEVRON} size="sm" className="!text-muted" />
+    </button>
   );
 }
 
@@ -594,25 +628,14 @@ function ResultCard({ view }: { view: ChatTaskView }) {
         ))}
       </ul>
       {review && openReview && (
-        // The artifact: one tile that opens the whole review next to the chat.
-        <button
-          type="button"
-          onClick={() => openReview("changes")}
-          // Concentric corners: the tile's radius is the icon box's radius plus the padding around it.
-          className="mt-xs flex w-full items-center gap-md rounded-[calc(var(--cds-radius)+var(--cds-gap-sm))] bg-alpha-1 p-[var(--cds-gap-sm)] pe-md text-left outline-none hover:bg-alpha-2 focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
-        >
-          <span className="flex size-8 shrink-0 items-center justify-center rounded bg-alpha-2">
-            <Icon glyph={FILES} className="!text-secondary" />
-          </span>
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="text-body text-primary">Review the change</span>
-            <span className="text-footnote text-muted">
-              {review.files.length} {review.files.length === 1 ? "file" : "files"} · {review.screens.length * 2} screenshots ·{" "}
-              {review.checks.length} checks
-            </span>
-          </span>
-          <Icon glyph={CHEVRON} size="sm" className="!text-muted" />
-        </button>
+        <div className="pt-xs">
+          <ArtifactTile
+            icon={FILES}
+            title="Review the change"
+            meta={`${review.files.length} ${review.files.length === 1 ? "file" : "files"} · ${review.screens.length * 2} screenshots · ${review.checks.length} checks`}
+            onOpen={() => openReview("changes")}
+          />
+        </div>
       )}
       {view.accepted && (
         <span className="flex items-center justify-end gap-1.5 text-footnote text-muted">

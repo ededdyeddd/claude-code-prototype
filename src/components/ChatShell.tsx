@@ -11,6 +11,7 @@ import { usePersistentWidth } from "../data/usePersistentWidth";
 import { ReviewPane } from "./ReviewPane";
 import { SIDE_PANE, SidePane } from "./SidePane";
 import { BriefView, ChatTaskContext, PlanView } from "./ChatTask";
+import { Tabs } from "../ui";
 import { seeTab, type TaskTab } from "../data/chatTaskStore";
 import { useEffect } from "react";
 
@@ -82,14 +83,17 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
             <div className="relative h-full min-w-0 flex flex-col">
               <EpitaxyTitlebar
                 chat={transcript ? chat : undefined}
-                panes={
-                  view && view.tabs.length > 0
-                    ? view.tabs
-                        .filter((t) => t !== "chat")
-                        .map((t) => ({ id: t, label: t === "brief" ? "Brief" : "Plan", open: panel === t, changed: view.changed.includes(t) && panel !== t }))
+                taskPane={
+                  view && view.tabs.length > 1
+                    ? {
+                        label: view.tabs.includes("brief") ? "Brief and plan" : "Plan",
+                        open: !!panel,
+                        changed: view.changed.length > 0,
+                        // Opens on the brief while it waits for approval, on the plan once the task runs.
+                        onToggle: () => setPanel(panel ? null : view.tabs.includes("brief") && view.atGate ? "brief" : "plan"),
+                      }
                     : undefined
                 }
-                onPane={(id) => setPanel(panel === id ? null : (id as TaskTab))}
               />
               <div className="relative">
                 {!transcript && <NextHeader name={name} />}
@@ -104,13 +108,27 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
     {panel && view && (
       <ChatTaskContext.Provider value={{ chatId: view.id, view, setTab: (t) => setPanel(t) }}>
         <SidePane
-          title={panel === "brief" ? "Brief" : "Plan"}
-          meta={view.task.title}
+          id="task-pane"
+          title={view.tabs.includes("brief") ? "Brief and plan" : "Plan"}
           width={Math.min(paneWidth, Math.max(SIDE_PANE.min, paneMax))}
           maxWidth={paneMax}
           onResize={setPaneWidth}
           onClose={() => setPanel(null)}
         >
+          {view.tabs.includes("brief") && (
+            <div className="px-[var(--cds-gap-lg)] pt-xs">
+              <Tabs
+                label="Brief and plan"
+                value={panel}
+                onChange={(t) => setPanel(t)}
+                items={(["brief", "plan"] as const).map((t) => ({
+                  value: t,
+                  label: t === "brief" ? "Brief" : "Plan",
+                  badge: view.changed.includes(t) && panel !== t ? <span aria-label="Changed" className="block size-[6px] rounded-full bg-muted" /> : undefined,
+                }))}
+              />
+            </div>
+          )}
           {panel === "brief" ? <BriefView view={view} /> : <PlanView view={view} />}
         </SidePane>
       </ChatTaskContext.Provider>
