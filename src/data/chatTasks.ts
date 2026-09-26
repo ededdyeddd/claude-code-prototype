@@ -5,6 +5,7 @@
  */
 import type { Turn } from "./transcripts";
 import type { Level, Task } from "./task";
+import { YANGO_TASKS, YANGO_TASK_TRANSCRIPTS } from "./yangoTasks";
 
 /* ---------------------------------------------------------------- Envelope */
 
@@ -77,6 +78,13 @@ const ONE_CLICK: Task = {
   brief: {
     understanding:
       "Покупатель, который уже платил, оплачивает следующий заказ в один клик: сохранённая карта выбрана заранее, CVC не спрашиваем, 3-D Secure — только когда требует банк. Карты хранит Stripe, у нас — токен и последние 4 цифры.",
+    found: [
+      { text: "Stripe подключён: платёж идёт через PaymentIntent, ключ и вебхуки уже настроены", source: "`server/payments/stripe.ts`" },
+      { text: "Карты сейчас не сохраняются и Stripe Customer не создаётся: каждый заказ — новый ввод карты", source: "`checkout/PaymentForm.tsx`" },
+      { text: "38% заказов за 90 дней — повторные, 71% из них оплачены той же картой, что и прошлый", source: "Заказы за 90 дней, 12 400 штук" },
+      { text: "3-D Secure уже обрабатывает `handleNextAction` — для повторной оплаты его можно переиспользовать", source: "`checkout/useCheckout.ts`" },
+      { text: "Повторный заказ собирается на странице истории заказов — туда встанет кнопка", source: "`checkout/OrderHistory.tsx`" },
+    ],
     assumptions: [
       {
         id: "consent",
@@ -85,6 +93,8 @@ const ONE_CLICK: Task = {
         why: "Продуктовое и юридическое решение — в коде ответа нет",
       },
       { id: "stripe", text: "Stripe уже подключён: беру существующий ключ и вебхуки из `server/payments/stripe.ts`" },
+      { id: "cvc", text: "CVC при повторной оплате не спрашиваем: Stripe проверил его при первой" },
+      { id: "cards", text: "До 3 сохранённых карт на покупателя, по умолчанию — последняя использованная" },
       { id: "wallets", text: "Apple Pay и Google Pay — той же кнопкой, через Payment Request" },
       { id: "mobile", text: "Вёрстка на мобильном — как у текущей формы оплаты" },
     ],
@@ -92,10 +102,14 @@ const ONE_CLICK: Task = {
       "Схему заказов и `server/orders/` только читаю",
       "Миграции не пишу: токен карты живёт в Stripe Customer",
       "Оплату для гостей не меняю",
+      "Возвраты и частичные списания не трогаю",
+      "Письма о заказе не меняю",
     ],
     doneWhen: [
       { id: "one-click", text: "Повторный заказ оплачивается одним нажатием, без ввода карты" },
       { id: "3ds", text: "3-D Secure проходит в тестовом режиме Stripe" },
+      { id: "decline", text: "Отказ банка по сохранённой карте — понятный текст и выбор другой карты" },
+      { id: "delete", text: "Сохранённую карту можно удалить в профиле" },
       { id: "no-consent", text: "Без согласия карта не сохраняется", locked: true },
       { id: "tests", text: "Все тесты чекаута зелёные, ни один не пропущен", locked: true },
     ],
@@ -149,7 +163,7 @@ const ONE_CLICK: Task = {
           work: { agent: "payments-engineer", cost: "~$2–3", basis: "14 similar tasks" },
           plan: {
             what: "Кнопка «Оплатить картой •• 4242» в повторном заказе: карта выбрана заранее, CVC не спрашиваем. Другую карту можно выбрать из списка.",
-            serves: ["one-click"],
+            serves: ["one-click", "delete"],
           },
         },
         {
@@ -158,7 +172,8 @@ const ONE_CLICK: Task = {
           title: "3-D Secure для повторной оплаты",
           work: { agent: "payments-engineer", cost: "~$1–2", basis: "size M, the agent's estimate" },
           plan: {
-            serves: ["3ds"],
+            what: "Если банк просит 3-D Secure, повторная оплата уходит в подтверждение и возвращается в заказ. Отказ банка — понятный текст и выбор другой карты.",
+            serves: ["3ds", "decline"],
           },
         },
         {
@@ -167,6 +182,7 @@ const ONE_CLICK: Task = {
           title: "Apple Pay и Google Pay через Payment Request",
           work: { agent: "payments-engineer", cost: "~$1–2", basis: "6 similar tasks" },
           plan: {
+            what: "Кнопка кошелька рядом с сохранённой картой: тоже оплата в одно нажатие, если кошелёк есть в браузере.",
             serves: ["one-click"],
           },
         },
@@ -183,7 +199,8 @@ const ONE_CLICK: Task = {
           title: "E2E: повторная оплата в тестовом режиме",
           work: { agent: "test-fixer", cost: "~$1", basis: "31 similar tasks" },
           plan: {
-            serves: ["one-click", "3ds", "no-consent", "tests"],
+            what: "Прогоню весь путь в тестовом режиме Stripe: оплата в одно нажатие, 3-D Secure, отказ банка, заказ без согласия. Тесты чекаута остаются зелёными.",
+            serves: ["one-click", "3ds", "decline", "no-consent", "tests"],
           },
         },
       ],
@@ -247,17 +264,34 @@ const I18N: Task = {
   brief: {
     understanding:
       "Витрина storefront на испанском для покупателей из Испании: интерфейс, карточки товаров и письма о заказе. Английский остаётся по умолчанию, язык выбирается по браузеру и переключателем в футере.",
+    found: [
+      { text: "1 240 строк интерфейса зашиты прямо в код, в 84 файлах; библиотеки i18n в проекте нет", source: "Поиск по `src/`" },
+      { text: "312 карточек товаров: название, описание и 9 атрибутов; описание — в среднем 80 слов", source: "Каталог" },
+      { text: "6 писем о заказе, тексты вшиты в вёрстку шаблонов", source: "`emails/templates/`" },
+      { text: "18% трафика — из Испании, из Латинской Америки — 2%", source: "Аналитика за 90 дней" },
+      { text: "Цены уже в евро и форматируются вручную, строкой", source: "`src/format/price.ts`" },
+    ],
     assumptions: [
       { id: "es-es", text: "Испанский для Испании (es-ES), не латиноамериканский", risky: true, why: "От этого зависят слова и обращение на «вы»", confirmed: true },
       { id: "prices", text: "Цены и валюта не меняются, переводим только текст" },
       { id: "brands", text: "Названия брендов и товарных линеек не переводим" },
       { id: "intl", text: "Даты и числа форматирует Intl по локали es-ES" },
+      { id: "fallback", text: "Если перевода нет, показываем английский, а не ключ" },
+      { id: "cookie", text: "Выбор языка храню в cookie, чтобы письма уходили на том же языке" },
     ],
-    boundaries: ["Цены, валюту и налоги не трогаю", "Адреса страниц для SEO не меняю", "В письмах меняю только тексты, не вёрстку"],
+    boundaries: [
+      "Цены, валюту и налоги не трогаю",
+      "Адреса страниц для SEO не меняю",
+      "В письмах меняю только тексты, не вёрстку",
+      "Отзывы покупателей не перевожу — это их тексты",
+      "Админку оставляю на английском",
+    ],
     doneWhen: [
       { id: "ui", text: "Все строки интерфейса на испанском, ни одного пропущенного ключа", met: "Линтер i18n: 0 пропущенных ключей из 1 240" },
+      { id: "switch", text: "Язык выбирается по браузеру и переключателем в футере", met: "Проверено в Chrome и Safari с es-ES и en-US" },
       { id: "cards", text: "Карточки товаров переведены: названия, описания, атрибуты" },
       { id: "emails", text: "Письма о заказе на испанском" },
+      { id: "layout", text: "Длинные испанские строки не ломают вёрстку на 375, 768 и 1440" },
       { id: "review", text: "Носитель вычитал и одобрил тексты", locked: true },
     ],
   },
@@ -317,6 +351,29 @@ const I18N: Task = {
           },
         },
         {
+          id: "switch",
+          status: "done",
+          title: "Выбор языка по браузеру и переключатель в футере",
+          work: { agent: "i18n-translator", cost: "$0.30", time: "8m" },
+          result: {
+            summary: "Язык берётся из браузера при первом заходе, дальше — переключатель в футере. Выбор хранится в cookie, чтобы письма уходили на том же языке.",
+            files: [
+              { name: "src/components/Footer.tsx", added: 34, removed: 2 },
+              { name: "src/i18n.ts", added: 12, removed: 0 },
+            ],
+          },
+        },
+        {
+          id: "intl",
+          status: "done",
+          title: "Даты, числа и цены через Intl",
+          work: { agent: "i18n-translator", cost: "$0.20", time: "6m" },
+          result: {
+            summary: "Даты, числа и цены форматирует Intl по локали: «12 de mayo de 2026», «1.234,50 €». Валюта не меняется, только запись.",
+            decisions: ["Цены по-прежнему в евро — так в брифе"],
+          },
+        },
+        {
           id: "b",
           status: "running",
           title: "Карточки товаров",
@@ -338,14 +395,21 @@ const I18N: Task = {
       title: "Review",
       steps: [
         {
+          id: "layout",
+          status: "ahead",
+          title: "Длинные строки в вёрстке",
+          work: { agent: "ui-engineer", cost: "~$0.40", time: "~15m", basis: "испанский в среднем на 25% длиннее" },
+          plan: { what: "Проверю вёрстку на 375, 768 и 1440 и поправлю места, где длинные испанские строки её ломают.", serves: ["layout"] },
+        },
+        {
           id: "fixes",
           status: "ahead",
           title: "Правки после вычитки",
           work: { agent: "i18n-translator", cost: "~$0.20–0.60", basis: "3 similar reviews" },
-          plan: { serves: ["review"] },
+          plan: { what: "Вношу правки носителя, пока он не одобрит тексты.", serves: ["review"] },
         },
       ],
-      gate: { title: "the Spanish copy", mine: true, status: "ahead", eta: "~17:30", etaSource: "this task's pace" },
+      gate: { title: "the Spanish copy", mine: true, status: "ahead", eta: "17:30", etaSource: "this task's pace" },
     },
   ],
   rules: RULES,
@@ -383,13 +447,22 @@ const LOYALTY: Task = {
   brief: {
     understanding:
       "Постоянные покупатели (от 3 оплаченных заказов) получают скидку 5% в корзине. Чтобы считать заказы быстро, нужна колонка с их числом у покупателя — это миграция.",
+    found: [
+      { text: "Число заказов покупателя нигде не хранится: считать на лету — запрос по всей истории при каждом открытии корзины", source: "Схема `customers`, `orders`" },
+      { text: "У активных покупателей до 240 заказов, медиана — 4", source: "Заказы за всё время" },
+      { text: "Промокоды и скидка распродажи не суммируются: берётся большая", source: "`server/promo/rules.ts`" },
+      { text: "Под правило попадут 31% покупателей", source: "Оплаченные заказы, без отменённых и возвратов" },
+    ],
     assumptions: [
       { id: "threshold", text: "«Постоянный» — от 3 оплаченных заказов за всё время", risky: true, why: "Порог — решение продукта" },
       { id: "stack", text: "Скидка не суммируется с промокодом: берём большую" },
+      { id: "cancelled", text: "Отменённые и полностью возвращённые заказы не считаются" },
+      { id: "count", text: "Счётчик растёт по вебхуку об оплате, а не при оформлении" },
     ],
-    boundaries: ["Промокоды не трогаю — только читаю правила из `server/promo/`", "Миграция — только после гейта"],
+    boundaries: ["Промокоды не трогаю — только читаю правила из `server/promo/`", "Миграция — только после гейта", "Скидку в админке и отчётах не показываю"],
     doneWhen: [
       { id: "cart", text: "Скидка видна в корзине и в письме о заказе" },
+      { id: "edge", text: "На границе всё верно: 2 заказа — без скидки, 3 — со скидкой" },
       { id: "tests", text: "Тесты корзины зелёные", locked: true },
     ],
   },
@@ -422,7 +495,7 @@ const LOYALTY: Task = {
   autoDecisions: [],
 };
 
-export const CHAT_TASK_LIST: Task[] = [ONE_CLICK, BIRTH_DATE, LOYALTY, I18N];
+export const CHAT_TASK_LIST: Task[] = [...YANGO_TASKS, ONE_CLICK, BIRTH_DATE, LOYALTY, I18N];
 
 export const CHAT_TASKS: Record<string, Task> = Object.fromEntries(CHAT_TASK_LIST.map((t) => [t.id, t]));
 
@@ -431,6 +504,7 @@ export const ONE_CLICK_PROMPT =
   "Сделай оплату в один клик: покупатель, который уже платил, оплачивает следующий заказ сохранённой картой.";
 
 export const CHAT_TASK_TRANSCRIPTS: Record<string, Turn[]> = {
+  ...YANGO_TASK_TRANSCRIPTS,
   "one-click-pay": [
     { role: "user", text: ONE_CLICK_PROMPT },
     {
@@ -452,6 +526,26 @@ export const CHAT_TASK_TRANSCRIPTS: Record<string, Turn[]> = {
     { role: "user", text: "У некоторых пользователей в профиле дата рождения на день раньше, чем они ввели. Почини." },
     {
       role: "assistant",
+      thought: "Ran 2 steps",
+      time: "5 minutes ago",
+      steps: [
+        { icon: READ, label: "Read support tickets", detail: "tag: birth date" },
+        { icon: RUN, label: "Grouped tickets by country" },
+      ],
+      blocks: [
+        { type: "p", text: "Нашёл 23 обращения за месяц. Все — из Америки: США, Канада, Бразилия, Мексика. Из Европы и Азии — ни одного. Похоже на часовой пояс западнее UTC." },
+      ],
+    },
+    { role: "user", text: "Это только отображение или карта тоже считается неправильно?" },
+    {
+      role: "assistant",
+      time: "4 minutes ago",
+      blocks: [
+        { type: "p", text: "Только отображение: на сервер уходит строка «1990-05-12», и карта считается по ней верно. Но человек видит не ту дату и думает, что карта тоже не та, — отсюда обращения." },
+      ],
+    },
+    {
+      role: "assistant",
       steps: [
         { icon: READ, label: "Read ProfileScreen.tsx" },
         { icon: SEARCH, label: "Searched for new Date(", detail: "4 matches" },
@@ -468,6 +562,24 @@ export const CHAT_TASK_TRANSCRIPTS: Record<string, Turn[]> = {
     { role: "user", text: "Дай постоянным покупателям скидку 5% в корзине." },
     {
       role: "assistant",
+      time: "25 minutes ago",
+      blocks: [
+        { type: "p", text: "Уточню, кто постоянный. Предлагаю: от 3 оплаченных заказов за всё время. Отменённые и полностью возвращённые не считаю." },
+      ],
+    },
+    { role: "user", text: "Да, от трёх. А с промокодом суммируется?" },
+    {
+      role: "assistant",
+      thought: "Ran 1 step",
+      time: "22 minutes ago",
+      steps: [{ icon: READ, label: "Read server/promo/rules.ts" }],
+      blocks: [
+        { type: "p", text: "Предлагаю как с распродажей: не суммируется, берём большую скидку. Так уже работают промокоды, и покупателю не придётся разбираться, почему одна скидка съела другую." },
+      ],
+    },
+    { role: "user", text: "Ок" },
+    {
+      role: "assistant",
       thought: "Edited 3 files",
       time: "8 minutes ago",
       steps: [
@@ -476,6 +588,7 @@ export const CHAT_TASK_TRANSCRIPTS: Record<string, Turn[]> = {
       ],
       blocks: [
         { type: "p", text: "Правило скидки и строку в корзине сделал. Дальше упёрся: число заказов покупателя нигде не хранится." },
+        { type: "p", text: "Считать заказы на лету при каждом открытии корзины — это запрос по всей истории, у активных покупателей 200+ заказов. Нужна колонка у покупателя, то есть миграция." },
         { type: "escalation-card" },
       ],
     },

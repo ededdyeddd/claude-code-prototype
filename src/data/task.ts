@@ -130,9 +130,14 @@ export type Criterion = {
   met?: string;
 };
 
+/** A fact the agent checked in the code or data, which the plan rests on; `source` says where it was seen. */
+export type Finding = { text: string; source?: string };
+
 export type Brief = {
-  /** "How I understood the task", 2–3 lines in the agent's words. */
+  /** "How I understood the task", 2–3 lines in the agent's words. Also the lead of the gate card, so it stays short. */
   understanding: string;
+  /** "What I found": checked facts, unlike assumptions, which the agent could not check. */
+  found?: Finding[];
   assumptions: Assumption[];
   /** "What I won't touch": the envelope territory in words. */
   boundaries: string[];

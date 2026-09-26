@@ -1,10 +1,9 @@
-import { createContext, useContext, useRef, useState } from "react";
+import { createContext, useContext, useRef, useState, type ReactNode } from "react";
 import { DockFrame, OptionList, OptionRow, RowField, type DockNav } from "./DecisionPanel";
-import type { ReactNode } from "react";
 import type { Block } from "../data/transcripts";
 import { costRange, currentGate, gateText, money, planProgress, type Assumption, type Question, type ReviewTab } from "../data/task";
 import { useInbox } from "../data/inboxStore";
-import { PANE_BODY, PlanPane, QuestionCard, answerLabel, type CustomAnswer } from "./PlanPane";
+import { ChangeButton, PANE_BODY, PlanPane, QuestionCard, YouSaid, anyMinutes, answerLabel, duration, etaFrom, type CustomAnswer } from "./PlanPane";
 import { TASKS } from "../data/inbox";
 import { answerKey, openQuestions, unanswer } from "../data/inboxStore";
 import {
@@ -17,6 +16,7 @@ import {
 } from "../data/chatTaskStore";
 import { Button, Hint, Icon } from "../ui";
 import { TaskDot } from "./StatusMark";
+import { Meter } from "./BudgetLine";
 import { Inline } from "./Transcript";
 
 const LOCK = "";
@@ -33,8 +33,7 @@ export const CODE = "[&_code]:rounded-sm [&_code]:bg-alpha-2 [&_code]:px-1 [&_co
 const fieldClass =
   "w-full rounded border border-alpha-2 bg-fill-field px-sm py-xs text-body text-primary outline-none placeholder:text-muted focus-visible:shadow-focus";
 
-/** The task of the open chat and a way to switch its tabs, for blocks rendered deep in the transcript. */
-/** `chatId` is set for every chat, `view` only for chats with a task level. */
+/** The task of the open chat and a way to switch its tabs, for blocks rendered deep in the transcript. `chatId` is set for every chat, `view` only for chats with a task level. */
 export const ChatTaskContext = createContext<{
   chatId?: string;
   view?: ChatTaskView;
@@ -70,11 +69,6 @@ function SectionTitle({ children, aside }: { children: ReactNode; aside?: ReactN
   );
 }
 
-/** Neutral chip after text an edit changed, as "New / Removed / Changes" in the Inbox plan. */
-function Chip({ children }: { children: ReactNode }) {
-  return <span className="ms-sm inline-block rounded-sm bg-alpha-3 px-1.5 align-baseline text-footnote leading-5 text-secondary">{children}</span>;
-}
-
 /**
  * A risky assumption at the gate, as a row like an option of a question card: unmarked, it sits on a soft
  * fill with the clay dot (needs you) and its own small "Confirm" / "Correct…"; marked, it drops the fill and gets ✓
@@ -94,31 +88,25 @@ function RiskyAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
 
   if (mark && !fixing)
     return (
-      <li className={cx(row, "group/row")}>
-        <span className="mt-[4px] flex">
+      <li className={cx(row, "group/change")}>
+        <span className="mt-[5px] flex">
           <TaskDot state="done" />
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <p className={cx("text-body", mark.ok ? "text-primary" : "text-muted line-through")}>
             <Inline text={a.text} />
           </p>
-          <p className="text-footnote text-secondary">you: {"note" in mark ? mark.note : "confirmed"}</p>
+          <p className="text-footnote text-secondary">
+            <YouSaid>{"note" in mark ? mark.note : "confirmed"}</YouSaid>
+          </p>
         </div>
-        {editable && (
-          <Button
-            size="xs"
-            className="-my-0.5 opacity-0 transition-opacity duration-fast group-hover/row:opacity-100 focus-visible:opacity-100"
-            onClick={() => markAssumption(view.id, a.id, undefined)}
-          >
-            Change
-          </Button>
-        )}
+        {editable && <ChangeButton onClick={() => markAssumption(view.id, a.id, undefined)} />}
       </li>
     );
 
   return (
     <li className={cx(row, "bg-alpha-2")}>
-      <span className="mt-[4px] flex">
+      <span className="mt-[5px] flex">
         <TaskDot state="blocked" />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-sm">
@@ -172,12 +160,14 @@ function AssumptionState({ view, a }: { view: ChatTaskView; a: Assumption }) {
   return (
     <li className="flex items-start gap-sm">
       <span className="mt-[5px] flex">{mark ? <TaskDot state="done" /> : <TaskDot state="blocked" />}</span>
-      <div className="flex min-w-0 flex-col">
+      <div className="flex min-w-0 flex-col gap-0.5">
         <p className={cx("text-body", mark && !mark.ok ? "text-muted line-through" : "text-primary")}>
           <Inline text={a.text} />
         </p>
         {mark ? (
-          <p className="text-footnote text-secondary">you: {"note" in mark ? mark.note : "confirmed"}</p>
+          <p className="text-footnote text-secondary">
+            <YouSaid>{"note" in mark ? mark.note : "confirmed"}</YouSaid>
+          </p>
         ) : (
           <p className="text-footnote text-clay">Waiting for you in the chat{a.why && <span className="text-muted"> · {a.why}</span>}</p>
         )}
@@ -207,8 +197,7 @@ function SafeAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
         </p>
         {note && (
           <p className="text-footnote text-secondary">
-            you: {note}
-            <Chip>Changed</Chip>
+            <YouSaid>{note}</YouSaid>
           </p>
         )}
       </div>
@@ -216,7 +205,7 @@ function SafeAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
   );
 }
 
-/** "Brief" tab: how I understood it, assumptions, what I won't touch, done when. */
+/** "Brief" tab: how I understood it, what I found, assumptions, what I won't touch, done when. */
 export function BriefView({ view }: { view: ChatTaskView }) {
   const brief = view.task.brief;
   if (!brief) return null;
@@ -234,14 +223,38 @@ export function BriefView({ view }: { view: ChatTaskView }) {
       .join(", ");
   return (
     <div className={cx("flex flex-col gap-[var(--cds-gap-lg)]", PANE_BODY, CODE)}>
-      <section className="flex flex-col gap-sm">
+      <section className="flex flex-col gap-xs">
         <SectionTitle>How I understood the task</SectionTitle>
         <p className="text-body text-primary">
           <Inline text={brief.understanding} />
         </p>
       </section>
 
-      <section className="flex flex-col gap-sm">
+      {/* Facts before assumptions: what the agent checked, then what it could not. */}
+      {brief.found && brief.found.length > 0 && (
+        <section className="flex flex-col gap-xs">
+          <SectionTitle aside="checked in code and data">What I found</SectionTitle>
+          <ul className="flex flex-col gap-sm">
+            {brief.found.map((f) => (
+              <li key={f.text} className="flex items-start gap-sm">
+                <Bullet />
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <p className="text-body text-secondary">
+                    <Inline text={f.text} />
+                  </p>
+                  {f.source && (
+                    <p className="text-footnote text-muted">
+                      <Inline text={f.source} />
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section className="flex flex-col gap-xs">
         <SectionTitle aside={view.unmarked.length ? `${view.unmarked.length} to confirm` : "all confirmed"}>Assumptions</SectionTitle>
         <ul className="flex flex-col gap-sm">
           {risky.map((a) =>
@@ -260,7 +273,7 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         )}
       </section>
 
-      <section className="flex flex-col gap-sm">
+      <section className="flex flex-col gap-xs">
         <SectionTitle>What I won't touch</SectionTitle>
         <ul className="flex flex-col gap-xs">
           {brief.boundaries.map((b) => (
@@ -273,7 +286,7 @@ export function BriefView({ view }: { view: ChatTaskView }) {
           ))}
         </ul>
         {/* The envelope's territory, one access level per row, so paths are readable and never wrap alone. */}
-        <dl className="grid grid-cols-[max-content_1fr] items-baseline gap-x-md gap-y-0.5">
+        <dl className="mt-xs grid grid-cols-[max-content_1fr] items-baseline gap-x-md gap-y-0.5">
           {(
             [
               ["write", "Edits"],
@@ -294,7 +307,7 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         </dl>
       </section>
 
-      <section className="flex flex-col gap-sm">
+      <section className="flex flex-col gap-xs">
         <SectionTitle
           aside={
             <Hint text="I check these at the end and mark each one with its proof">
@@ -304,7 +317,7 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         >
           Done when
         </SectionTitle>
-        <ul className="flex flex-col gap-xs">
+        <ul className="flex flex-col gap-sm">
           {criteria.map((c) => (
             <li key={c.id} className="flex items-start gap-sm text-body text-primary">
               {/* Not met yet: the plan's "ahead" ring; met: its "done" dot, with the check that proves it. A ring, not a box: nobody ticks these by hand. */}
@@ -316,7 +329,7 @@ export function BriefView({ view }: { view: ChatTaskView }) {
                 <span className={"met" in c && c.met ? "text-secondary" : undefined}>
                   <Inline text={c.text} />
                 </span>
-                {c.mine && <span className="text-footnote text-muted"> · added by you</span>}
+                {c.mine && <span className="text-muted"> · added by you</span>}
                 {c.locked && (
                   <Hint text="Locked: I can't loosen or skip this" className="ms-xs inline-flex align-[-2px] text-muted">
                     <Icon glyph={LOCK} size="sm" className="!text-muted" />
@@ -334,12 +347,66 @@ export function BriefView({ view }: { view: ChatTaskView }) {
 
 /* ------------------------------------------------------------------- Plan */
 
+/**
+ * One card over the plan: a label (with a quiet word on its right, if any) and the value with its scale in the same
+ * size and weight, grey ("8 of 13"), then a quiet grey meter of the share: the numbers lead, the meter only backs them. Outlined, not filled:
+ * muted text keeps its contrast on the pane surface. A hint, if any, opens on the whole card.
+ */
+function Stat({
+  label,
+  value,
+  of,
+  aside,
+  meter,
+  hint,
+}: {
+  label: string;
+  value: string;
+  /** The scale after the value ("of 13"): same size and weight, grey. */
+  of?: string;
+  /** A quiet word on the label's row, right-aligned (the finish time). */
+  aside?: ReactNode;
+  /** Share done, 0–100; `over` turns it into a warning (the forecast goes past the limit). */
+  meter?: { used: number; over?: boolean };
+  hint?: ReactNode;
+}) {
+  const body = (
+    <>
+      <span className="mb-0.5 flex items-baseline justify-between gap-sm text-footnote">
+        <span className="text-secondary">{label}</span>
+        {aside && <span className="truncate tabular-nums text-muted">{aside}</span>}
+      </span>
+      <span className="truncate text-body font-medium tabular-nums text-primary">
+        {value}
+        {of && <span className="text-muted"> {of}</span>}
+      </span>
+      {meter && <Meter used={Math.min(100, meter.used)} tight={meter.over} quiet className="mt-sm" />}
+    </>
+  );
+  const box = "flex min-w-0 flex-col gap-1 rounded-lg border border-alpha-2 p-[var(--cds-gap-md)]";
+  return hint ? (
+    // The hint's own span only carries the hover; the card inside keeps its shape.
+    <Hint text={hint} className="flex">
+      <div className={cx(box, "flex-1")}>{body}</div>
+    </Hint>
+  ) : (
+    <div className={box}>{body}</div>
+  );
+}
+
 /** "Plan" tab: the same plan as in the Inbox pane, headed by what is left against the envelope. */
 export function PlanView({ view }: { view: ChatTaskView }) {
   const { answers } = useInbox();
   const t = totals(view);
   const spent = view.live.stages.flatMap((st) => st.steps).reduce((n, p) => n + (p.status === "done" && p.work ? costRange(p.work.cost).min : 0), 0);
   const progress = planProgress(view.live);
+  // When the task is expected to finish: the gate after the last stage.
+  const finish = view.live.stages[view.live.stages.length - 1]?.gate;
+  // Agent working time so far: done steps only.
+  const steps = view.live.stages.flatMap((st) => st.steps).filter((p) => p.work?.time && !view.removed.has(p.id));
+  const worked = steps.filter((p) => p.status === "done").reduce((n, p) => n + anyMinutes(p.work!.time!), 0);
+  // The whole task's working time: done steps plus the forecast for the rest, rounded to 10 minutes as a forecast.
+  const total = Math.round((worked + steps.filter((p) => p.status !== "done").reduce((n, p) => n + anyMinutes(p.work!.time!), 0)) / 10) * 10;
   return (
     <div className={CODE}>
       <PlanPane
@@ -347,33 +414,37 @@ export function PlanView({ view }: { view: ChatTaskView }) {
         answers={answers}
         edits={view.planEdits}
         header={
-          // At the gate the question is whether to let it run, so money leads. Once it runs, where it stands leads.
-          <header className="flex flex-col gap-0.5">
-            {view.atGate ? (
-              <>
-                <p className="text-heading text-primary">
-                  ~{money(t.min, t.max)} <span className="text-secondary">of the ${view.envelope.limit} limit</span>
-                </p>
-                <p className="text-footnote text-muted">Forecast for what is left{spent > 0 && ` · $${spent.toFixed(2)} spent`}</p>
-              </>
-            ) : (
-              <>
-                {/* Steps of the whole plan: the stage rows below have their own counts. */}
-                <p className="text-heading text-primary">
-                  {progress.done} of {progress.total} steps done
-                  {progress.yourTurn && <span className="text-secondary"> · your turn {progress.yourTurn}</span>}
-                </p>
-                <p className="text-footnote text-muted">
-                  ~{money(t.min, t.max)} more of the ${view.envelope.limit} limit{spent > 0 && ` · $${spent.toFixed(2)} spent`}
-                </p>
-              </>
-            )}
+          <div className="flex flex-col gap-xs">
+            <div className="grid grid-cols-3 gap-sm">
+              <Stat label="Done" value={`${progress.done}`} of={`of ${progress.total}`} meter={{ used: (progress.done / progress.total) * 100 }} />
+              {/* Facts first: what is left against the limit is on hover; the plan's rows carry the forecasts. */}
+              <Stat
+                label="Spent"
+                value={`$${spent.toFixed(2)}`}
+                of={`of $${view.envelope.limit}`}
+                meter={{ used: (spent / view.envelope.limit) * 100, over: t.over }}
+                hint={`~${money(t.min, t.max)} more, forecast for what's left in the plan.`}
+              />
+              <Stat
+                label="Working"
+                aside={finish?.eta && `by ${finish.eta}`}
+                value={duration(worked)}
+                of={`of ~${duration(total)}`}
+                meter={{ used: total ? (worked / total) * 100 : 0 }}
+                hint={
+                  <>
+                    Agent working time: done steps, then the forecast for the rest.
+                    {finish?.eta && ` ${finish.mine ? "Ready for you" : "Done"} ${finish.eta}, ${etaFrom(finish.etaSource)}`}
+                  </>
+                }
+              />
+            </div>
             {t.over && (
-              <p className="pt-xs text-footnote text-clay">
-                May go over your limit: up to ${t.max} of ${view.envelope.limit}. Cut scope to fit.
+              <p className="text-footnote text-clay">
+                May go over your limit: up to {money(t.max)} of ${view.envelope.limit}. Cut scope to fit.
               </p>
             )}
-          </header>
+          </div>
         }
       />
     </div>
@@ -574,11 +645,6 @@ function EscalationDecision({
 
 /* ------------------------------------------------------- Blocks in the feed */
 
-
-/**
- * The brief in the feed: the agent's words and where the full brief and plan are. The decisions on them
- * (assumptions, the gate) are asked in the dock over the composer.
- */
 /** "3 stages · 2 approvals · ~$6–11 of $12": what the tile opens, in one line. */
 function briefMeta(view: ChatTaskView) {
   const t = totals(view);
@@ -592,6 +658,10 @@ function briefMeta(view: ChatTaskView) {
     .join(" · ");
 }
 
+/**
+ * The brief in the feed: the agent's words and where the full brief and plan are. The decisions on them
+ * (assumptions, the gate) are asked in the dock over the composer.
+ */
 function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) => void }) {
   const brief = view.task.brief;
   if (view.atGate && brief)
@@ -620,13 +690,13 @@ function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) 
   );
 }
 
+/** Task icon, shared by the Plan tile and the live step card. */
+export const TASK_ICON = TASK;
+
 /**
  * An artifact in the agent's reply: one tile that opens it next to the chat (the review, the brief and plan).
  * Concentric corners: the tile's radius is the icon box's radius plus the padding around it.
  */
-/** Task icon, shared by the Plan tile and the live step card. */
-export const TASK_ICON = TASK;
-
 export function ArtifactTile({ icon, title, meta, onOpen }: { icon: string; title: ReactNode; meta: ReactNode; onOpen: () => void }) {
   return (
     <button
@@ -865,16 +935,12 @@ function QuestionLine({ chatId, questionId }: { chatId: string; questionId: stri
       <span className={cx("text-footnote", blocks ? "text-clay" : "text-muted")}>{question.blocking ? "Blocking" : "Can wait"}</span>
       <p className="text-body font-medium text-primary">{question.text}</p>
       {picked && (
-        <p className="flex flex-wrap items-center gap-x-xs text-footnote text-muted">
+        <p className="group/change flex flex-wrap items-center gap-x-xs text-footnote text-secondary">
           <TaskDot state="done" />
-          Your answer: {answerLabel(question, picked)}
-          <button
-            type="button"
-            onClick={() => unanswer(task.id, question.id)}
-            className="rounded-sm px-1 text-secondary outline-none hover:bg-fill-ghost-hover hover:text-primary focus-visible:shadow-focus"
-          >
-            Change
-          </button>
+          <span>
+            <YouSaid>{answerLabel(question, picked)}</YouSaid>
+          </span>
+          <ChangeButton onClick={() => unanswer(task.id, question.id)} />
         </p>
       )}
     </div>

@@ -47,6 +47,7 @@ export type LiveStatus = {
 import { YANGO_TRANSCRIPTS } from "./yangoTranscripts";
 import { TASK_LIVE_STATUS, TASK_TRANSCRIPTS } from "./taskTranscripts";
 import { CHAT_TASK_TRANSCRIPTS } from "./chatTasks";
+import { YANGO_LIVE_STATUS } from "./yangoTasks";
 
 export const TRANSCRIPTS: Record<string, Turn[]> = {
   ...YANGO_TRANSCRIPTS,
@@ -108,6 +109,51 @@ export const TRANSCRIPTS: Record<string, Turn[]> = {
           code: '{\n  "sun": { "sign": "Leo", "degree": 14.2, "house": 10 },\n  "moon": { "sign": "Pisces", "degree": 3.8, "house": 5 },\n  "ascendant": { "sign": "Scorpio", "degree": 21.5 }\n}',
         },
         { type: "p", text: "Могу начать с первого этапа: поднять сервер расчётов и описать API. Или сначала набросать экраны онбординга — что удобнее?" },
+      ],
+    },
+    { role: "user", text: "А если человек не знает точное время рождения? Таких много" },
+    {
+      role: "assistant",
+      time: "Yesterday",
+      blocks: [
+        { type: "p", text: "Тогда считаем карту на полдень и честно говорим, что неточно:" },
+        {
+          type: "ul",
+          items: [
+            "Позиции планет, кроме Луны, почти не меняются за сутки — их показываем как есть.",
+            "Луна за день проходит ~13°, может сменить знак — показываем оба варианта.",
+            "Дома и Асцендент без времени не считаются — прячем их и объясняем почему.",
+          ],
+        },
+        { type: "p", text: "В онбординге кнопка «Не знаю точное время» и подсказка, где его найти: свидетельство о рождении, выписка из роддома." },
+      ],
+    },
+    { role: "user", text: "Сколько будет стоить Claude API на расшифровках?" },
+    {
+      role: "assistant",
+      thought: "Ran 1 step",
+      time: "Yesterday",
+      steps: [{ icon: "\uE051", label: "Estimated tokens per chart", detail: "12 sections" }],
+      blocks: [
+        { type: "p", text: "Расшифровка натальной карты — один раз на пользователя, около 12 разделов по 150 слов. Прогноз дня — каждый день, коротко." },
+        {
+          type: "table",
+          head: ["Что", "Как часто", "На 10 тыс. пользователей в месяц"],
+          rows: [
+            ["Натальная карта", "Один раз", "~$60, разово"],
+            ["Прогноз дня", "Каждый день", "~$240"],
+            ["Совместимость", "~2 раза в месяц", "~$30"],
+          ],
+        },
+        { type: "p", text: "Прогноз дня — главная статья. Его можно кешировать: у людей с одинаковой Луной и Солнцем транзиты дня похожи, и общая часть текста переиспользуется." },
+      ],
+    },
+    { role: "user", text: "Начинаем с сервера расчётов" },
+    {
+      role: "assistant",
+      time: "Yesterday",
+      blocks: [
+        { type: "p", text: "Хорошо. Первым делом выберу, на чём считать эфемериды: свой Swiss Ephemeris или готовый API. Разберу это в отдельном чате, чтобы решение и цифры лежали в одном месте, — «Выбор API эфемерид»." },
       ],
     },
   ],
@@ -173,4 +219,5 @@ export const TRANSCRIPTS: Record<string, Turn[]> = {
 /** Live status for chats that are still running (keyed by session id). */
 export const LIVE_STATUS: Record<string, LiveStatus> = {
   ...TASK_LIVE_STATUS,
+  ...YANGO_LIVE_STATUS,
 };

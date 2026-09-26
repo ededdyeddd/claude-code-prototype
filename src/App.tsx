@@ -10,6 +10,12 @@ import { TRANSCRIPTS } from "./data/transcripts";
 import { SESSIONS } from "./data/sessions";
 import { usePersistentWidth } from "./data/usePersistentWidth";
 import { taskState, useInbox } from "./data/inboxStore";
+import { introSeen } from "./data/onboarding";
+
+// First run lands on Up next with its intro. Done before the router mounts, once per load: "New" still opens an empty chat.
+if (!introSeen() && ["/", "/code", "/code/"].includes(window.location.pathname)) {
+  window.history.replaceState(null, "", "/up-next");
+}
 
 /** Content of the main pane: switches with the sidebar navigation. */
 function MainContent() {
