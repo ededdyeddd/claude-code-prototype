@@ -11,7 +11,7 @@ import { ChangeButton, PaneMeta, PlanPane, whenHint } from "../components/PlanPa
 import { BriefView, GateCard } from "../components/ChatTask";
 import { deriveTask, type TaskState } from "../data/chatTaskStore";
 import { openQuestions, useInbox, type Attention } from "../data/inboxStore";
-import { introSeen, markIntroSeen, resetPlanHint } from "../data/onboarding";
+import { introSeen, markIntroSeen } from "../data/onboarding";
 import { ONBOARDING_DELAY, useDelay } from "../data/useDelay";
 import { UpNextIntro } from "../components/UpNextIntro";
 import { Coachmarks, type Coachmark } from "../components/Coachmarks";
@@ -372,6 +372,8 @@ function NothingNeedsYou() {
 /* ------------------------------------------------------------ Onboarding */
 
 // Micro-onboarding tour: what is inside the page, one element at a time. Steps whose element is not on the page are skipped.
+const TOUR_DELAY = 500;
+
 const TOUR: Coachmark[] = [
   {
     target: "groups",
@@ -411,14 +413,11 @@ export function InboxPage() {
   // The first task that needs the person is open on arrival; clicking a task opens it on the right.
   // "Answer in the plan" from a task's chat opens that task (?task=id); otherwise the first task that needs you.
   const { search } = useLocation();
-  // First visit: the intro in a modal over the page, then the tour. `?intro` shows it again (for demos).
-  const [onboarding, setOnboarding] = useState<"intro" | "tour" | null>(() => {
-    const replay = new URLSearchParams(search).has("intro");
-    if (replay) resetPlanHint();
-    return replay || !introSeen() ? "intro" : null;
-  });
-  // The page comes up first; the intro follows a moment later.
+  // Onboarding, step two: however the person got here (the sidebar hint or on their own), the intro in a modal, then the tour.
+  const [onboarding, setOnboarding] = useState<"intro" | "tour" | null>(() => (introSeen() ? null : "intro"));
+  // The page comes up first; the intro follows a moment later, the tour a beat after the page (or the modal) settles.
   const introReady = useDelay(onboarding === "intro", ONBOARDING_DELAY);
+  const tourReady = useDelay(onboarding === "tour", TOUR_DELAY);
   const finishOnboarding = () => {
     markIntroSeen();
     setOnboarding(null);
@@ -555,7 +554,7 @@ export function InboxPage() {
         </SidePane>
       )}
       {introReady && <UpNextIntro onTour={() => setOnboarding("tour")} onSkip={finishOnboarding} />}
-      {onboarding === "tour" && <Coachmarks steps={TOUR} onDone={finishOnboarding} />}
+      {tourReady && <Coachmarks steps={TOUR} onDone={finishOnboarding} />}
     </div>
   );
 }

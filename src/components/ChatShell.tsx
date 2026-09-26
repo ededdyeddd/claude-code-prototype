@@ -26,7 +26,7 @@ import { Tabs } from "../ui";
 import { enterAcceptance, seeTab, type TaskTab } from "../data/chatTaskStore";
 import { useEffect, useMemo, useState } from "react";
 import { Coachmarks, type Coachmark } from "./Coachmarks";
-import { markPlanHintSeen, planHintSeen } from "../data/onboarding";
+import { markPlanHintSeen, onboardingSettled, planHintSeen, useOnboarding } from "../data/onboarding";
 import { ONBOARDING_DELAY, useDelay } from "../data/useDelay";
 
 export function ChatShell({ name, transcript, chat }: { name: string; transcript?: Turn[]; chat?: Session }) {
@@ -76,9 +76,11 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
   // First task chat with a "Plan" toggle: light it up once and say what is behind it.
   const hasToggle = !!view && view.tabs.length > 1;
   const hasBrief = !!view?.tabs.includes("brief");
+  useOnboarding();
   const [planHint, setPlanHint] = useState(() => !planHintSeen());
   // The chat comes up first; the hint follows a moment later, and starts over if another chat opens meanwhile.
-  const showPlanHint = useDelay(planHint && hasToggle && !panel && !review, ONBOARDING_DELAY, view?.id);
+  // Only after the Up next announcement has had its turn: two overlays at once would fight.
+  const showPlanHint = useDelay(planHint && onboardingSettled() && hasToggle && !panel && !review, ONBOARDING_DELAY, view?.id);
   // The hint's steps stay the same object while it is up (Coachmarks measures them once); the button opens the current chat's plan.
   const openPlan = useRef(() => {});
   openPlan.current = () => setPanel("plan");

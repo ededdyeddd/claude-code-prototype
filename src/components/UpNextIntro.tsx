@@ -29,8 +29,8 @@ export function UpNextIllustration({ size = 60 }: { size?: number }) {
 }
 
 /**
- * Micro-onboarding, step one: on the first visit a modal over Up next says what the page is for.
- * "Show me around" starts the coachmark tour; "Skip" or Escape ends onboarding.
+ * Onboarding, step two: on the first visit a modal over Up next says what the page is for.
+ * "Show me around" starts the coachmark tour; "Skip" or Escape ends it.
  */
 export function UpNextIntro({ onTour, onSkip }: { onTour: () => void; onSkip: () => void }) {
   const primary = useRef<HTMLDivElement>(null);
@@ -84,7 +84,9 @@ export function UpNextIntro({ onTour, onSkip }: { onTour: () => void; onSkip: ()
           Agents work on your tasks in parallel. Up next shows where one waits for you, what it needs and what it will cost, then lets
           you get back to work.
         </p>
-        <div className="flex items-center gap-xs pt-md">
+        {/* Optical centring: the filled button weighs more than the ghost one, whose box is mostly empty padding.
+            Centred by their boxes the pair leans right, so it moves left by part of the ghost's padding. */}
+        <div className="flex items-center gap-xs pt-md" style={{ transform: "translateX(calc(var(--cds-pad-md) * -0.75))" }}>
           <Button size="sm" variant="ghost" onClick={onSkip}>
             Skip
           </Button>
