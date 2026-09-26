@@ -2,8 +2,7 @@ import { useContext, useState } from "react";
 import type { Block, Diff, LiveStatus, Turn, TurnStep } from "../data/transcripts";
 import { Button, Icon } from "../ui";
 import { Irregular_radiating_starburst } from "./icons/Irregular_radiating_starburst";
-import { ChatTaskContext, TaskBlock } from "./ChatTask";
-import { TaskDot } from "./StatusMark";
+import { ArtifactTile, ChatTaskContext, TASK_ICON, TaskBlock } from "./ChatTask";
 
 const CHEVRON = "";
 const COPY = "\uE056"; // two overlapping squares, as in the app
@@ -285,27 +284,24 @@ function MessageActions({ time }: { time?: string }) {
 
 /** Chat transcript: user bubbles, assistant turns with status, prose answer and actions. */
 /**
- * What a task chat is doing now, as a step of its plan: the plan's "running" dot, its place in the plan, the step,
- * the file as a note. Opens the plan, so the link between the feed and the plan is explicit.
+ * What a task chat is doing now, as a card like the Plan tile and titled the same: under "Plan", the step in progress,
+ * the whole plan's steps done and the file. Opens the plan, so the link between the feed and the plan is explicit.
  */
-function PlanStepRow({ live, planStep }: { live: LiveStatus; planStep: { n: number; of: number } }) {
+function PlanStepRow({ live, planStep }: { live: LiveStatus; planStep: { done: number; of: number } }) {
   const { setTab } = useContext(ChatTaskContext);
   return (
-    <button
-      type="button"
-      onClick={() => setTab("plan")}
-      className="group/step -ms-1 flex w-fit max-w-full items-center gap-sm rounded-sm px-1 text-left text-body outline-none hover:bg-fill-ghost-hover focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
-    >
-      <TaskDot state="running" />
-      <span className="min-w-0 truncate">
-        <span className="text-muted">
-          Plan · step {planStep.n} of {planStep.of} ·{" "}
-        </span>
-        <span className="text-secondary">{live.step}</span>
-        {live.target && <span className="text-footnote text-muted"> · {live.target}</span>}
-      </span>
-      <Icon glyph={CHEVRON} size="sm" className="!text-muted" />
-    </button>
+    <div className="not-prose">
+      <ArtifactTile
+        icon={TASK_ICON}
+        // Worded as the chip ("Plan · 3/6") so it reads as the same plan; the pulsing spark below says it is live.
+        title={`Plan · ${planStep.done}/${planStep.of}`}
+        // Said in words: a pulsing dot alone did not read as progress. The count is the whole plan's, the same as on
+        // the Plan chip and in the plan's header ("3 of 6"), not the step's number, which read as a mismatch.
+        // No file: it changes every few seconds and is a tool call's detail, not the plan's.
+        meta={`Now: ${live.step}`}
+        onOpen={() => setTab("plan")}
+      />
+    </div>
   );
 }
 

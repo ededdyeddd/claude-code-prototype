@@ -281,7 +281,8 @@ function TaskRow({
         selected ? "bg-alpha-2" : "hover:bg-fill-ghost-hover",
       )}
     >
-      <TaskDot state={group} className="mt-[4px]" />
+      {/* Clay only when the agent stopped for you. Can wait keeps working: the running dot, as in the sidebar; the group and "1 question" say it has a question. */}
+      <TaskDot state={group === "canWait" ? "running" : group} className="mt-[4px]" />
       <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-md gap-y-0.5">
         <span className="truncate text-body font-medium text-primary">{task.title}</span>
         <span className="justify-self-end text-footnote tabular-nums text-secondary">

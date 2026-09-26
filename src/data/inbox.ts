@@ -305,6 +305,8 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
         title: "Brief",
         steps: [
           { id: "a", status: "done", title: "Разбор текущих запросов" },
+          // Can wait: the agent keeps working while the question waits, so one step is running.
+          { id: "w", status: "running", title: "Написать бриф" },
           {
             id: "b",
             status: "waiting",
@@ -404,7 +406,7 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
               ],
             },
           },
-          { id: "c", status: "ahead", title: "Починить тесты домов" },
+          { id: "c", status: "running", title: "Починить тесты домов" },
         ],
       },
     ],
@@ -455,6 +457,7 @@ const STEP_WORK: Record<string, StepWork> = {
   "transit-push:c": { agent: "notifications-engineer", cost: "~$0.60", time: "~30m", basis: "5 similar tasks" },
   "transit-push:s": { agent: "notifications-engineer", cost: "~$0.80", time: "~45m", basis: "2 similar tasks" },
   "search:a": { agent: "planner", cost: "$0.40", time: "14m" },
+  "search:w": { agent: "planner", cost: "~$0.30", time: "~15m", basis: "5 similar briefs" },
   "search:b": { agent: "search-tuner", cost: "$0.50", time: "8m" },
   "search:c": { agent: "search-tuner", cost: "~$1.20", time: "~40m" },
   "search:d": { agent: "search-tuner", cost: "~$0.80", time: "~30m", basis: "6 similar steps" },
