@@ -794,7 +794,7 @@ const DEV_PORT: Task = {
   autoDecisions: [],
 };
 
-/** Level 1 running: a small fix, no plan. */
+/** Level 1 running: a small, clear fix. A plan to read, no brief: the request says it all. */
 const CHAT_SCROLL: Task = {
   id: "chat-scroll",
   title: "Прокрутка в длинных чатах",
@@ -811,7 +811,11 @@ const CHAT_SCROLL: Task = {
     {
       id: "fix",
       title: "Fix",
-      steps: [{ id: "fix", status: "running", title: "Держать прокрутку внизу при открытии и росте ленты", work: { agent: "ui-engineer", cost: "~$0.40", time: "~10m" } }],
+      steps: [
+        { id: "open", status: "done", title: "Открывать чат на последнем сообщении", work: { agent: "ui-engineer", cost: "$0.14", time: "4m" } },
+        { id: "fix", status: "running", title: "Держать прокрутку внизу, пока растёт лента", work: { agent: "ui-engineer", cost: "~$0.20", time: "~6m" } },
+        { id: "check", status: "ahead", title: "Проверить на чате из 15 шагов", work: { agent: "ui-engineer", cost: "~$0.06", time: "~2m" } },
+      ],
     },
   ],
   autoDecisions: [],

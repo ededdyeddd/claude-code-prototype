@@ -244,6 +244,11 @@ export function liveTask(task: Task, s: TaskState = EMPTY): Task {
   return stage && step ? { ...task, stages, stage: stage.title, now: `${stage.title} · ${step.title}`, waitingFor: undefined } : { ...task, stages };
 }
 
+/** The brief says more than the request did: checked findings or assumptions the agent works on. */
+export function hasBrief(task: Task) {
+  return !!task.brief && ((task.brief.found?.length ?? 0) > 0 || task.brief.assumptions.length > 0);
+}
+
 /**
  * The plan in the acceptance scene: every step is done with what it really cost, the checks passed, and the plan
  * stands at "You approve the result". Each round sent back adds a fix step before it: running while the agent
@@ -388,8 +393,11 @@ export function deriveTask(task: Task, s: TaskState = EMPTY) {
   const unmarked = risky.filter((a) => !marks[a.id]);
   // Level goes up only with the person's consent; it never goes down on its own. Inbox tasks without a level are full tasks.
   const level: Level = s.escalation === "agreed" && task.escalation ? task.escalation.to : task.level ?? 3;
-  // A large task has its brief and plan as tabs from the start: to read. Every decision on them happens in the chat.
-  const tabs: TaskTab[] = task.level === undefined ? [] : level >= 3 ? ["chat", "brief", "plan"] : level === 2 ? ["chat", "plan"] : [];
+  // Visibility is not the level. Every task has a plan to read, whatever its size. A brief shows up only when the agent has
+  // something to say beyond the person's message (what it found, what it assumed); otherwise it would retell the request.
+  // Decisions (the gate) still come with size and risk only: see atGate.
+  const tabs: TaskTab[] =
+    task.level === undefined ? [] : hasBrief(task) || level >= 3 ? ["chat", "brief", "plan"] : ["chat", "plan"];
   // A gate waits for the person until they pass it: the brief gate right away, the escalation's after consent.
   const atGate = task.level !== undefined && level >= 2 && !s.launched && currentGate(task)?.mine === true;
   const escalationPending = !!task.escalation && !s.escalation;

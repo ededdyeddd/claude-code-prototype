@@ -680,7 +680,10 @@ const ONE_CLICK: Task = {
   },
 };
 
-/** Level 1 in progress: a small fix the agent just does, with no plan; the result card comes at the end. */
+/**
+ * Level 1 in progress: a small fix the agent just does, no gate; the result card comes at the end. Its plan is there
+ * to read, and so is a short brief: the agent found where the day goes and assumed something it could not check.
+ */
 const BIRTH_DATE: Task = {
   id: "birth-date",
   title: "Дата рождения сдвигается на день",
@@ -693,11 +696,36 @@ const BIRTH_DATE: Task = {
   spent: "$0.12",
   tokens: "40K",
   level: 1,
+  brief: {
+    understanding: "Дата рождения в профиле на день раньше у всех, кто западнее UTC. Чиню так, чтобы дата показывалась ровно как введена, в любом поясе.",
+    found: [
+      { text: "`new Date(\"1990-05-12\")` читается как полночь UTC, а `toLocaleDateString` сдвигает её в пояс браузера", source: "src/profile/BirthDate.tsx:18" },
+      { text: "В базе дата хранится строкой `YYYY-MM-DD` без времени, так что данные чинить не нужно", source: "schema.prisma" },
+    ],
+    assumptions: [{ id: "a1", text: "Время рождения на этом экране не показываем, поэтому разбираю только дату" }],
+    boundaries: ["Натальную карту и расчёт домов не трогаю: там дата идёт вместе со временем и поясом"],
+    doneWhen: [
+      { id: "d1", text: "Дата в профиле совпадает с введённой в поясах от UTC−10 до UTC+14" },
+      { id: "d2", text: "Тест на UTC−5 падает до правки и проходит после" },
+    ],
+  },
+  envelope: {
+    ...DEFAULT_ENVELOPE,
+    paths: [
+      { path: "src/profile/", access: "write" },
+      { path: "src/", access: "read" },
+      { path: "server/natal/", access: "never" },
+    ],
+  },
   stages: [
     {
       id: "fix",
       title: "Fix",
-      steps: [{ id: "fix", status: "running", title: "Разбирать дату рождения без часового пояса", work: { agent: "ui-engineer", cost: "~$0.30", time: "~8m" } }],
+      steps: [
+        { id: "find", status: "done", title: "Найти, где дата теряет день", work: { agent: "ui-engineer", cost: "$0.12", time: "3m" } },
+        { id: "fix", status: "running", title: "Разбирать дату рождения без часового пояса", plan: { serves: ["d1"] }, work: { agent: "ui-engineer", cost: "~$0.20", time: "~5m" } },
+        { id: "test", status: "ahead", title: "Тест на UTC−5 и UTC+14", plan: { serves: ["d2"] }, work: { agent: "ui-engineer", cost: "~$0.10", time: "~3m" } },
+      ],
     },
   ],
   autoDecisions: [],

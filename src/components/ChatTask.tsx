@@ -258,7 +258,10 @@ export function BriefView({ view }: { view: ChatTaskView }) {
       )}
 
       <section className="flex flex-col gap-xs">
-        <SectionTitle aside={view.unmarked.length ? `${view.unmarked.length} to confirm` : "all confirmed"}>Assumptions</SectionTitle>
+        {/* A small task's brief can have only safe assumptions: then there is nothing to confirm and no count. */}
+        <SectionTitle aside={risky.length === 0 ? undefined : view.unmarked.length ? `${view.unmarked.length} to confirm` : "all confirmed"}>
+          Assumptions
+        </SectionTitle>
         <ul className="flex flex-col gap-sm">
           {risky.map((a) =>
             view.rejected.has(a.id) ? <SafeAssumption key={a.id} view={view} a={a} /> : <AssumptionState key={a.id} view={view} a={a} />,
