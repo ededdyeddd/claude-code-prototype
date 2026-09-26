@@ -107,7 +107,7 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
             // the transcript column keeps the max width and gutters itself.
             (hasContent ? " !max-w-none !ps-0 !pe-0" : "")
           }>
-          <ScrollFadeContainer>
+          <ScrollFadeContainer stickToBottom={transcript ? chat?.id : undefined}>
             {transcript && (
               <div className={TRANSCRIPT_COLUMN + " !static !h-auto !pointer-events-auto select-text"}>
                 <Transcript turns={turns!} live={live} />
