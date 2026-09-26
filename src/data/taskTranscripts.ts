@@ -16,13 +16,66 @@ export const TASK_TRANSCRIPTS: Record<string, Turn[]> = {
     {
       role: "assistant",
       thought: "Ran 3 steps",
-      time: "45 minutes ago",
+      time: "2 hours ago",
       steps: [
+        { icon: READ, label: "Read UserMenuButton.tsx" },
         { icon: READ, label: "Read design-system.css", detail: "data-mode=light" },
+      ],
+      blocks: [
+        { type: "p", text: "В дизайн-системе светлая тема уже есть: все токены `--cds-*` переопределены для `data-mode=\"light\"`. Значит, большую часть работы делает CSS, а мне нужно научить приложение переключать режим." },
+        { type: "p", text: "Начинаю с переключателя: пункт «Theme» в меню пользователя — System, Light, Dark." },
+      ],
+    },
+    { role: "user", text: "По умолчанию какая?" },
+    {
+      role: "assistant",
+      time: "2 hours ago",
+      blocks: [{ type: "p", text: "Системная, как в оригинале: Claude Code следует настройке macOS, пока ты явно не выбрал другую. Выбор сохраню в localStorage — так же хранится ширина панелей." }],
+    },
+    {
+      role: "assistant",
+      thought: "Edited 3 files",
+      time: "1 hour ago",
+      steps: [
+        { icon: RUN, label: "Ran npm run typecheck" },
         { icon: SEARCH, label: "Searched the codebase", detail: "data-mode=\"dark\"" },
       ],
       blocks: [
-        { type: "p", text: "Переключатель в меню пользователя готов. Нашёл 14 мест, где тема зашита как `data-mode=\"dark\"`. Пока не ответишь, экраны не перекрашиваю:" },
+        { type: "p", text: "Переключатель готов и сохраняет выбор. Но светлым стал только сайдбар." },
+        {
+          type: "files",
+          title: "Edited 3 files",
+          diff: { added: 114, removed: 9 },
+          files: [
+            { name: "UserMenuButton.tsx", diff: { added: 64, removed: 3 } },
+            { name: "useTheme.ts", diff: { added: 38, removed: 0 } },
+            { name: "App.tsx", diff: { added: 12, removed: 6 } },
+          ],
+        },
+        { type: "p", text: "Причина: в 14 местах тема зашита как `data-mode=\"dark\"` — страница токенов, панель плана, Up next, превью ревью. Каждое такое место — своя `.cds-root`, и настройку оно не видит." },
+      ],
+    },
+    { role: "user", text: "Покажи, как выглядит сейчас" },
+    {
+      role: "assistant",
+      thought: "Ran 2 steps",
+      time: "50 minutes ago",
+      steps: [{ icon: RUN, label: "Took screenshots", detail: "4 screens, light" }],
+      blocks: [
+        { type: "p", text: "Сайдбар и чат светлые, а панель плана, Up next и `/tokens` — тёмные островки. Выглядит как баг, а не как тема." },
+        { type: "p", text: "Ещё заметил: в светлой теме оригинала часть экранов вообще не использует светлые токены — например, превью кода остаётся тёмным. Не уверен, баг это оригинала или так задумано." },
+      ],
+    },
+    {
+      role: "assistant",
+      thought: "Ran 3 steps",
+      time: "45 minutes ago",
+      steps: [
+        { icon: READ, label: "Read design-system.css", detail: "data-mode=light" },
+        { icon: SEARCH, label: "Compared light tokens with the original", detail: "212 colors" },
+      ],
+      blocks: [
+        { type: "p", text: "Прежде чем перекрашивать 14 экранов, нужно решить, откуда брать цвета. Пока не ответишь, экраны не трогаю:" },
         { type: "question", id: "q1" },
       ],
     },

@@ -47,6 +47,7 @@ export type LiveStatus = {
 import { YANGO_TRANSCRIPTS } from "./yangoTranscripts";
 import { TASK_LIVE_STATUS, TASK_TRANSCRIPTS } from "./taskTranscripts";
 import { CHAT_TASK_TRANSCRIPTS } from "./chatTasks";
+import { YANGO_LIVE_STATUS } from "./yangoTasks";
 
 export const TRANSCRIPTS: Record<string, Turn[]> = {
   ...YANGO_TRANSCRIPTS,
@@ -173,4 +174,5 @@ export const TRANSCRIPTS: Record<string, Turn[]> = {
 /** Live status for chats that are still running (keyed by session id). */
 export const LIVE_STATUS: Record<string, LiveStatus> = {
   ...TASK_LIVE_STATUS,
+  ...YANGO_LIVE_STATUS,
 };

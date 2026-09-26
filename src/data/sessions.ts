@@ -27,10 +27,20 @@ export type Session = {
 export const PROJECTS = ["yango-prototype", "astrology-app", "storefront"];
 
 export const SESSIONS: Session[] = [
+  // yango-prototype: how this prototype is built. Large tasks in progress (yangoTasks.ts), two small ones, finished chats.
+  { id: "brief-plan", title: "Бриф и план в боковой панели", project: "yango-prototype", repo: { name: "yango-prototype", branch: "feat/brief-plan-pane", added: 1184, removed: 426 }, status: "active", env: "local", lastActivity: 0, created: 300, running: true },
+  { id: "chat-scroll", title: "Прокрутка в длинных чатах", project: "yango-prototype", repo: { name: "yango-prototype", branch: "fix/chat-scroll", added: 18, removed: 4 }, status: "active", env: "local", lastActivity: 2, created: 9, running: true },
+  { id: "up-next", title: "Раздел «Up next»", project: "yango-prototype", repo: { name: "yango-prototype", branch: "feat/up-next", added: 2146, removed: 96 }, status: "active", env: "local", lastActivity: 6, created: 1500, running: true },
+  { id: "chat-levels", title: "Уровни задач в чате", project: "yango-prototype", repo: { name: "yango-prototype", branch: "feat/chat-levels", added: 2862, removed: 412 }, status: "active", env: "local", lastActivity: 14, created: 1300, pr: "draft" },
+  { id: "dev-port", title: "Порт dev-сервера из PORT", project: "yango-prototype", repo: { name: "yango-prototype", branch: "chore/dev-port", added: 16, removed: 1 }, status: "active", env: "local", lastActivity: 25, created: 40 },
   { id: "light-theme", title: "Светлая тема прототипа", project: "yango-prototype", repo: { name: "yango-prototype", branch: "feat/light-theme", added: 140, removed: 12 }, status: "active", env: "local", lastActivity: 45, created: 150 },
-  { id: "visual-polish", title: "Доработки визуала и анимации", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 1386, removed: 58 }, status: "active", env: "local", lastActivity: 10, created: 60 },
-  { id: "design-system", title: "Создание дизайн-системы", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 1911, removed: 10 }, status: "active", env: "local", lastActivity: 60, created: 120 },
-  { id: "copy-prototype", title: "Копирование прототипа", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 2804, removed: 0 }, status: "active", env: "local", lastActivity: 120, created: 180 },
+  { id: "visual-polish", title: "Доработки визуала и анимации", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 538, removed: 49 }, status: "active", env: "local", lastActivity: 1100, created: 1450 },
+  { id: "avatar-status", title: "Статус внимания на аватаре", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 161, removed: 6 }, status: "active", env: "local", lastActivity: 1220, created: 1260, pr: "merged" },
+  { id: "budget-line", title: "Лимит недели в сайдбаре", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 100, removed: 4 }, status: "active", env: "local", lastActivity: 1250, created: 1300, pr: "merged" },
+  { id: "working-dot", title: "Пульсация рабочей точки", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 21, removed: 5 }, status: "active", env: "local", lastActivity: 1380, created: 1420 },
+  { id: "sidebar-nav", title: "Сайдбар: проекты и Routines", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 1036, removed: 93 }, status: "active", env: "local", lastActivity: 1440, created: 1560, pr: "merged" },
+  { id: "design-system", title: "Создание дизайн-системы", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 1975, removed: 13 }, status: "active", env: "local", lastActivity: 1500, created: 1600 },
+  { id: "copy-prototype", title: "Копирование прототипа", project: "yango-prototype", repo: { name: "yango-prototype", branch: "main", added: 2836, removed: 25 }, status: "active", env: "local", lastActivity: 1620, created: 1700 },
   // astrology-app: the MVP plan, a finished research chat, and two tasks from "Inbox".
   { id: "transit-push", title: "Пуши о транзитах", project: "astrology-app", repo: { name: "astrology-app", branch: "feat/transit-push", added: 96, removed: 3 }, status: "active", env: "cloud", lastActivity: 18, created: 200 },
   { id: "birth-date", title: "Дата рождения сдвигается на день", project: "astrology-app", repo: { name: "astrology-app", branch: "fix/birth-date-tz", added: 6, removed: 2 }, status: "active", env: "local", lastActivity: 3, created: 6, running: true },

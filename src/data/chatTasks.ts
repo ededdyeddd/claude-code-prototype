@@ -5,6 +5,7 @@
  */
 import type { Turn } from "./transcripts";
 import type { Level, Task } from "./task";
+import { YANGO_TASKS, YANGO_TASK_TRANSCRIPTS } from "./yangoTasks";
 
 /* ---------------------------------------------------------------- Envelope */
 
@@ -422,7 +423,7 @@ const LOYALTY: Task = {
   autoDecisions: [],
 };
 
-export const CHAT_TASK_LIST: Task[] = [ONE_CLICK, BIRTH_DATE, LOYALTY, I18N];
+export const CHAT_TASK_LIST: Task[] = [...YANGO_TASKS, ONE_CLICK, BIRTH_DATE, LOYALTY, I18N];
 
 export const CHAT_TASKS: Record<string, Task> = Object.fromEntries(CHAT_TASK_LIST.map((t) => [t.id, t]));
 
@@ -431,6 +432,7 @@ export const ONE_CLICK_PROMPT =
   "Сделай оплату в один клик: покупатель, который уже платил, оплачивает следующий заказ сохранённой картой.";
 
 export const CHAT_TASK_TRANSCRIPTS: Record<string, Turn[]> = {
+  ...YANGO_TASK_TRANSCRIPTS,
   "one-click-pay": [
     { role: "user", text: ONE_CLICK_PROMPT },
     {

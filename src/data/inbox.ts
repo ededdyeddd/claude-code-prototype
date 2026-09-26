@@ -36,10 +36,17 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
     delivery: "push",
     stages: [
       {
+        id: "s0",
+        title: "Toggle",
+        steps: [
+          { id: "a", status: "done", title: "Переключатель темы в меню пользователя" },
+          { id: "t", status: "done", title: "Найти экраны с зашитой тёмной темой" },
+        ],
+      },
+      {
         id: "s1",
         title: "Build",
         steps: [
-          { id: "a", status: "done", title: "Переключатель темы в меню пользователя" },
           {
             id: "b",
             status: "waiting",
@@ -79,7 +86,17 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
             },
           },
           { id: "p", status: "ahead", title: "Подбор палитры" },
+          { id: "s", status: "ahead", title: "Перевести 14 экранов на настройку темы" },
+          { id: "i", status: "ahead", title: "Иконки и превью кода в светлой теме" },
+        ],
+        gate: { title: "typecheck and build pass", status: "ahead" },
+      },
+      {
+        id: "s2",
+        title: "Verify",
+        steps: [
           { id: "c", status: "ahead", title: "Сверка экранов с оригиналом" },
+          { id: "d", status: "ahead", title: "Проверка контраста текста" },
         ],
         gate: { title: "the light theme", mine: true, status: "ahead", eta: "~17:00", etaSource: "3 similar tasks" },
       },
@@ -440,6 +457,10 @@ const STEP_WORK: Record<string, StepWork> = {
   "light-theme:a": { agent: "ui-engineer", cost: "$0.60", time: "18m" },
   "light-theme:b": { agent: "ui-engineer", cost: "$0.40", time: "9m" },
   "light-theme:p": { agent: "ui-engineer", cost: "~$1.20", time: "~40m", basis: "3 similar tasks" },
+  "light-theme:t": { agent: "ui-engineer", cost: "$0.30", time: "7m" },
+  "light-theme:s": { agent: "ui-engineer", cost: "~$1.40", time: "~45m", basis: "14 screens, the agent's estimate" },
+  "light-theme:i": { agent: "ui-engineer", cost: "~$0.50", time: "~15m" },
+  "light-theme:d": { agent: "test-fixer", cost: "~$0.30", time: "~10m", basis: "WCAG AA check" },
   "light-theme:c": { agent: "test-fixer", cost: "~$0.50", time: "~20m", basis: "9 similar checks in yango-prototype" },
   "checkout:a": { agent: "planner", cost: "$0.30", time: "6m" },
   "checkout:b": { agent: "planner", cost: "$0.20", time: "4m" },
@@ -478,6 +499,9 @@ const STEP_RESULT: Record<string, StepResult> = {
       { name: "src/data/useTheme.ts", added: 38, removed: 0 },
       { name: "src/App.tsx", added: 12, removed: 6 },
     ],
+  },
+  "light-theme:t": {
+    summary: "Нашёл 14 мест, где тема зашита как data-mode=\"dark\": /tokens, панель плана, Up next, превью ревью и 10 мелких. Каждое — своя .cds-root, настройку не видит.",
   },
   "checkout:a": {
     summary: "Описал 6 сценариев: оплата картой, 3-D Secure, отказ банка, частичный и полный возврат, повтор после ошибки. Для каждого — ожидаемое поведение и тексты ошибок.",
