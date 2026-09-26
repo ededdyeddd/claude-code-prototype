@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "../ui";
+import { useFadeIn } from "../data/useDelay";
 
 /** Three task rows, the front one waiting for you (clay), then running, then ahead. Same drawing style as the Routines stopwatch. */
 export function UpNextIllustration({ size = 60 }: { size?: number }) {
@@ -33,6 +34,7 @@ export function UpNextIllustration({ size = 60 }: { size?: number }) {
  */
 export function UpNextIntro({ onTour, onSkip }: { onTour: () => void; onSkip: () => void }) {
   const primary = useRef<HTMLDivElement>(null);
+  const shown = useFadeIn();
   const skip = useRef(onSkip);
   skip.current = onSkip;
   // Once on open: focus the primary button, Escape skips.
@@ -45,7 +47,10 @@ export function UpNextIntro({ onTour, onSkip }: { onTour: () => void; onSkip: ()
 
   return createPortal(
     <div
-      className="cds-root fixed inset-0 z-[var(--cds-z-modal)] flex items-center justify-center p-xl"
+      className={
+        "cds-root fixed inset-0 z-[var(--cds-z-modal)] flex items-center justify-center p-xl transition-opacity duration-slow ease-out motion-reduce:transition-none " +
+        (shown ? "opacity-100" : "opacity-0")
+      }
       data-mode="dark"
       data-density="comfortable"
       data-font="anthropic"
@@ -57,7 +62,10 @@ export function UpNextIntro({ onTour, onSkip }: { onTour: () => void; onSkip: ()
         aria-modal="true"
         aria-labelledby="up-next-intro-title"
         aria-describedby="up-next-intro-body"
-        className="relative flex w-full max-w-[400px] flex-col items-center gap-sm rounded-lg bg-surface-popover px-xl pt-xl pb-lg text-center"
+        className={
+          "relative flex w-full max-w-[400px] flex-col items-center gap-sm rounded-lg bg-surface-popover px-xl pt-xl pb-lg text-center transition-transform duration-slow ease-out motion-reduce:transition-none " +
+          (shown ? "translate-y-0" : "translate-y-2")
+        }
         style={{ boxShadow: "var(--cds-shadow-popover), inset 0 0 0 1px var(--cds-alpha-2)" }}
       >
         <UpNextIllustration />

@@ -23,6 +23,7 @@ import { seeTab, type TaskTab } from "../data/chatTaskStore";
 import { useEffect, useMemo, useState } from "react";
 import { Coachmarks, type Coachmark } from "./Coachmarks";
 import { markPlanHintSeen, planHintSeen } from "../data/onboarding";
+import { ONBOARDING_DELAY, useDelay } from "../data/useDelay";
 
 export function ChatShell({ name, transcript, chat }: { name: string; transcript?: Turn[]; chat?: Session }) {
   // One pane on the right of the chat, like the task pane in the Inbox: the task's brief or plan (?panel=brief|plan),
@@ -58,7 +59,8 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
   const hasToggle = !!view && view.tabs.length > 1;
   const hasBrief = !!view?.tabs.includes("brief");
   const [planHint, setPlanHint] = useState(() => !planHintSeen());
-  const showPlanHint = planHint && hasToggle && !panel && !review;
+  // The chat comes up first; the hint follows a moment later, and starts over if another chat opens meanwhile.
+  const showPlanHint = useDelay(planHint && hasToggle && !panel && !review, ONBOARDING_DELAY, view?.id);
   // The hint's steps stay the same object while it is up (Coachmarks measures them once); the button opens the current chat's plan.
   const openPlan = useRef(() => {});
   openPlan.current = () => setPanel("plan");

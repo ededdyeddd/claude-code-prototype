@@ -12,6 +12,7 @@ import { BriefView, GateCard } from "../components/ChatTask";
 import { deriveTask, type TaskState } from "../data/chatTaskStore";
 import { openQuestions, useInbox, type Attention } from "../data/inboxStore";
 import { introSeen, markIntroSeen, resetPlanHint } from "../data/onboarding";
+import { ONBOARDING_DELAY, useDelay } from "../data/useDelay";
 import { UpNextIntro } from "../components/UpNextIntro";
 import { Coachmarks, type Coachmark } from "../components/Coachmarks";
 
@@ -411,6 +412,8 @@ export function InboxPage() {
     if (replay) resetPlanHint();
     return replay || !introSeen() ? "intro" : null;
   });
+  // The page comes up first; the intro follows a moment later.
+  const introReady = useDelay(onboarding === "intro", ONBOARDING_DELAY);
   const finishOnboarding = () => {
     markIntroSeen();
     setOnboarding(null);
@@ -545,7 +548,7 @@ export function InboxPage() {
           )}
         </SidePane>
       )}
-      {onboarding === "intro" && <UpNextIntro onTour={() => setOnboarding("tour")} onSkip={finishOnboarding} />}
+      {introReady && <UpNextIntro onTour={() => setOnboarding("tour")} onSkip={finishOnboarding} />}
       {onboarding === "tour" && <Coachmarks steps={TOUR} onDone={finishOnboarding} />}
     </div>
   );
