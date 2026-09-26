@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { DockFrame, OptionList, OptionRow, RowField, type DockNav } from "./DecisionPanel";
 import type { Block } from "../data/transcripts";
 import { costRange, currentGate, gateText, money, planProgress, type Assumption, type Question, type ReviewTab } from "../data/task";
@@ -1163,21 +1163,30 @@ export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: 
   const [choices, setChoices] = useState<Record<string, string>>({});
   const [customs, setCustoms] = useState<Record<string, CustomAnswer | undefined>>({});
   const task = TASKS.find((t) => t.id === chatId);
-  if (!task || closed) return null;
-  const open = openQuestions(task, answers).sort((a, b) => Number(b.blocking) - Number(a.blocking));
-  const items: Decision[] = [
+  const open = task ? openQuestions(task, answers).sort((a, b) => Number(b.blocking) - Number(a.blocking)) : [];
+  const items: Decision[] = !task ? [] : [
     ...(view?.escalationPending ? [{ key: "escalation", kind: "escalation" as const }] : []),
     ...(view?.atGate ? view.unmarked.map((a) => ({ key: `a:${a.id}`, kind: "assumption" as const, a })) : []),
     ...(view?.atGate ? [{ key: "gate", kind: "gate" as const }] : []),
     ...open.map((q) => ({ key: `q:${q.id}`, kind: "question" as const, q })),
     ...(view?.resultPending ? [{ key: "result", kind: "result" as const }] : []),
   ];
-  if (items.length === 0) return null;
+  // Every decision the dock has shown in this chat: those gone from the queue are done, and the counter keeps them.
+  const [seen, setSeen] = useState<{ chat: string; keys: string[] }>({ chat: chatId, keys: [] });
+  const seenKeys = seen.chat === chatId ? seen.keys : [];
+  const itemKeys = items.map((d) => d.key);
+  const fresh = itemKeys.filter((k) => !seenKeys.includes(k));
+  useEffect(() => {
+    if (fresh.length > 0 || seen.chat !== chatId) setSeen({ chat: chatId, keys: [...seenKeys, ...fresh] });
+  });
+  const done = seenKeys.filter((k) => !itemKeys.includes(k)).length;
+  if (!task || closed || items.length === 0) return null;
   const i = Math.min(index, items.length - 1);
   const item = items[i];
   const nav: DockNav = {
     index: i,
     count: items.length,
+    done,
     prev: () => setIndex(i - 1),
     next: () => setIndex(i + 1),
     collapsed,

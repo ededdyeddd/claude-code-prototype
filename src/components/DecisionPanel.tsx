@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode, type Ref } from "react";
+import { useFadeIn } from "../data/useDelay";
 import { Button } from "../ui";
 
 /*
@@ -19,6 +20,8 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 export type DockNav = {
   index: number;
   count: number;
+  /** Decisions already made while the dock is up: the counter goes on ("2 of 2"), it does not start over at "1 of 1". */
+  done?: number;
   prev: () => void;
   next: () => void;
   collapsed: boolean;
@@ -194,12 +197,17 @@ export function DockFrame({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [nav.collapsed]);
+  const shown = useFadeIn();
 
   return (
     <section
       ref={ref}
       aria-label="Decision"
-      className="not-prose mb-xs flex max-h-[min(60vh,560px)] flex-col rounded-lg border border-alpha-2 bg-surface-2 p-2"
+      className={cx(
+        "not-prose mb-xs flex max-h-[min(60vh,560px)] flex-col rounded-lg border border-alpha-2 bg-surface-2 p-2 transition-opacity duration-base ease-out motion-reduce:transition-none",
+        // The next decision fades in, so answering one reads as moving on, not as nothing happening.
+        shown ? "opacity-100" : "opacity-0",
+      )}
     >
       {/* The header is inset like the text inside the option rows: the same distance from the top, left and right edges.
           The icon buttons' own padding makes up the difference on the right. */}
@@ -209,10 +217,10 @@ export function DockFrame({
           <p className="text-body font-medium text-primary">{title}</p>
         </div>
         <div className="flex shrink-0 items-center gap-0.5 text-footnote tabular-nums text-muted">
-          {nav.count > 1 && (
+          {(nav.done ?? 0) + nav.count > 1 && (
             <>
               <span className="me-0.5">
-                {nav.index + 1} of {nav.count}
+                {(nav.done ?? 0) + nav.index + 1} of {(nav.done ?? 0) + nav.count}
               </span>
               <Button size="xs" icon={CHEVRON_LEFT} aria-label="Previous decision" disabled={nav.index === 0} onClick={nav.prev} className="text-muted" />
               <Button size="xs" icon={CHEVRON_RIGHT} aria-label="Next decision" disabled={nav.index === nav.count - 1} onClick={nav.next} className="text-muted" />
