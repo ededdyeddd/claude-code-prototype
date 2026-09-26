@@ -44,6 +44,14 @@ export function openQuestions(task: Task, answers: Record<string, string>) {
 }
 
 /**
+ * The person has had a hand in this task in this visit: answered one of its questions or decided on its escalation.
+ * A small task like that stays in Running, so it does not vanish from Up next right after the answer.
+ */
+function touched(t: Task, answers: Record<string, string>, chat: TaskState) {
+  return !!chat.escalation || questionsOf(t).some((q) => !!answers[answerKey(t.id, q.id)]);
+}
+
+/**
  * Where a task stands for the person. Blocked: the agent stopped and waits (a blocking question, a gate of
  * the task chat, an escalation offer). Can wait: questions only, the agent keeps going. Result: a small task's
  * result to accept (the sidebar shows it; the Inbox list does not). None: a small task, not in the Inbox.
@@ -58,7 +66,7 @@ export function taskStatus(t: Task, answers: Record<string, string>, chat: TaskS
   if (d.resultPending) return "result" as const;
   // Accepted: the task is done and leaves the lists.
   if (d.acceptance && d.accepted) return "none" as const;
-  if (d.level < 2) return d.escalation === "declined" ? ("running" as const) : ("none" as const);
+  if (d.level < 2) return touched(t, answers, chat) ? ("running" as const) : ("none" as const);
   return "running" as const;
 }
 
@@ -75,10 +83,11 @@ export function useInbox() {
   const blocked = of("blocked");
   const canWait = of("canWait");
   const needsYou = [...blocked, ...canWait];
-  // Small tasks run too, but only tasks with a plan are listed.
-  const running = live.filter((t) => status.get(t.id) === "running" && deriveTask(t, chats[t.id]).level >= 2);
+  // Small tasks run too, but only the ones the person has had a hand in are listed; the rest would be noise.
+  const listed = (t: Task) => deriveTask(t, chats[t.id]).level >= 2 || touched(t, s.answers, chats[t.id] ?? EMPTY);
+  const running = live.filter((t) => status.get(t.id) === "running" && listed(t));
   const results = of("result");
-  const smallRunning = live.filter((t) => status.get(t.id) === "running" && deriveTask(t, chats[t.id]).level < 2);
+  const smallRunning = live.filter((t) => status.get(t.id) === "running" && !listed(t));
   // Results waiting for acceptance: the agent is done, so the sidebar shows them still, not pulsing.
   const accepting = live.filter((t) => deriveTask(t, chats[t.id]).acceptancePending);
   return { ...s, chats, blocked, canWait, needsYou, running, results, smallRunning, accepting };
