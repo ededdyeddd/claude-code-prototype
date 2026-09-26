@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import type { Turn } from "./transcripts";
 import { CHAT_TASKS, DEFAULT_ENVELOPE, RUN, type Envelope } from "./chatTasks";
 import { featureOn } from "./features";
+import { TASKS } from "./inbox";
 import { currentGate, flagTitle, zoneOf, type Acceptance, type Claim, type Criterion, type Level, type PlanDiff, type PlanStep, type Task } from "./task";
 
 /** A risky assumption the person marked: right, or fixed with their words. */
@@ -393,11 +394,10 @@ export function deriveTask(task: Task, s: TaskState = EMPTY) {
   const unmarked = risky.filter((a) => !marks[a.id]);
   // Level goes up only with the person's consent; it never goes down on its own. Inbox tasks without a level are full tasks.
   const level: Level = s.escalation === "agreed" && task.escalation ? task.escalation.to : task.level ?? 3;
-  // Visibility is not the level. Every task has a plan to read, whatever its size. A brief shows up only when the agent has
-  // something to say beyond the person's message (what it found, what it assumed); otherwise it would retell the request.
-  // Decisions (the gate) still come with size and risk only: see atGate.
-  const tabs: TaskTab[] =
-    task.level === undefined ? [] : hasBrief(task) || level >= 3 ? ["chat", "brief", "plan"] : ["chat", "plan"];
+  // Visibility is not the level. Every task has a plan to read, whatever its size, Inbox tasks without a level included.
+  // A brief shows up only when the agent has something to say beyond the person's message (what it found, what it
+  // assumed); otherwise it would retell the request. Decisions (the gate) still come with size and risk only: see atGate.
+  const tabs: TaskTab[] = hasBrief(task) || (task.level !== undefined && level >= 3) ? ["chat", "brief", "plan"] : ["chat", "plan"];
   // A gate waits for the person until they pass it: the brief gate right away, the escalation's after consent.
   const atGate = task.level !== undefined && level >= 2 && !s.launched && currentGate(task)?.mine === true;
   const escalationPending = !!task.escalation && !s.escalation;
@@ -431,7 +431,8 @@ export function deriveTask(task: Task, s: TaskState = EMPTY) {
 
 export function useChatTask(id: string | undefined) {
   const s = useStore();
-  const task = id ? CHAT_TASKS[id] : undefined;
+  // Any task, not only the chat-level mocks: an Inbox task's chat reads its plan too.
+  const task = id ? TASKS.find((t) => t.id === id) : undefined;
   if (!id || !task) return undefined;
   return { id, task, ...deriveTask(task, s[id]) };
 }
