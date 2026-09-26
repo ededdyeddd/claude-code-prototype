@@ -72,6 +72,7 @@ function TaskPaneChip({ label, status, open, changed, onToggle }: TaskPaneToggle
       type="button"
       aria-pressed={open}
       aria-controls="task-pane"
+      data-coach="plan-toggle"
       aria-label={status ? `${label}, ${status}` : label}
       onClick={onToggle}
       className={
