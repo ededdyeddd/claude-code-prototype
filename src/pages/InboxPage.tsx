@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Button, EmptyState, Hint, Icon, Menu, Tabs } from "../ui";
+import { AllRunningIllustration, Button, EmptyState, Hint, Icon, Menu, Tabs } from "../ui";
 import { SidePane, SIDE_PANE } from "../components/SidePane";
 import { TaskDot } from "../components/StatusMark";
 import { AttentionMenu } from "../components/AttentionMenu";
@@ -342,31 +342,16 @@ function Group({ title, count, coach, children }: { title: string; count: number
 }
 
 /** Nobody needs the person: when they will be needed next, by plan. */
+/** Nothing needs the person: the Running list below says when they will be needed, soonest first. */
 function NothingNeedsYou() {
-  const upcoming = TASKS.flatMap((t) =>
-    t.stages.flatMap((s) => (s.gate?.mine && s.gate.status === "ahead" && s.gate.eta ? [{ task: t, gate: s.gate }] : [])),
-  );
-  return (
-    <div className="flex flex-col gap-md">
-      <EmptyState>Nothing needs you</EmptyState>
-      <section className="flex flex-col gap-0.5">
-        <h2 className="px-sm pb-xs text-footnote text-muted">Coming up for you</h2>
-        {upcoming.map(({ task, gate }) => (
-          <div key={task.id + gate.title} className="flex items-start gap-sm px-sm py-xs">
-            <TaskDot state="ahead" className="mt-[5px]" />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="text-body text-primary">
-                {gateText(gate)} · {task.title}
-              </span>
-              <span className="text-footnote text-muted">
-                by {gate.eta} · based on {gate.etaSource}
-              </span>
-            </div>
-          </div>
-        ))}
-      </section>
-    </div>
-  );
+  return <EmptyState illustration={<AllRunningIllustration />}>Nothing needs you</EmptyState>;
+}
+
+/** Minutes from the start of today to a task's next turn of yours ("17:30", "tomorrow 11:00"); none goes last. */
+function turnAt(t: Task) {
+  const eta = t.stages.flatMap((s) => (s.gate?.status === "ahead" && s.gate.eta ? [s.gate.eta] : []))[0];
+  const m = eta?.match(/(tomorrow )?(\d{1,2}):(\d{2})/);
+  return m ? (m[1] ? 24 * 60 : 0) + Number(m[2]) * 60 + Number(m[3]) : Infinity;
 }
 
 /* ------------------------------------------------------------ Onboarding */
@@ -476,7 +461,8 @@ export function InboxPage() {
                   [
                     ["Blocked", blocked],
                     ["Can wait", canWait],
-                    ["Running", running],
+                    // Running: the soonest "Your turn by" first, so the list also says when you will be needed.
+                    ["Running", [...running].sort((a, b) => turnAt(a) - turnAt(b))],
                   ] as const
                 )
                   .filter(([, tasks]) => tasks.length > 0)

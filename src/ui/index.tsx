@@ -162,7 +162,7 @@ export function Button({
 export { Tabs } from "./Tabs";
 export { Hint } from "./Hint";
 export { PageHeader } from "./PageHeader";
-export { EmptyState, StopwatchIllustration } from "./EmptyState";
+export { AllRunningIllustration, EmptyState, StopwatchIllustration } from "./EmptyState";
 export { WavyDivider } from "./WavyDivider";
 export { ListCard, CardGrid } from "./ListCard";
 export { Menu, MenuItem, MenuCheckboxItem, MenuSelectItem, MenuSeparator } from "./Menu";
