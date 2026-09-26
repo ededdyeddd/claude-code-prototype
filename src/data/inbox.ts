@@ -29,6 +29,26 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
     now: "Build · waiting on the palette",
     waitingFor: "45m",
     delivery: "push",
+    level: 3,
+    levelReason: "it changes 14 screens, and 3 similar tasks took over 2 hours",
+    brief: {
+      understanding:
+        "В прототипе только тёмная тема. Делаю светлую и переключатель в меню пользователя: System, Light, Dark. Готово, когда каждый экран в светлой теме совпадает с оригиналом.",
+      found: [
+        { text: "Тема зашита как `data-mode=\"dark\"` в 14 местах: /tokens, панель плана, Up next, превью ревью и 10 мелких. Каждое — своя `.cds-root`, настройку не видит", source: "Поиск по `src/`" },
+        { text: "Значения для `data-mode=light` в дизайн-системе уже есть, но часть экранов их не использует", source: "`src/styles/design-system.css`" },
+      ],
+      assumptions: [
+        { id: "default", text: "По умолчанию — тема системы, как в оригинале" },
+        { id: "storage", text: "Выбор храню в localStorage, как ширину панелей" },
+      ],
+      boundaries: ["`design-system.css` не правлю: это скомпилированный оригинал", "Цвета — только из токенов `--cds-*`"],
+      doneWhen: [
+        { id: "match", text: "Каждый экран в светлой теме совпадает с оригиналом" },
+        { id: "contrast", text: "Контраст текста не ниже AA" },
+        { id: "build", text: "typecheck и build проходят", locked: true },
+      ],
+    },
     stages: [
       {
         id: "s0",
@@ -114,6 +134,27 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
     now: "Build · waiting on payments",
     waitingFor: "32m",
     delivery: "push",
+    level: 3,
+    levelReason: "payments are risky, and it touches the cart, orders and emails",
+    brief: {
+      understanding:
+        "Новый чекаут в три шага: адрес, доставка, оплата картой, потом письмо о заказе. Готово, когда проходят критерии приёмки из `docs/checkout.md`.",
+      found: [
+        { text: "6 сценариев оплаты: картой, 3-D Secure, отказ банка, частичный и полный возврат, повтор после ошибки", source: "`docs/checkout.md`" },
+        { text: "zod уже используется в проекте — беру его для валидации адреса", source: "`package.json`" },
+      ],
+      assumptions: [
+        { id: "steps", text: "Форма — три шага, как в макете" },
+        { id: "applepay", text: "Apple Pay не входит в первую версию: его нет в сценариях" },
+        { id: "sum", text: "Итог считаю на сервере, клиент только показывает", risky: true, why: "Если сумма разойдётся с корзиной, покупатель заплатит не то", confirmed: true },
+      ],
+      boundaries: ["Корзину и промокоды не трогаю — только читаю", "Живые платежи — только после ревью, до него тестовый режим Stripe"],
+      doneWhen: [
+        { id: "e2e", text: "e2e на все 6 сценариев зелёные", locked: true },
+        { id: "sum", text: "Итоговая сумма совпадает с корзиной до цента", locked: true },
+        { id: "email", text: "Письмо о заказе уходит в течение минуты" },
+      ],
+    },
     stages: [
       {
         id: "s1",
@@ -237,6 +278,24 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
     now: "Build · waiting on the push service",
     waitingFor: "18m",
     delivery: "push",
+    level: 3,
+    levelReason: "pushes go to real users and can't be taken back",
+    brief: {
+      understanding: "Каждое утро в 8:00 по местному времени — один пуш с прогнозом дня по самому сильному транзиту к натальной карте.",
+      found: [
+        { text: "Важные транзиты — Солнце, Луна и медленные планеты к Солнцу, Луне и Асценденту, орбис до 1°. Так в день набирается 1–3 события", source: "Эфемериды за 90 дней по 200 картам" },
+      ],
+      assumptions: [
+        { id: "one", text: "Не больше одного пуша в день, чтобы не отписывались" },
+        { id: "text", text: "Тексты пушей генерирует Claude API, как расшифровки карты" },
+        { id: "tz", text: "8:00 — по поясу телефона, а не места рождения", risky: true, why: "Пуш посреди ночи — повод отключить уведомления", confirmed: true },
+      ],
+      boundaries: ["Расчёт транзитов не меняю — только читаю", "На всю базу не отправляю до проверки на реальном телефоне"],
+      doneWhen: [
+        { id: "phone", text: "Пуш приходит в 8:00 на реальном телефоне в двух поясах" },
+        { id: "daily", text: "Одному человеку — не больше одного пуша в день", locked: true },
+      ],
+    },
     stages: [
       {
         id: "s1",
@@ -311,6 +370,24 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
     now: "Brief · waiting on ranking",
     waitingFor: "1h 10m",
     delivery: "digest",
+    level: 3,
+    levelReason: "a new index and stock sync, and 4 similar tasks took over a day",
+    brief: {
+      understanding: "Ищем не только по названию, но и по описанию и атрибутам, и подсвечиваем совпадения. Сейчас 18% запросов уходят в пустую выдачу.",
+      found: [
+        { text: "18% запросов за 30 дней уходят в пустую выдачу. Почти все — поиск по цвету и материалу, которых нет в названиях товаров", source: "Логи поиска за 30 дней" },
+        { text: "Meilisearch уже развёрнут, опечатки он исправляет из коробки", source: "`infra/search/`" },
+      ],
+      assumptions: [
+        { id: "engine", text: "Остаюсь на Meilisearch" },
+        { id: "fields", text: "Ищу по названию, описанию, цвету и материалу; по отзывам — нет", risky: true, why: "Отзывы добавят шума в выдачу, но иногда в них есть то, что ищут" },
+      ],
+      boundaries: ["Карточку товара и каталог не трогаю", "Ранжирование по продажам не меняю"],
+      doneWhen: [
+        { id: "empty", text: "Пустых выдач меньше 5% на тех же запросах за 30 дней" },
+        { id: "highlight", text: "Совпадения подсвечены в выдаче" },
+      ],
+    },
     stages: [
       {
         id: "s1",
@@ -381,6 +458,17 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
     now: "Triage · waiting on quarantine",
     waitingFor: "2h",
     delivery: "digest",
+    level: 1,
+    brief: {
+      understanding: "Три теста расчёта домов падают через раз. Чиню сами тесты; пока чиню, предлагаю карантин, чтобы CI не краснел.",
+      found: [
+        { text: "За 30 дней 41 падение, все в трёх тестах системы домов Плацидуса", source: "CI, прогоны за 30 дней" },
+        { text: "Падают только на раннерах с поясом UTC−5 около полуночи; перезапуск не воспроизводит", source: "Логи раннеров" },
+      ],
+      assumptions: [{ id: "tests", text: "Ошибка в тестах, а не в расчёте: фикстура берёт время без пояса" }],
+      boundaries: ["Расчёт домов не трогаю — только тесты и фикстуры"],
+      doneWhen: [{ id: "runs", text: "100 прогонов подряд на UTC−5 без падений" }],
+    },
     stages: [
       {
         id: "s1",
@@ -435,6 +523,8 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
     project: "astrology-app",
     stage: "Review",
     now: "Review · running e2e",
+    level: 2,
+    levelReason: "a new export with 3 parts, and 5 similar tasks took half a day",
     stages: [
       {
         id: "s1",
