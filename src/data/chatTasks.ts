@@ -318,6 +318,29 @@ const I18N: Task = {
           },
         },
         {
+          id: "switch",
+          status: "done",
+          title: "Выбор языка по браузеру и переключатель в футере",
+          work: { agent: "i18n-translator", cost: "$0.30", time: "8m" },
+          result: {
+            summary: "Язык берётся из браузера при первом заходе, дальше — переключатель в футере. Выбор хранится в cookie, чтобы письма уходили на том же языке.",
+            files: [
+              { name: "src/components/Footer.tsx", added: 34, removed: 2 },
+              { name: "src/i18n.ts", added: 12, removed: 0 },
+            ],
+          },
+        },
+        {
+          id: "intl",
+          status: "done",
+          title: "Даты, числа и цены через Intl",
+          work: { agent: "i18n-translator", cost: "$0.20", time: "6m" },
+          result: {
+            summary: "Даты, числа и цены форматирует Intl по локали: «12 de mayo de 2026», «1.234,50 €». Валюта не меняется, только запись.",
+            decisions: ["Цены по-прежнему в евро — так в брифе"],
+          },
+        },
+        {
           id: "b",
           status: "running",
           title: "Карточки товаров",
@@ -338,6 +361,13 @@ const I18N: Task = {
       id: "review",
       title: "Review",
       steps: [
+        {
+          id: "layout",
+          status: "ahead",
+          title: "Длинные строки в вёрстке",
+          work: { agent: "ui-engineer", cost: "~$0.40", time: "~15m", basis: "испанский в среднем на 25% длиннее" },
+          plan: { serves: ["ui"] },
+        },
         {
           id: "fixes",
           status: "ahead",
@@ -454,6 +484,26 @@ export const CHAT_TASK_TRANSCRIPTS: Record<string, Turn[]> = {
     { role: "user", text: "У некоторых пользователей в профиле дата рождения на день раньше, чем они ввели. Почини." },
     {
       role: "assistant",
+      thought: "Ran 2 steps",
+      time: "5 minutes ago",
+      steps: [
+        { icon: READ, label: "Read support tickets", detail: "tag: birth date" },
+        { icon: RUN, label: "Grouped tickets by country" },
+      ],
+      blocks: [
+        { type: "p", text: "Нашёл 23 обращения за месяц. Все — из Америки: США, Канада, Бразилия, Мексика. Из Европы и Азии — ни одного. Похоже на часовой пояс западнее UTC." },
+      ],
+    },
+    { role: "user", text: "Это только отображение или карта тоже считается неправильно?" },
+    {
+      role: "assistant",
+      time: "4 minutes ago",
+      blocks: [
+        { type: "p", text: "Только отображение: на сервер уходит строка «1990-05-12», и карта считается по ней верно. Но человек видит не ту дату и думает, что карта тоже не та, — отсюда обращения." },
+      ],
+    },
+    {
+      role: "assistant",
       steps: [
         { icon: READ, label: "Read ProfileScreen.tsx" },
         { icon: SEARCH, label: "Searched for new Date(", detail: "4 matches" },
@@ -470,6 +520,24 @@ export const CHAT_TASK_TRANSCRIPTS: Record<string, Turn[]> = {
     { role: "user", text: "Дай постоянным покупателям скидку 5% в корзине." },
     {
       role: "assistant",
+      time: "25 minutes ago",
+      blocks: [
+        { type: "p", text: "Уточню, кто постоянный. Предлагаю: от 3 оплаченных заказов за всё время. Отменённые и полностью возвращённые не считаю." },
+      ],
+    },
+    { role: "user", text: "Да, от трёх. А с промокодом суммируется?" },
+    {
+      role: "assistant",
+      thought: "Ran 1 step",
+      time: "22 minutes ago",
+      steps: [{ icon: READ, label: "Read server/promo/rules.ts" }],
+      blocks: [
+        { type: "p", text: "Предлагаю как с распродажей: не суммируется, берём большую скидку. Так уже работают промокоды, и покупателю не придётся разбираться, почему одна скидка съела другую." },
+      ],
+    },
+    { role: "user", text: "Ок" },
+    {
+      role: "assistant",
       thought: "Edited 3 files",
       time: "8 minutes ago",
       steps: [
@@ -478,6 +546,7 @@ export const CHAT_TASK_TRANSCRIPTS: Record<string, Turn[]> = {
       ],
       blocks: [
         { type: "p", text: "Правило скидки и строку в корзине сделал. Дальше упёрся: число заказов покупателя нигде не хранится." },
+        { type: "p", text: "Считать заказы на лету при каждом открытии корзины — это запрос по всей истории, у активных покупателей 200+ заказов. Нужна колонка у покупателя, то есть миграция." },
         { type: "escalation-card" },
       ],
     },

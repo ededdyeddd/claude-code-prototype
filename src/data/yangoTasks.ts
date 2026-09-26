@@ -602,7 +602,7 @@ const CHAT_LEVELS: Task = {
       title: "Cards",
       steps: [
         {
-          id: "gate",
+          id: "brief-gate",
           status: "done",
           title: "Гейт брифа и плана в ленте",
           work: { agent: "ui-engineer", cost: "$1.50", time: "35m" },
