@@ -27,6 +27,7 @@ export function SidePane({
   actions,
   subheader,
   footer,
+  coach,
   children,
 }: {
   /** For aria-controls on the toggle that opens it. */
@@ -45,6 +46,8 @@ export function SidePane({
   subheader?: ReactNode;
   /** Pinned under the scroll area, e.g. a reply box. */
   footer?: ReactNode;
+  /** Anchor for a coachmark tour (`data-coach`). */
+  coach?: string;
   children: ReactNode;
 }) {
   // top: content is scrolled under the header; bottom: there is more content below the footer.
@@ -75,6 +78,7 @@ export function SidePane({
       )}
       <section
         id={id}
+        data-coach={coach}
         aria-label="Side pane"
         className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-card bg-surface-2 shadow-panel-sm dark:shadow-sm dark:outline dark:outline-1 dark:outline-alpha-2"
       >

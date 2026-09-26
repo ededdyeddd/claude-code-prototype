@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Button, EmptyState, Hint, Icon, Menu, Tabs } from "../ui";
+import { Button, EmptyState, Hint, Icon, Menu, Tabs, WavyDivider } from "../ui";
 import { SidePane, SIDE_PANE } from "../components/SidePane";
 import { TaskDot } from "../components/StatusMark";
 import { AttentionMenu } from "../components/AttentionMenu";
@@ -11,6 +11,9 @@ import { PaneMeta, PlanPane, whenHint } from "../components/PlanPane";
 import { BriefView, GateCard } from "../components/ChatTask";
 import { deriveTask, type TaskState } from "../data/chatTaskStore";
 import { openQuestions, useInbox, type Attention } from "../data/inboxStore";
+import { introSeen, markIntroSeen } from "../data/onboarding";
+import { UpNextIntro } from "../components/UpNextIntro";
+import { Coachmarks, type Coachmark } from "../components/Coachmarks";
 
 // Anthropicons codepoints (see /tokens#icons)
 const I = {
@@ -58,7 +61,9 @@ function Header({
         >
           Up next
         </h1>
-        <AttentionMenu attention={attention} busyUntil={busyUntil} />
+        <span data-coach="attention" className="shrink-0">
+          <AttentionMenu attention={attention} busyUntil={busyUntil} />
+        </span>
       </div>
       <p className="text-footnote text-secondary">{summary}</p>
       <AwayRecap onOpenTask={onOpenTask} />
@@ -167,7 +172,7 @@ function AwayRecap({ onOpenTask }: { onOpenTask: (id: string) => void }) {
   };
 
   return (
-    <p className="text-footnote text-muted">
+    <p data-coach="recap" className="text-footnote text-muted">
       While you were away, <span className="tabular-nums">{AWAY.window}</span>
       {" · "}
       <RecapNumber value={String(AWAY.checks.length)} label="checks passed" open={open === "checks"} onToggle={toggle("checks")} />
@@ -324,10 +329,10 @@ function TaskRow({
 
 /** `spaced`: extra room above every group but the first, so a heading clearly belongs to the rows below it. */
 /** Collapsible group of tasks. Every group gets room above it, so its heading belongs to the rows below. */
-function Group({ title, count, children }: { title: string; count: number; children: ReactNode }) {
+function Group({ title, count, coach, children }: { title: string; count: number; coach?: string; children: ReactNode }) {
   const [open, setOpen] = useState(true);
   return (
-    <section className={cx("flex flex-col", open ? "pb-lg" : "pb-sm")}>
+    <section data-coach={coach} className={cx("flex flex-col", open ? "pb-lg" : "pb-sm")}>
       <h2>
         <button
           type="button"
@@ -382,6 +387,41 @@ function NothingNeedsYou() {
   );
 }
 
+/* ------------------------------------------------------------ Onboarding */
+
+// Micro-onboarding tour: what is inside the page, one element at a time. Steps whose element is not on the page are skipped.
+const TOUR: Coachmark[] = [
+  {
+    target: "groups",
+    title: "Start at the top",
+    body: (
+      <>
+        <span className="text-primary">Blocked</span>: the agent stopped and waits for you. <span className="text-primary">Can wait</span>: it
+        has a question but keeps working. <span className="text-primary">Running</span>: nothing needed yet.
+      </>
+    ),
+    sides: ["right", "bottom", "top"],
+  },
+  {
+    target: "pane",
+    title: "Decide on the plan",
+    body: "Open a task to see its plan. A question sits on its step, and each option shows its cost, time and whether you can undo it. The same question waits in the task’s chat: answer once, it closes everywhere.",
+    sides: ["left", "bottom"],
+  },
+  {
+    target: "recap",
+    title: "What happened without you",
+    body: "Checks that passed, what agents decided on their own and what it cost. Click a number to see the list.",
+    sides: ["bottom", "top"],
+  },
+  {
+    target: "attention",
+    title: "Say when you are free",
+    body: "Busy and Do not disturb hold notifications. The list here stays the same.",
+    sides: ["bottom", "left"],
+  },
+];
+
 /* -------------------------------------------------------------------- Page */
 
 export function InboxPage() {
@@ -389,6 +429,14 @@ export function InboxPage() {
   // The first task that needs the person is open on arrival; clicking a task opens it on the right.
   // "Answer in the plan" from a task's chat opens that task (?task=id); otherwise the first task that needs you.
   const { search } = useLocation();
+  // First visit: the intro above the list, then the tour. `?intro` shows it again (for demos).
+  const [onboarding, setOnboarding] = useState<"intro" | "tour" | null>(() =>
+    new URLSearchParams(search).has("intro") || !introSeen() ? "intro" : null,
+  );
+  const finishOnboarding = () => {
+    markIntroSeen();
+    setOnboarding(null);
+  };
   const [selectedId, setSelectedId] = useState<string | null>(() => new URLSearchParams(search).get("task") ?? needsYou[0]?.id ?? null);
   const [expanded, setExpanded] = useState(false);
   // Same pane as beside a task chat: Plan first, Brief a tab away for tasks that have one.
@@ -426,6 +474,12 @@ export function InboxPage() {
                 busyUntil={busyUntil}
                 onOpenTask={setSelectedId}
               />
+              {onboarding === "intro" && (
+                <>
+                  <UpNextIntro onTour={() => setOnboarding("tour")} onSkip={finishOnboarding} />
+                  <WavyDivider />
+                </>
+              )}
               {needsYou.length === 0 && <NothingNeedsYou />}
               {/* One list: space comes after an open group, so collapsed headings stack tightly. */}
               <div className="flex flex-col pt-xs">
@@ -437,8 +491,8 @@ export function InboxPage() {
                   ] as const
                 )
                   .filter(([, tasks]) => tasks.length > 0)
-                  .map(([title, tasks]) => (
-                    <Group key={title} title={title} count={tasks.length}>
+                  .map(([title, tasks], i) => (
+                    <Group key={title} title={title} count={tasks.length} coach={i === 0 ? "groups" : undefined}>
                       {tasks.map((t) => (
                         <TaskRow
                           key={t.id}
@@ -461,6 +515,7 @@ export function InboxPage() {
       {selected && (
         <SidePane
           key={selected.id}
+          coach="pane"
           title={selected.title}
           subheader={
             <div className="flex flex-col gap-md pt-xs">
@@ -518,6 +573,7 @@ export function InboxPage() {
           )}
         </SidePane>
       )}
+      {onboarding === "tour" && <Coachmarks steps={TOUR} onDone={finishOnboarding} />}
     </div>
   );
 }
