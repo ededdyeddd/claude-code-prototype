@@ -20,7 +20,9 @@ import { SIDE_PANE, SidePane } from "./SidePane";
 import { BriefView, ChatTaskContext, PlanView } from "./ChatTask";
 import { Tabs } from "../ui";
 import { seeTab, type TaskTab } from "../data/chatTaskStore";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Coachmarks, type Coachmark } from "./Coachmarks";
+import { markPlanHintSeen, planHintSeen } from "../data/onboarding";
 
 export function ChatShell({ name, transcript, chat }: { name: string; transcript?: Turn[]; chat?: Session }) {
   // One pane on the right of the chat, like the task pane in the Inbox: the task's brief or plan (?panel=brief|plan),
@@ -52,6 +54,32 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
   useEffect(() => {
     if (view && panel && unseen) seeTab(view.id, panel);
   }, [view, panel, unseen]);
+  // First task chat with a "Plan" toggle: light it up once and say what is behind it.
+  const hasToggle = !!view && view.tabs.length > 1;
+  const hasBrief = !!view?.tabs.includes("brief");
+  const [planHint, setPlanHint] = useState(() => !planHintSeen());
+  const showPlanHint = planHint && hasToggle && !panel && !review;
+  // The hint's steps stay the same object while it is up (Coachmarks measures them once); the button opens the current chat's plan.
+  const openPlan = useRef(() => {});
+  openPlan.current = () => setPanel("plan");
+  const planHintSteps = useMemo<Coachmark[]>(
+    () => [
+      {
+        target: "plan-toggle",
+        title: hasBrief ? "Plan and brief" : "Plan",
+        body: hasBrief
+          ? "What the agent will do, step by step, with cost and time for each and where you approve. The Brief tab says how it understood the task and what it assumed."
+          : "What the agent will do, step by step, with cost and time for each and where you approve.",
+        sides: ["bottom", "left"],
+        action: { label: "Open plan", onClick: () => openPlan.current() },
+      },
+    ],
+    [hasBrief],
+  );
+  const endPlanHint = () => {
+    markPlanHintSeen();
+    setPlanHint(false);
+  };
   const [paneWidth, setPaneWidth] = usePersistentWidth("cc:review-pane-width", SIDE_PANE.default);
   const root = useRef<HTMLDivElement>(null);
   const paneMax = (root.current?.clientWidth ?? 1200) - 400;
@@ -115,6 +143,7 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
       </div>
     </div>
     </div>
+    {showPlanHint && <Coachmarks key={view?.id} steps={planHintSteps} onDone={endPlanHint} skipLabel="Got it" />}
     {panel && view && (
       <ChatTaskContext.Provider value={{ chatId: view.id, view, setTab: (t) => setPanel(t) }}>
         {/* Beside 14px messages the task pane reads at the same size: its text-body maps to the prose size. */}

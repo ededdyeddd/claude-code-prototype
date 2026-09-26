@@ -9,6 +9,8 @@ export type Coachmark = {
   body: ReactNode;
   /** Sides to try, in order; the first one that fits the window wins. */
   sides?: Side[];
+  /** The primary button of this step, in place of Next / Done (e.g. "Open plan"); the tour ends after it. */
+  action?: { label: string; onClick: () => void };
 };
 
 type Side = "bottom" | "top" | "left" | "right";
@@ -49,15 +51,25 @@ function place(t: Rect, card: { width: number; height: number }, sides: Side[]) 
  * A short tour over the page: the page dims, the element of the current step stays lit,
  * a card beside it says what it is. Next / Back / Skip; Escape skips, arrows step.
  */
-export function Coachmarks({ steps, onDone }: { steps: Coachmark[]; onDone: () => void }) {
-  // Steps whose element is on the page right now (e.g. no task pane when nothing is selected).
-  const [live] = useState(() => steps.filter((s) => find(s.target)));
+export function Coachmarks({
+  steps,
+  onDone,
+  skipLabel = "Skip",
+}: {
+  steps: Coachmark[];
+  onDone: () => void;
+  /** A single hint reads better with "Got it" than "Skip". */
+  skipLabel?: string;
+}) {
+  // Steps whose element is on the page once it has rendered (e.g. no task pane when nothing is selected).
+  const [live, setLive] = useState<Coachmark[] | null>(null);
+  useLayoutEffect(() => setLive(steps.filter((s) => find(s.target))), [steps]);
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const card = useRef<HTMLDivElement>(null);
   const primary = useRef<HTMLDivElement>(null);
-  const step = live[index];
+  const step = live?.[index];
 
   const measure = useCallback(() => {
     const el = step && find(step.target);
@@ -89,7 +101,8 @@ export function Coachmarks({ steps, onDone }: { steps: Coachmark[]; onDone: () =
     };
   }, [measure]);
 
-  const last = index === live.length - 1;
+  const count = live?.length ?? 0;
+  const last = index === count - 1;
   const next = useCallback(() => (last ? onDone() : setIndex((i) => i + 1)), [last, onDone]);
   const back = useCallback(() => setIndex((i) => Math.max(0, i - 1)), []);
 
@@ -109,8 +122,8 @@ export function Coachmarks({ steps, onDone }: { steps: Coachmark[]; onDone: () =
   }, [index, pos === null]);
 
   useEffect(() => {
-    if (live.length === 0) onDone();
-  }, [live.length, onDone]);
+    if (live && live.length === 0) onDone();
+  }, [live, onDone]);
 
   if (!step) return null;
 
@@ -143,9 +156,11 @@ export function Coachmarks({ steps, onDone }: { steps: Coachmark[]; onDone: () =
         }}
       >
         <div className="flex flex-col gap-xs">
-          <span className="text-footnote tabular-nums text-muted">
-            {index + 1} of {live.length}
-          </span>
+          {count > 1 && (
+            <span className="text-footnote tabular-nums text-muted">
+              {index + 1} of {count}
+            </span>
+          )}
           <h2 id="coachmark-title" className="text-heading font-medium text-primary">
             {step.title}
           </h2>
@@ -155,7 +170,7 @@ export function Coachmarks({ steps, onDone }: { steps: Coachmark[]; onDone: () =
         </div>
         <div className="flex items-center gap-xs pt-xs">
           <Button size="xs" variant="ghost" className="text-muted" onClick={onDone}>
-            Skip
+            {skipLabel}
           </Button>
           <span className="flex-1" />
           {index > 0 && (
@@ -164,9 +179,22 @@ export function Coachmarks({ steps, onDone }: { steps: Coachmark[]; onDone: () =
             </Button>
           )}
           <div ref={primary} className="contents">
-            <Button size="xs" variant="primary" onClick={next}>
-              {last ? "Done" : "Next"}
-            </Button>
+            {step.action ? (
+              <Button
+                size="xs"
+                variant="primary"
+                onClick={() => {
+                  onDone();
+                  step.action!.onClick();
+                }}
+              >
+                {step.action.label}
+              </Button>
+            ) : (
+              <Button size="xs" variant="primary" onClick={next}>
+                {last ? "Done" : "Next"}
+              </Button>
+            )}
           </div>
         </div>
       </div>

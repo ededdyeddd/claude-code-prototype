@@ -16,3 +16,31 @@ export function markIntroSeen() {
     // Not saved: the intro comes back on the next visit.
   }
 }
+
+/** The one-time hint on the "Plan" toggle in a task chat. */
+const PLAN_HINT_KEY = "cc:plan-hint-seen";
+
+export function planHintSeen() {
+  try {
+    return localStorage.getItem(PLAN_HINT_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function markPlanHintSeen() {
+  try {
+    localStorage.setItem(PLAN_HINT_KEY, "1");
+  } catch {
+    // Not saved: the hint comes back on the next visit.
+  }
+}
+
+/** For demos: `?intro` replays the whole onboarding, the Plan hint included. */
+export function resetPlanHint() {
+  try {
+    localStorage.removeItem(PLAN_HINT_KEY);
+  } catch {
+    // Nothing to reset.
+  }
+}

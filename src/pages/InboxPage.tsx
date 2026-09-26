@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Button, EmptyState, Hint, Icon, Menu, Tabs, WavyDivider } from "../ui";
+import { Button, EmptyState, Hint, Icon, Menu, Tabs } from "../ui";
 import { SidePane, SIDE_PANE } from "../components/SidePane";
 import { TaskDot } from "../components/StatusMark";
 import { AttentionMenu } from "../components/AttentionMenu";
@@ -11,7 +11,7 @@ import { ChangeButton, PaneMeta, PlanPane, whenHint } from "../components/PlanPa
 import { BriefView, GateCard } from "../components/ChatTask";
 import { deriveTask, type TaskState } from "../data/chatTaskStore";
 import { openQuestions, useInbox, type Attention } from "../data/inboxStore";
-import { introSeen, markIntroSeen } from "../data/onboarding";
+import { introSeen, markIntroSeen, resetPlanHint } from "../data/onboarding";
 import { UpNextIntro } from "../components/UpNextIntro";
 import { Coachmarks, type Coachmark } from "../components/Coachmarks";
 
@@ -405,10 +405,12 @@ export function InboxPage() {
   // The first task that needs the person is open on arrival; clicking a task opens it on the right.
   // "Answer in the plan" from a task's chat opens that task (?task=id); otherwise the first task that needs you.
   const { search } = useLocation();
-  // First visit: the intro above the list, then the tour. `?intro` shows it again (for demos).
-  const [onboarding, setOnboarding] = useState<"intro" | "tour" | null>(() =>
-    new URLSearchParams(search).has("intro") || !introSeen() ? "intro" : null,
-  );
+  // First visit: the intro in a modal over the page, then the tour. `?intro` shows it again (for demos).
+  const [onboarding, setOnboarding] = useState<"intro" | "tour" | null>(() => {
+    const replay = new URLSearchParams(search).has("intro");
+    if (replay) resetPlanHint();
+    return replay || !introSeen() ? "intro" : null;
+  });
   const finishOnboarding = () => {
     markIntroSeen();
     setOnboarding(null);
@@ -450,12 +452,6 @@ export function InboxPage() {
                 busyUntil={busyUntil}
                 onOpenTask={setSelectedId}
               />
-              {onboarding === "intro" && (
-                <>
-                  <UpNextIntro onTour={() => setOnboarding("tour")} onSkip={finishOnboarding} />
-                  <WavyDivider />
-                </>
-              )}
               {needsYou.length === 0 && <NothingNeedsYou />}
               {/* One list: space comes after an open group, so collapsed headings stack tightly. */}
               <div className="flex flex-col pt-xs">
@@ -549,6 +545,7 @@ export function InboxPage() {
           )}
         </SidePane>
       )}
+      {onboarding === "intro" && <UpNextIntro onTour={() => setOnboarding("tour")} onSkip={finishOnboarding} />}
       {onboarding === "tour" && <Coachmarks steps={TOUR} onDone={finishOnboarding} />}
     </div>
   );
