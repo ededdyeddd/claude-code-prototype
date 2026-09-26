@@ -205,6 +205,14 @@ export function QuestionCard({
   // "Ask about it" is beside the answer, not instead of it: the options stay, the field has its own text.
   const [asking, setAsking] = useState(false);
   const [askDraft, setAskDraft] = useState("");
+  // Asking and answering take turns: asking drops an unsent pick (or own answer), and picking closes the question field.
+  const startAsk = () => {
+    setChoice("");
+    setMode("choose");
+    setDraft("");
+    setAskDraft("");
+    setAsking(true);
+  };
   const [thread, setThread] = useState<{ q: string; a?: string }[]>([]);
   const otherRef = useRef<HTMLInputElement>(null);
 
@@ -253,6 +261,7 @@ export function QuestionCard({
     const otherOn = mode === "other";
     const picked = otherOn ? undefined : question.options.find((o) => o.id === choice);
     const pick = (i: number) => {
+      setAsking(false);
       if (custom) return;
       if (i < n) {
         setChoice(question.options[i].id);
@@ -301,7 +310,7 @@ export function QuestionCard({
               Cancel
             </Button>
           ) : (
-            <Button size="sm" onClick={() => (setAskDraft(""), setAsking(true))}>
+            <Button size="sm" onClick={startAsk}>
               Ask about it
             </Button>
           )
@@ -360,7 +369,7 @@ export function QuestionCard({
                 ref={otherRef}
                 value={draft}
                 onChange={setDraft}
-                onFocus={() => mode !== "other" && setMode("other")}
+                onFocus={() => (setAsking(false), mode !== "other" && setMode("other"))}
                 onEnter={sendOther}
                 placeholder="Type your own answer here"
                 label="Your answer"
@@ -408,7 +417,7 @@ export function QuestionCard({
                 title={o.label}
                 recommended={o.recommended}
                 selected={on}
-                onSelect={() => (setChoice(o.id), setMode("choose"))}
+                onSelect={() => (setChoice(o.id), setMode("choose"), setAsking(false))}
                 description={
                   <span className="tabular-nums">
                     <Forecast cost={o.cost} time={o.toAcceptance} basis={o.forecastSource} model={task.model} focusable={false} /> ·{" "}
@@ -420,12 +429,12 @@ export function QuestionCard({
               />
             );
           })}
-          <OptionRow title="Other" selected={mode === "other"} onSelect={() => (setMode("other"), window.setTimeout(() => otherRef.current?.focus()))}>
+          <OptionRow title="Other" selected={mode === "other"} onSelect={() => (setMode("other"), setAsking(false), window.setTimeout(() => otherRef.current?.focus()))}>
             <RowField
               ref={otherRef}
               value={draft}
               onChange={setDraft}
-              onFocus={() => mode !== "other" && setMode("other")}
+              onFocus={() => (setAsking(false), mode !== "other" && setMode("other"))}
               onEnter={sendOther}
               placeholder="Type your own answer here"
               label="Your answer"
@@ -482,7 +491,7 @@ export function QuestionCard({
           </>
         ) : !asking ? (
           <>
-            <Button size="sm" className="me-auto" onClick={() => (setAskDraft(""), setAsking(true))}>
+            <Button size="sm" className="me-auto" onClick={startAsk}>
               Ask about it
             </Button>
             {/* Other: your words come back as a plan change to apply; an option answers right away. */}
