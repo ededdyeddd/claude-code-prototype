@@ -12,11 +12,6 @@ export const AWAY = {
     { taskId: "light-theme", text: "Theme toggle: visual diff clean" },
     { taskId: "search", text: "Query export matches the schema" },
   ],
-  /**
-   * Shown only for what needs the person, is not a question inside one task, and stops agents.
-   * Self-healed events (retries, flaky tests) stay in the recap, not here.
-   */
-  alarm: { text: "GitHub token for storefront expired. Agents can't push.", action: "Reconnect" } as { text: string; action: string } | null,
 };
 
 /** Inbox tasks as authored; step work and results come from STEP_WORK / STEP_RESULT below. */

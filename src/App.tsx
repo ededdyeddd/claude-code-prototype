@@ -12,9 +12,13 @@ import { usePersistentWidth } from "./data/usePersistentWidth";
 import { taskState, useInbox } from "./data/inboxStore";
 import { introSeen } from "./data/onboarding";
 
+/** Router basename: "" locally, "/<repo>" on GitHub Pages. */
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 // First run lands on Up next with its intro. Done before the router mounts, once per load: "New" still opens an empty chat.
-if (!introSeen() && ["/", "/code", "/code/"].includes(window.location.pathname)) {
-  window.history.replaceState(null, "", "/up-next");
+const path = window.location.pathname.slice(BASE.length) || "/";
+if (!introSeen() && ["/", "/code", "/code/"].includes(path)) {
+  window.history.replaceState(null, "", `${BASE}/up-next`);
 }
 
 /** Content of the main pane: switches with the sidebar navigation. */
@@ -283,7 +287,7 @@ export function AppContent() {
 
 export function App() {
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter basename={BASE} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/" element={<Navigate to="/code" replace />} />
         <Route path="/tokens" element={<TokensPage />} />

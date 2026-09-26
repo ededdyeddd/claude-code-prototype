@@ -657,6 +657,8 @@ export function PaneMeta({ task, answers }: { task: Task; answers: Record<string
 export const PANE_BODY = "px-[var(--cds-gap-lg)] pt-xs pb-[var(--cds-gap-xl)]";
 /** Room between plan stages (and before the plan rules). */
 export const SECTION_GAP = "pb-[var(--cds-gap-md)]";
+/** Room after a collapsed stage: less than after an open one, but its heading should not touch the next. */
+const COLLAPSED_STAGE_GAP = "pb-[var(--cds-gap-sm)]";
 /** Room between steps; the last step of a stage has none, the stage's own room follows. */
 const STEP_GAP = "pb-[var(--cds-gap-sm)]";
 /** Room after an opened step: more than between its own blocks (gap-xs), so the next step reads as the next one. */
@@ -990,7 +992,7 @@ export function PlanPane({
           const isCollapsed = !single && collapsed[stage.id];
           return (
             // Room comes after an open stage; collapsed stages stack tightly (their rows' own padding), like the Inbox groups.
-            <li key={stage.id} className={cx("flex flex-col", !isCollapsed && (si < stages.length - 1 || hasTail) && SECTION_GAP)}>
+            <li key={stage.id} className={cx("flex flex-col", (si < stages.length - 1 || hasTail) && (isCollapsed ? COLLAPSED_STAGE_GAP : SECTION_GAP))}>
               {/* One stage: just its steps (the pane's header already says where it stands); several: numbered, collapsible stages. */}
               {!single && (
                 <button

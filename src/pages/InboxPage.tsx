@@ -19,7 +19,6 @@ import { Coachmarks, type Coachmark } from "../components/Coachmarks";
 const I = {
   chevronDown: "",
   chevronRight: "",
-  warning: "",
   send: "",
   check: "",
 };
@@ -67,9 +66,6 @@ function Header({
       </div>
       <p className="text-footnote text-secondary">{summary}</p>
       <AwayRecap onOpenTask={onOpenTask} />
-      <div className="pt-md empty:hidden">
-        <AwayAlert />
-      </div>
     </header>
   );
 }
@@ -212,26 +208,6 @@ function AwayRecap({ onOpenTask }: { onOpenTask: (id: string) => void }) {
         </div>
       </Menu>
     </p>
-  );
-}
-
-/** A problem that stops agents and needs the person (access, budget, a stuck agent, red main). Not for self-healed events. */
-function AwayAlert() {
-  // In the prototype the action just resolves the problem, so the banner goes away.
-  const [resolved, setResolved] = useState(false);
-  if (!AWAY.alarm || resolved) return null;
-  return (
-    <div
-      role="alert"
-      className="flex items-center gap-sm rounded-[calc(var(--cds-radius--sm)+4px)] bg-alpha-1 ps-sm pe-xs py-xs text-footnote text-secondary"
-    >
-      {/* The glyph sits high in its box; 1px down lines it up with the text optically. */}
-      <Icon glyph={I.warning} size="sm" className="translate-y-px" />
-      <span className="min-w-0 flex-1">{AWAY.alarm.text}</span>
-      <Button size="xs" onClick={() => setResolved(true)}>
-        {AWAY.alarm.action}
-      </Button>
-    </div>
   );
 }
 
