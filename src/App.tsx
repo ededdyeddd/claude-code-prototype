@@ -58,7 +58,7 @@ function MainContent() {
   // Task chats follow "Up next": blocked means the agent is not working right now, unless other steps run in parallel.
   const live = session && taskState(session.id, needs);
   const chat = session && live ? { ...session, running: live.running } : session;
-  return <ChatShell name="Eduard" chat={chat} transcript={chatId ? TRANSCRIPTS[chatId] : undefined} />;
+  return <ChatShell name="Stranger" chat={chat} transcript={chatId ? TRANSCRIPTS[chatId] : undefined} />;
 }
 
 const SIDEBAR = { default: 288, min: 256, max: 480 };
