@@ -200,8 +200,11 @@ export function QuestionCard({
   // Nothing is picked until the person picks: no option is preselected, not even the recommended one.
   const chosen = question.options.find((o) => o.id === choice);
   const recommended = question.options.find((o) => o.recommended);
-  const [mode, setMode] = useState<"choose" | "other" | "ask">("choose");
+  const [mode, setMode] = useState<"choose" | "other">("choose");
   const [draft, setDraft] = useState("");
+  // "Ask about it" is beside the answer, not instead of it: the options stay, the field has its own text.
+  const [asking, setAsking] = useState(false);
+  const [askDraft, setAskDraft] = useState("");
   const [thread, setThread] = useState<{ q: string; a?: string }[]>([]);
   const otherRef = useRef<HTMLInputElement>(null);
 
@@ -214,11 +217,11 @@ export function QuestionCard({
     window.setTimeout(() => setCustom({ text, ready: true }), 1500);
   };
   const sendAsk = () => {
-    const text = draft.trim();
+    const text = askDraft.trim();
     if (!text) return;
     setThread((t) => [...t, { q: text }]);
-    setDraft("");
-    setMode("choose");
+    setAskDraft("");
+    setAsking(false);
     const reply =
       `${question.context ?? ""} ` +
       (recommended
@@ -293,26 +296,26 @@ export function QuestionCard({
             >
               Edit
             </Button>
-          ) : mode === "ask" ? (
-            <Button size="sm" onClick={() => setMode("choose")}>
+          ) : asking ? (
+            <Button size="sm" onClick={() => setAsking(false)}>
               Cancel
             </Button>
           ) : (
-            <Button size="sm" onClick={() => (setDraft(""), setMode("ask"))}>
+            <Button size="sm" onClick={() => (setAskDraft(""), setAsking(true))}>
               Ask about it
             </Button>
           )
         }
       >
         {thread$}
-        {mode === "ask" && (
+        {asking && (
           <input
             autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            value={askDraft}
+            onChange={(e) => setAskDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") (e.preventDefault(), sendAsk());
-              if (e.key === "Escape") setMode("choose");
+              if (e.key === "Escape") setAsking(false);
             }}
             placeholder="Ask me about this question"
             aria-label="Ask about this question"
@@ -394,7 +397,7 @@ export function QuestionCard({
             {custom.ready ? "Plan change ready: review it in the plan below, then Apply it or Edit your answer" : "Drafting the plan change…"}
           </span>
         </div>
-      ) : mode !== "ask" ? (
+      ) : (
         // The same option rows as the decision dock over the composer, Other included, without keycaps: the pane has no number keys.
         <OptionList label={question.text}>
           {question.options.map((o) => {
@@ -429,18 +432,21 @@ export function QuestionCard({
             />
           </OptionRow>
         </OptionList>
-      ) : (
+      )}
+
+      {/* Asking takes the place of the "Ask about it" row: the field, its buttons under it; Cancel brings the row back. */}
+      {asking && !custom && (
         <textarea
           autoFocus
           rows={2}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          value={askDraft}
+          onChange={(e) => setAskDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               sendAsk();
             }
-            if (e.key === "Escape") setMode("choose");
+            if (e.key === "Escape") setAsking(false);
           }}
           placeholder="Ask me about this question"
           aria-label="Ask about this question"
@@ -474,9 +480,9 @@ export function QuestionCard({
               Apply
             </Button>
           </>
-        ) : mode !== "ask" ? (
+        ) : !asking ? (
           <>
-            <Button size="sm" className="me-auto" onClick={() => (setDraft(""), setMode("ask"))}>
+            <Button size="sm" className="me-auto" onClick={() => (setAskDraft(""), setAsking(true))}>
               Ask about it
             </Button>
             {/* Other: your words come back as a plan change to apply; an option answers right away. */}
@@ -497,10 +503,10 @@ export function QuestionCard({
           </>
         ) : (
           <>
-            <Button size="sm" variant="secondary" onClick={() => setMode("choose")}>
+            <Button size="sm" variant="secondary" onClick={() => setAsking(false)}>
               Cancel
             </Button>
-            <Button size="sm" variant="primary" disabled={!draft.trim()} onClick={sendAsk}>
+            <Button size="sm" variant="primary" disabled={!askDraft.trim()} onClick={sendAsk}>
               Ask
             </Button>
           </>
