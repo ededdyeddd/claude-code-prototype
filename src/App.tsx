@@ -32,7 +32,7 @@ function MainContent() {
   if (pathname.startsWith("/up-next")) return <InboxPage />;
   const chatId = pathname.match(/^\/code\/([^/]+)/)?.[1];
   const session = SESSIONS.find((s) => s.id === chatId);
-  // Task chats follow "Up next": blocked means the agent is not working right now.
+  // Task chats follow "Up next": blocked means the agent is not working right now, unless other steps run in parallel.
   const live = session && taskState(session.id, needs);
   const chat = session && live ? { ...session, running: live.running } : session;
   return <ChatShell name="Eduard" chat={chat} transcript={chatId ? TRANSCRIPTS[chatId] : undefined} />;

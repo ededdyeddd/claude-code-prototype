@@ -1,7 +1,7 @@
 /**
  * Task chats of the yango-prototype project: how this prototype is being built, told as tasks.
- * Two large tasks in progress (one keeps working with questions, one is blocked), one large task that stands
- * at a question, a small task with a result to accept, and a small one running. Model: task.ts.
+ * Two large tasks in progress (one keeps working with questions, one is blocked on one step while two agents
+ * work in parallel on steps that do not need the answer), a small task with a result to accept, and a small one running. Model: task.ts.
  */
 import type { LiveStatus, Turn } from "./transcripts";
 import type { Envelope } from "./chatTasks";
@@ -531,7 +531,10 @@ const UP_NEXT: Task = {
 
 /* --------------------------------------------------------------------------------------------- Chat levels */
 
-/** Level 3 blocked: a blocking question on the decision dock stops the Cards stage. */
+/**
+ * Level 3 blocked, but not stopped: a blocking question stops the dock step and the steps that need it (`after`);
+ * two other agents keep working in parallel on steps that do not depend on the answer.
+ */
 const CHAT_LEVELS: Task = {
   id: "chat-levels",
   title: "Уровни задач в чате",
@@ -718,7 +721,7 @@ const CHAT_LEVELS: Task = {
         },
         {
           id: "edits",
-          status: "ahead",
+          status: "running",
           title: "Правки брифа текстом из чата",
           work: { agent: "ui-engineer", cost: "~$0.60", time: "~20m", basis: "the agent's estimate" },
           plan: { what: "«Apple Pay не нужен» в композере убирает допущение и шаг плана, агент отвечает одной строкой: что изменилось и сколько сэкономили.", serves: ["decide"] },
@@ -730,9 +733,9 @@ const CHAT_LEVELS: Task = {
       id: "demo",
       title: "Demo",
       steps: [
-        { id: "demos", status: "ahead", title: "Демо-задачи в storefront и astrology-app", work: { agent: "ui-engineer", cost: "~$1", time: "~30m", basis: "the agent's estimate" }, plan: { what: "Покажу на демо-задачах все четыре уровня, от простого ответа до брифа с планом, и остановку на 80% лимита с вопросом.", serves: ["levels", "budget"] } },
-        { id: "copy", status: "ahead", title: "Проход по текстам: карточки говорят просто", work: { agent: "ux-writer", cost: "~$0.60", time: "~20m", basis: "2 similar passes" }, plan: { what: "Перепишу тексты карточек, чтобы было ясно, что нужно от тебя и что будет после.", serves: ["copy"] } },
-        { id: "docs", status: "ahead", title: "CHAT_LEVELS.md: демо-адреса и журнал решений", work: { agent: "docs-writer", cost: "~$0.30", time: "~10m" } },
+        { id: "docs", status: "running", title: "CHAT_LEVELS.md: уровни, лимиты и журнал решений", work: { agent: "docs-writer", cost: "~$0.30", time: "~10m" }, plan: { what: "Записываю то, что уже решено: уровни, лимиты задачи, гейт брифа, карточку результата. Раздел про док решений допишу после твоего ответа." } },
+        { id: "demos", status: "ahead", after: ["dock"], title: "Демо-задачи в storefront и astrology-app", work: { agent: "ui-engineer", cost: "~$1", time: "~30m", basis: "the agent's estimate" }, plan: { what: "Покажу на демо-задачах все четыре уровня, от простого ответа до брифа с планом, и остановку на 80% лимита с вопросом.", serves: ["levels", "budget"] } },
+        { id: "copy", status: "ahead", after: ["dock"], title: "Проход по текстам: карточки говорят просто", work: { agent: "ux-writer", cost: "~$0.60", time: "~20m", basis: "2 similar passes" }, plan: { what: "Перепишу тексты карточек, чтобы было ясно, что нужно от тебя и что будет после.", serves: ["copy"] } },
       ],
       gate: { title: "the result", mine: true, status: "ahead", eta: "20:00", etaSource: "this task's pace" },
     },
@@ -1268,8 +1271,9 @@ export const YANGO_TASK_TRANSCRIPTS: Record<string, Turn[]> = {
       ],
       blocks: [
         { type: "p", text: "Да, на гейте док занимает 412px из 900: бриф с допущениями не помещается, и главное уезжает в «Details». Предвыбор уберу в любом случае — случайный Enter на гейте запускает задачу." },
-        { type: "p", text: "Но дальше развилка, и она меняет план, поэтому стою:" },
+        { type: "p", text: "Но дальше развилка, и она меняет план, поэтому док жду:" },
         { type: "question", id: "q1" },
+        { type: "p", text: "Остальное не стоит. Правки брифа текстом и CHAT_LEVELS.md от дока не зависят — их два агента делают параллельно. Демо-задачи и проход по текстам начну после твоего ответа: они показывают док." },
       ],
     },
   ],
@@ -1318,5 +1322,6 @@ export const YANGO_TASK_TRANSCRIPTS: Record<string, Turn[]> = {
 export const YANGO_LIVE_STATUS: Record<string, LiveStatus> = {
   "brief-plan": { step: "Wiring the live row to the plan step", target: "Transcript.tsx", stats: "18m · 3.1M tokens" },
   "up-next": { step: "Pulsing dot for Can wait rows", target: "InboxPage.tsx", stats: "6m · 4.6M tokens" },
+  "chat-levels": { step: "Parsing a brief edit from the composer", target: "chatTaskStore.ts", stats: "9m · 5.8M tokens" },
   "chat-scroll": { step: "Pinning the feed to the bottom", target: "ScrollFadeContainer.tsx", stats: "2m · 88K tokens" },
 };

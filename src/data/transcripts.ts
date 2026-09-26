@@ -42,6 +42,9 @@ export type LiveStatus = {
   stats: string;
   /** `step` is the plan step in progress (a task chat), with the whole plan's steps done of all, as on the Plan chip. */
   planStep?: { done: number; of: number };
+  /** Other plan steps running at the same time, and whether a step waits for your answer meanwhile. */
+  parallel?: number;
+  waitingForYou?: boolean;
 };
 
 import { YANGO_TRANSCRIPTS } from "./yangoTranscripts";

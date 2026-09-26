@@ -248,6 +248,8 @@ function TaskRow({
             ? `approve ${gate.title}`
             : undefined;
   const needs = open.length > 0 || !!decision;
+  // Blocked on one step, not stopped: steps that do not need the answer keep running in parallel.
+  const working = group === "blocked" ? task.stages.flatMap((st) => st.steps).filter((p) => p.status === "running" && !p.question).length : 0;
   const nextGate = task.stages.flatMap((s) => (s.gate?.status === "ahead" && s.gate.eta ? [s.gate] : []))[0];
   const stageText = needs ? task.stage : task.waitingFor ? `${task.stage} · resumed` : task.now;
 
@@ -289,6 +291,7 @@ function TaskRow({
               </span>
             )}
             {blocking > 0 && later > 0 && <span className="text-secondary"> · +{later} can wait</span>}
+            {working > 0 && <span> · {working} in parallel</span>}
             {needs && !blocking && !decision && (
               <span className="text-secondary">
                 {later} {plural(later, "question", "questions")}

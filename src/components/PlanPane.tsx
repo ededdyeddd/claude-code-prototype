@@ -613,6 +613,8 @@ function StepResultView({ result }: { result: StepResult }) {
 export function PaneMeta({ task, answers }: { task: Task; answers: Record<string, string> }) {
   const open = openQuestions(task, answers).sort((a, b) => Number(b.blocking) - Number(a.blocking));
   const next = task.stages.flatMap((st) => st.steps).find((x) => x.status === "running" || x.status === "ahead");
+  // Waiting for you does not always mean stopped: steps that do not need the answer keep running.
+  const working = open.length > 0 ? task.stages.flatMap((st) => st.steps).filter((x) => x.status === "running" && !x.question).length : 0;
   // Stopped at a gate of yours (a task chat): that is the status, not "Running".
   const gate = task.stages.find((st) => st.gate?.status === "current" && st.gate.mine)?.gate;
   const branch = SESSIONS.find((x) => x.id === task.id)?.repo?.branch;
@@ -643,6 +645,7 @@ export function PaneMeta({ task, answers }: { task: Task; answers: Record<string
           <span>Running{next && ` · next: ${next.title}`}</span>
         )
       )}
+      {working > 0 && ` · ${working} in parallel`}
       {" · "}
       {task.project}
       {branch && ` · ${branch}`}
@@ -739,6 +742,10 @@ export function PlanPane({
   const [openSteps, setOpenSteps] = useState<Record<string, boolean>>({});
   const [openQs, setOpenQs] = useState<Record<string, boolean>>({});
   const hasBlocking = open.some((q) => q.blocking);
+  // Steps are not always a line: while one waits for you, steps that do not need it run in parallel (see `PlanStep.after`).
+  const statusOf = (p: PlanStep): Status => (p.question ? (answers[answerKey(task.id, p.question.id)] ? "running" : "waiting") : p.status);
+  const allSteps = task.stages.flatMap((st) => st.steps);
+  const inParallel = allSteps.filter((p) => ["running", "waiting"].includes(statusOf(p))).length > 1;
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(task.stages.map((st) => [st.id, stageDone(st)])),
   );
@@ -814,7 +821,10 @@ export function PlanPane({
     const step = item.step;
     const q = step.question;
     const picked = q && answers[answerKey(task.id, q.id)];
-    const status: Status = q ? (picked ? "running" : "waiting") : step.status;
+    const status = statusOf(step);
+    const parallel = status === "running" && inParallel;
+    // What a step ahead still waits for: only unfinished steps it depends on, so the line goes once they are done.
+    const waitsFor = status === "ahead" ? (step.after ?? []).flatMap((id) => allSteps.filter((p) => p.id === id && statusOf(p) !== "done")) : [];
     const work = step.work;
     const removing = effectOn(step.id, "remove");
     const changed = effectOn(step.id, "change");
@@ -891,13 +901,21 @@ export function PlanPane({
                   )}
                 >
                   {/* Agent: only where it changes along the plan; the same name on every step reads as a table. */}
-                  {work.agent && newAgent.has(step.id) && <>{work.agent} · </>}
+                  {work.agent && (newAgent.has(step.id) || parallel) && <>{work.agent} · </>}
                   <Forecast cost={work.cost} time={work.time} basis={work.basis} model={task.model} />
                 </span>
               )}
             </div>
             {/* What the step becomes; no chip: "New" and "Removed" already say the plan is changing. */}
             {changed && <span className="text-footnote text-secondary">{changed.text}</span>}
+            {/* Parallel work says so on the step: the task is not stopped just because one step waits for you. */}
+            {parallel && <span className="text-footnote text-secondary">{hasBlocking ? "In parallel · doesn't need your answer" : "In parallel"}</span>}
+            {waitsFor.length > 0 && (
+              <span className="text-footnote text-muted">
+                {waitsFor.some((p) => statusOf(p) === "waiting") ? "Starts after your answer on " : "Starts after "}
+                {waitsFor.map((p) => p.title).join(", ")}
+              </span>
+            )}
             {expanded && result && <p className="text-body text-secondary">{result.summary}</p>}
             {expanded && stepPlan?.what && <StepPlanView what={stepPlan.what} />}
             {q && picked && (

@@ -83,7 +83,9 @@ export function taskState(
   id: string,
   n: { blocked: Task[]; canWait: Task[]; running: Task[]; results: Task[]; smallRunning: Task[] },
 ) {
-  if (n.blocked.some((t) => t.id === id)) return { waiting: "blocked" as const, running: false };
+  // Blocked stops one step, not always the task: steps that do not need the answer may keep running in parallel.
+  const blocked = n.blocked.find((t) => t.id === id);
+  if (blocked) return { waiting: "blocked" as const, running: blocked.stages.some((st) => st.steps.some((p) => p.status === "running" && !p.question)) };
   if (n.canWait.some((t) => t.id === id)) return { waiting: "canWait" as const, running: true };
   if (n.results.some((t) => t.id === id)) return { waiting: "result" as const, running: false };
   if (n.running.some((t) => t.id === id) || n.smallRunning.some((t) => t.id === id)) return { waiting: undefined, running: true };

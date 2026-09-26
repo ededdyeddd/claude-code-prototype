@@ -17,7 +17,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "../ui";
 import { NEW_CHAT, seeTab, sendMessage, useChatTask, type TaskTab } from "../data/chatTaskStore";
 import { ONE_CLICK_PROMPT, guessLevel } from "../data/chatTasks";
-import { useInbox } from "../data/inboxStore";
+import { openQuestions, useInbox } from "../data/inboxStore";
 import { planProgress } from "../data/task";
 import { ChatTaskContext, DecisionDock } from "./ChatTask";
 
@@ -43,6 +43,7 @@ const TRANSCRIPT_COLUMN = COLUMN + " pointer-events-none absolute inset-0 z-[1]"
 export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Session }) {
   const hasContent = !!transcript;
   const view = useChatTask(chat?.id);
+  const { answers } = useInbox();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   // S2 demo: /code?scene=s2 opens the new chat with a draft typed and the envelope open.
@@ -72,7 +73,13 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
   const liveBase = chat?.running ? LIVE_STATUS[chat.id] : undefined;
   const live =
     liveBase && progress?.running
-      ? { ...liveBase, step: progress.running.title, planStep: { done: progress.done, of: progress.total } }
+      ? {
+          ...liveBase,
+          step: progress.running.title,
+          planStep: { done: progress.done, of: progress.total },
+          parallel: progress.parallel.length - 1,
+          waitingForYou: !!view && openQuestions(view.live, answers).some((q) => q.blocking),
+        }
       : liveBase;
 
   const send = (text: string) => {

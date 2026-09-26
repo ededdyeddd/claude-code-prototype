@@ -87,6 +87,11 @@ export type PlanStep = {
   /** Opens under the step while it is ahead or running. */
   plan?: StepPlan;
   result?: StepResult;
+  /**
+   * Ids of steps this one needs finished first. Only where it explains something: a step that waits for a blocked
+   * one, while steps without such a link run in parallel. Without it, the plan's order is just the planned order.
+   */
+  after?: string[];
 };
 
 /**
@@ -253,6 +258,8 @@ export function planProgress(task: Task) {
     stage,
     stageDone: stage?.steps.filter((p) => p.status === "done").length ?? 0,
     running: steps.find((p) => p.status === "running"),
+    /** Steps running at once: agents work in parallel on steps that do not wait for each other. */
+    parallel: steps.filter((p) => p.status === "running"),
     yourTurn: next?.eta,
   };
 }

@@ -298,7 +298,8 @@ function PlanStepRow({ live, planStep }: { live: LiveStatus; planStep: { done: n
         // Said in words: a pulsing dot alone did not read as progress. The count is the whole plan's, the same as on
         // the Plan chip and in the plan's header ("3 of 6"), not the step's number, which read as a mismatch.
         // No file: it changes every few seconds and is a tool call's detail, not the plan's.
-        meta={`Now: ${live.step}`}
+        // One step waits for you while others keep going: say both, so a blocked task does not read as stopped.
+        meta={`${live.waitingForYou ? "While you decide" : "Now"}: ${live.step}${live.parallel ? ` · +${live.parallel} in parallel` : ""}`}
         onOpen={() => setTab("plan")}
       />
     </div>
