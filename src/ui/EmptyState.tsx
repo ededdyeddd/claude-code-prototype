@@ -22,3 +22,24 @@ export function StopwatchIllustration({ size = 60 }: { size?: number }) {
     </svg>
   );
 }
+
+/**
+ * Three task rows, every one with the grey "working" dot: agents are busy and none waits for you.
+ * Used by the empty Up next; same drawing style as the stopwatch.
+ */
+export function AllRunningIllustration({ size = 60 }: { size?: number }) {
+  const row = (y: number, line: number) => (
+    <g>
+      <rect x="6" y={y} width="48" height="12" rx="3" fill="var(--cds-alpha-3)" stroke="var(--cds-text-secondary)" strokeWidth="1.5" />
+      <circle cx="13" cy={y + 6} r="2.5" fill="var(--cds-text-muted)" />
+      <path d={`M20 ${y + 6}h${line}`} stroke="var(--cds-text-secondary)" strokeWidth="2" strokeLinecap="round" />
+    </g>
+  );
+  return (
+    <svg width={size} height={size} viewBox="0 0 60 60" fill="none" aria-hidden="true">
+      {row(6, 26)}
+      {row(24, 20)}
+      {row(42, 14)}
+    </svg>
+  );
+}
