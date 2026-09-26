@@ -3,6 +3,7 @@ import type { Turn } from "./transcripts";
 import { CHAT_TASKS, DEFAULT_ENVELOPE, RUN, type Envelope } from "./chatTasks";
 import { featureOn } from "./features";
 import { TASKS } from "./inbox";
+import { DONE_TASKS } from "./doneTasks";
 import { currentGate, flagTitle, zoneOf, type Acceptance, type Claim, type Criterion, type Level, type PlanDiff, type PlanStep, type Task } from "./task";
 
 /** A risky assumption the person marked: right, or fixed with their words. */
@@ -449,8 +450,8 @@ export function deriveTask(task: Task, s: TaskState = EMPTY) {
 
 export function useChatTask(id: string | undefined) {
   const s = useStore();
-  // Any task, not only the chat-level mocks: an Inbox task's chat reads its plan too.
-  const task = id ? TASKS.find((t) => t.id === id) : undefined;
+  // Any task, not only the chat-level mocks: an Inbox task's chat reads its plan too, and a finished chat its plan after the fact.
+  const task = id ? (TASKS.find((t) => t.id === id) ?? DONE_TASKS.find((t) => t.id === id)) : undefined;
   if (!id || !task) return undefined;
   return { id, task, ...deriveTask(task, s[id]) };
 }
