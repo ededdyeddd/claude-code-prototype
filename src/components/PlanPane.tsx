@@ -632,6 +632,8 @@ export function PaneMeta({ task, answers }: { task: Task; answers: Record<string
   const working = open.length > 0 ? task.stages.flatMap((st) => st.steps).filter((x) => x.status === "running" && !x.question).length : 0;
   // Stopped at a gate of yours (a task chat): that is the status, not "Running".
   const gate = task.stages.find((st) => st.gate?.status === "current" && st.gate.mine)?.gate;
+  // Stopped on a step with no question on it: a decision of yours waits there (a small task that grew).
+  const stopped = task.stages.flatMap((st) => st.steps).find((x) => x.status === "waiting" && !x.question);
   const branch = SESSIONS.find((x) => x.id === task.id)?.repo?.branch;
   const spentTime = task.stages
     .flatMap((st) => st.steps)
@@ -656,6 +658,8 @@ export function PaneMeta({ task, answers }: { task: Task; answers: Record<string
       ) : (
         gate ? (
           <span className="text-secondary">{gateText(gate)}</span>
+        ) : stopped ? (
+          <span className="text-secondary">Waiting for you · {stopped.title}</span>
         ) : (
           <span>Running{next && ` · next: ${next.title}`}</span>
         )
@@ -760,6 +764,7 @@ export function PlanPane({
   // Steps are not always a line: while one waits for you, steps that do not need it run in parallel (see `PlanStep.after`).
   const statusOf = (p: PlanStep): Status => (p.question ? (answers[answerKey(task.id, p.question.id)] ? "running" : "waiting") : p.status);
   const allSteps = task.stages.flatMap((st) => st.steps);
+  const hasCurrentGate = task.stages.some((st) => st.gate?.status === "current");
   const inParallel = allSteps.filter((p) => ["running", "waiting"].includes(statusOf(p))).length > 1;
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(task.stages.map((st) => [st.id, stageDone(st)])),
@@ -850,10 +855,12 @@ export function PlanPane({
     const quiet = planned && status === "ahead" && !removing && !changed;
     const canOpen = !!result || !!stepPlan?.what;
     const expanded = canOpen && !!openSteps[step.id];
+    // Waiting with no question and no gate of the plan to hold it: the decision (gateCard) sits on this step.
+    const decides = status === "waiting" && !q && !hasCurrentGate;
     const foldedQuestion = !!q && !picked && !q.blocking && hasBlocking && !openQs[q.id];
     const card = !!q && !picked && (q.blocking || !hasBlocking || !!openQs[q.id]);
     // An opened step (details or a question card) gets more room after it than a closed one: its own blocks are xs apart.
-    const opened = expanded || card || foldedQuestion;
+    const opened = expanded || card || foldedQuestion || (decides && !!gateCard);
     return (
       <li key={item.key} className={cx("group/step relative flex items-start gap-md", !last && (opened ? OPEN_STEP_GAP : STEP_GAP))}>
         {rail}
@@ -861,7 +868,7 @@ export function PlanPane({
           <TaskDot
             state={
               status === "waiting"
-                ? q?.blocking
+                ? !q || q.blocking
                   ? "blocked"
                   : "canWait"
                 : status === "running"
@@ -923,6 +930,7 @@ export function PlanPane({
             </div>
             {/* What the step becomes; no chip: "New" and "Removed" already say the plan is changing. */}
             {changed && <span className="text-footnote text-secondary">{changed.text}</span>}
+            {decides && <span className="text-footnote text-clay">Waiting for you</span>}
             {/* Parallel work says so on the step: the task is not stopped just because one step waits for you. */}
             {parallel && <span className="text-footnote text-secondary">{hasBlocking ? "In parallel · doesn't need your answer" : "In parallel"}</span>}
             {waitsFor.length > 0 && (
@@ -959,6 +967,7 @@ export function PlanPane({
               </Button>
             </div>
           )}
+          {decides && gateCard}
           {card && q && (
             <QuestionCard
               task={task}

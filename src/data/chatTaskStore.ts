@@ -227,6 +227,12 @@ export function useChatStates() {
  * stages and gates become the plan, and the Inbox row reads the stage that waits at its gate.
  */
 function planned(task: Task, s: TaskState): Task {
+  // Finished as is: the step it stopped on starts, with no gates ahead.
+  if (s.escalation === "declined")
+    return {
+      ...task,
+      stages: task.stages.map((st) => ({ ...st, steps: st.steps.map((p) => (p.status === "waiting" && !p.question ? { ...p, status: "running" as const } : p)) })),
+    };
   const split = s.escalation === "agreed" ? task.escalation?.stages : undefined;
   if (!split) return task;
   const at = split.find((st) => st.gate?.status === "current");
