@@ -316,7 +316,11 @@ export type Task = {
     transcript?: Turn[];
   };
   /** Escalation offered in the feed: the level goes up to `to` once the person agrees. */
-  escalation?: { to: Level; text: string; afterAgree: Turn[]; afterDecline: string };
+  /**
+   * A small task that grew: the offer to split it. `stages` are the offer's stages and gates; they become the plan only
+   * once the person agrees. Until then the plan is one list, as for any small task.
+   */
+  escalation?: { to: Level; text: string; stages: Stage[]; afterAgree: Turn[]; afterDecline: string };
   /** Agent message after the current gate is passed. */
   launched?: Turn;
 };

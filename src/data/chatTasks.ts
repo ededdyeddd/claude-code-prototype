@@ -905,8 +905,8 @@ const LOYALTY: Task = {
   title: "Скидка постоянным покупателям",
   summary: "Скидка 5% в корзине покупателям от 3 оплаченных заказов. Готово, когда скидка видна в корзине и в письме о заказе.",
   project: "storefront",
-  stage: "Migration",
-  now: "Migration · waiting for you",
+  stage: "Build",
+  now: "Build · waiting for you",
   waitingFor: "8m",
   agent: "payments-engineer",
   model: "Opus 5.5",
@@ -918,6 +918,31 @@ const LOYALTY: Task = {
   escalation: {
     to: 3,
     text: "Задача оказалась больше, чем выглядела: скидке нужна история заказов, а её нет в схеме. Предлагаю разбить на 3 этапа и перед миграцией спросить тебя.",
+    stages: [
+      {
+        id: "scope",
+        title: "Cart",
+        steps: [
+          { id: "rule", status: "done", title: "Правило скидки в корзине", work: { agent: "payments-engineer", cost: "$1.20", time: "14m" } },
+          { id: "ui", status: "done", title: "Строка скидки в корзине", work: { agent: "payments-engineer", cost: "$0.80", time: "9m" } },
+        ],
+      },
+      {
+        id: "migrate",
+        title: "Migration",
+        steps: [
+          { id: "column", status: "ahead", title: "Колонка `orders_count` у покупателя", work: { agent: "payments-engineer", cost: "~$1–2", basis: "9 similar tasks" } },
+          { id: "backfill", status: "ahead", title: "Заполнить по истории заказов", work: { agent: "payments-engineer", cost: "~$1–3", basis: "size M, the agent's estimate" } },
+        ],
+        gate: { title: "the migration", mine: true, status: "current" },
+      },
+      {
+        id: "verify",
+        title: "Verify",
+        steps: [{ id: "email", status: "ahead", title: "Скидка в письме о заказе", work: { agent: "payments-engineer", cost: "~$1", basis: "12 similar tasks" } }],
+        gate: { title: "the result", mine: true, status: "ahead" },
+      },
+    ],
     afterAgree: [
       {
         role: "assistant",
@@ -949,29 +974,18 @@ const LOYALTY: Task = {
       { id: "tests", text: "Тесты корзины зелёные", locked: true },
     ],
   },
+  // One list, as for any small task: the stages and gates are the offer (escalation.stages) until the person agrees.
   stages: [
     {
-      id: "scope",
-      title: "Cart",
+      id: "build",
+      title: "Build",
       steps: [
         { id: "rule", status: "done", title: "Правило скидки в корзине", work: { agent: "payments-engineer", cost: "$1.20", time: "14m" } },
         { id: "ui", status: "done", title: "Строка скидки в корзине", work: { agent: "payments-engineer", cost: "$0.80", time: "9m" } },
-      ],
-    },
-    {
-      id: "migrate",
-      title: "Migration",
-      steps: [
         { id: "column", status: "ahead", title: "Колонка `orders_count` у покупателя", work: { agent: "payments-engineer", cost: "~$1–2", basis: "9 similar tasks" } },
         { id: "backfill", status: "ahead", title: "Заполнить по истории заказов", work: { agent: "payments-engineer", cost: "~$1–3", basis: "size M, the agent's estimate" } },
+        { id: "email", status: "ahead", title: "Скидка в письме о заказе", work: { agent: "payments-engineer", cost: "~$1", basis: "12 similar tasks" } },
       ],
-      gate: { title: "the migration", mine: true, status: "current" },
-    },
-    {
-      id: "verify",
-      title: "Verify",
-      steps: [{ id: "email", status: "ahead", title: "Скидка в письме о заказе", work: { agent: "payments-engineer", cost: "~$1", basis: "12 similar tasks" } }],
-      gate: { title: "the result", mine: true, status: "ahead" },
     },
   ],
   rules: RULES,

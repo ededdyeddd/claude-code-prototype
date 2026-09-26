@@ -223,10 +223,22 @@ export function useChatStates() {
 }
 
 /**
+ * The plan in force: a small task that grew stays one list until the person agrees to split it; then the offer's
+ * stages and gates become the plan, and the Inbox row reads the stage that waits at its gate.
+ */
+function planned(task: Task, s: TaskState): Task {
+  const split = s.escalation === "agreed" ? task.escalation?.stages : undefined;
+  if (!split) return task;
+  const at = split.find((st) => st.gate?.status === "current");
+  return { ...task, stages: split, ...(at ? { stage: at.title, now: `${at.title} · waiting for you` } : {}) };
+}
+
+/**
  * The task as it stands now, for the plan wherever it is shown (Inbox pane, chat tab):
  * after launch the current gate is passed and the first step ahead is running.
  */
-export function liveTask(task: Task, s: TaskState = EMPTY): Task {
+export function liveTask(authored: Task, s: TaskState = EMPTY): Task {
+  const task = planned(authored, s);
   if (s.scene === "acceptance" && featureOn("acceptance")) return acceptanceTask(task, s);
   if (!s.launched) return task;
   let started = false;
@@ -399,7 +411,7 @@ export function deriveTask(task: Task, s: TaskState = EMPTY) {
   // assumed); otherwise it would retell the request. Decisions (the gate) still come with size and risk only: see atGate.
   const tabs: TaskTab[] = hasBrief(task) || (task.level !== undefined && level >= 3) ? ["chat", "brief", "plan"] : ["chat", "plan"];
   // A gate waits for the person until they pass it: the brief gate right away, the escalation's after consent.
-  const atGate = task.level !== undefined && level >= 2 && !s.launched && currentGate(task)?.mine === true;
+  const atGate = task.level !== undefined && level >= 2 && !s.launched && currentGate(planned(task, s))?.mine === true;
   const escalationPending = !!task.escalation && !s.escalation;
   const resultPending = level === 1 && !!task.result && !s.accepted;
   const envelope = s.envelope ?? task.envelope ?? DEFAULT_ENVELOPE;

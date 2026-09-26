@@ -645,7 +645,7 @@ function EscalationDecision({
   return (
     <DecisionCard
       label="Bigger than it looked"
-      title={`Split it into ${view.task.stages.length} stages?`}
+      title={`Split it into ${esc.stages.length} stages?`}
       context={
         <div className="flex flex-col gap-xs">
           <p>{esc.text}</p>
@@ -872,7 +872,8 @@ function EscalationDetails({ view, inFeed }: { view: ChatTaskView; /** In the ch
   const esc = view.task.escalation;
   const done = view.live.stages.flatMap((st) => st.steps).filter((p) => p.status === "done");
   const spent = done.reduce((n, p) => n + (p.work ? costRange(p.work.cost).min : 0), 0);
-  const ahead = view.live.stages.filter((st) => st.steps.some((p) => p.status !== "done") || st.gate?.status === "current");
+  // What is proposed is the offer's stages, not the plan in force (one list until the person agrees).
+  const ahead = (esc?.stages ?? view.live.stages).filter((st) => st.steps.some((p) => p.status !== "done") || st.gate?.status === "current");
   const t = totals(view);
   // Typeset like the rest of the reply: body text in the feed, footnote inside the Inbox card. Each cost follows its
   // item's text, so nothing floats at the far edge of a wide column.
@@ -993,7 +994,7 @@ function EscalationCard({ view, setTab }: { view: ChatTaskView; setTab: (t: Task
         <EscalationDetails view={view} inFeed />
       </div>
     );
-  const stages = view.task.stages.length;
+  const stages = esc.stages.length;
   return (
     <div className={cx("not-prose flex flex-col gap-sm pt-sm", CODE)}>
       <p className="text-body text-primary">{esc.text}</p>
@@ -1154,7 +1155,7 @@ function GateDecision({ view, nav, setTab, toAssumption }: { view: ChatTaskView;
 /** The escalation offer: split into stages (recommended), or finish as is. The reasons are the agent's message above. */
 function EscalationChoice({ view, nav }: { view: ChatTaskView; nav: DockNav }) {
   const [picked, setPicked] = useState<number | null>(null);
-  const stages = view.task.stages.length;
+  const stages = view.task.escalation?.stages.length ?? view.task.stages.length;
   return (
     <DockFrame
       nav={nav}
