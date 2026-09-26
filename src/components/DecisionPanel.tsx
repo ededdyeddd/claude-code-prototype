@@ -205,7 +205,7 @@ export function DockFrame({
           The icon buttons' own padding makes up the difference on the right. */}
       <div className="flex items-start gap-sm ps-2.5 pe-2">
         <div className="min-w-0 flex-1 pt-0.5">
-          {tag && <p className="mb-xs text-footnote">{tag}</p>}
+          {tag && <p className="mb-sm text-footnote">{tag}</p>}
           <p className="text-body font-medium text-primary">{title}</p>
         </div>
         <div className="flex shrink-0 items-center gap-0.5 text-footnote tabular-nums text-muted">

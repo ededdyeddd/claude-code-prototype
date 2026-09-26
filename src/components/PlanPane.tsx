@@ -376,7 +376,8 @@ export function QuestionCard({
       className="flex scroll-mt-[var(--cds-gap-xl)] flex-col gap-md rounded-lg border border-alpha-2 p-lg transition-colors duration-fast data-[linked]:border-alpha-5"
     >
       <div className="flex flex-col gap-0.5">
-        <span className={cx("text-footnote", question.blocking ? "text-clay" : "text-muted")}>
+        {/* A status, not part of the question: set apart from the title below. */}
+        <span className={cx("pb-sm text-footnote", question.blocking ? "text-clay" : "text-muted")}>
           {question.blocking ? "Blocking" : "Can wait"}
         </span>
         <p className="text-body font-medium text-primary">{question.text}</p>
