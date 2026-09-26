@@ -1,6 +1,21 @@
 import { useLocation, useNavigate } from "react-router-dom";
 
-export function NavigationRow({ label, icon, variant = "standard", to, count }: { label: string; icon: string; variant?: string; to?: string; count?: number }) {
+export function NavigationRow({
+  label,
+  icon,
+  variant = "standard",
+  to,
+  count,
+  coach,
+}: {
+  label: string;
+  icon: string;
+  variant?: string;
+  to?: string;
+  count?: number;
+  /** Anchor for a coachmark tour (`data-coach`). */
+  coach?: string;
+}) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const active = to != null && pathname.startsWith(to);
@@ -21,6 +36,7 @@ export function NavigationRow({ label, icon, variant = "standard", to, count }: 
         : {})}
       {...(active ? { "data-selected": "focused" } : {})}
       draggable="false"
+      data-coach={coach}
       {...(variant === "standard"
         ? {
             "data-row": "",

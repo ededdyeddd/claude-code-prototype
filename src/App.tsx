@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useMemo } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { EmptyContainer } from "./components/EmptyContainer";
 import { NotificationRegion } from "./components/NotificationRegion";
 import { Sidebar } from "./components/Sidebar";
@@ -10,15 +11,37 @@ import { TRANSCRIPTS } from "./data/transcripts";
 import { SESSIONS } from "./data/sessions";
 import { usePersistentWidth } from "./data/usePersistentWidth";
 import { taskState, useInbox } from "./data/inboxStore";
-import { introSeen } from "./data/onboarding";
+import { announced, introSeen, markAnnounced, useOnboarding } from "./data/onboarding";
+import { ONBOARDING_DELAY, useDelay } from "./data/useDelay";
+import { Coachmarks, type Coachmark } from "./components/Coachmarks";
 
 /** Router basename: "" locally, "/<repo>" on GitHub Pages. */
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-// First run lands on Up next with its intro. Done before the router mounts, once per load: "New" still opens an empty chat.
-const path = window.location.pathname.slice(BASE.length) || "/";
-if (!introSeen() && ["/", "/code", "/code/"].includes(path)) {
-  window.history.replaceState(null, "", `${BASE}/up-next`);
+
+// Onboarding, step one: a hint on the sidebar item, not a modal. The explanation is Up next's own (intro, then tour).
+const ANNOUNCE_STEPS: Coachmark[] = [
+  {
+    target: "nav-up-next",
+    title: "New: Up next",
+    body: "Which task to go to first: where an agent waits for you, what it needs and what it costs.",
+    sides: ["right", "bottom"],
+    action: { label: "Take a look", onClick: () => {} },
+  },
+];
+
+/**
+ * The app opens where it always does, and a moment later points at the new section in the sidebar.
+ * "Take a look" opens Up next, where its intro and tour take over; "Not now" leaves them for when the person opens it.
+ */
+function UpNextAnnouncement() {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  useOnboarding();
+  const show = useDelay(!announced() && !introSeen() && !pathname.startsWith("/up-next"), ONBOARDING_DELAY);
+  const steps = useMemo(() => [{ ...ANNOUNCE_STEPS[0], action: { label: "Take a look", onClick: () => navigate("/up-next") } }], [navigate]);
+  if (!show) return null;
+  return <Coachmarks steps={steps} onDone={markAnnounced} skipLabel="Not now" />;
 }
 
 /** Content of the main pane: switches with the sidebar navigation. */
@@ -205,6 +228,7 @@ export function AppContent() {
                                                   }}
                                                 >
                                                   <MainContent />
+                                                  <UpNextAnnouncement />
                                                 </div>
                                               </div>
                                             </div>
