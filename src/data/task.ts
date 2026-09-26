@@ -162,13 +162,41 @@ export type ChatEdit = {
   reply: string;
 };
 
-/** Where the review artifact opens for a claim's evidence. */
-export type ReviewTab = "changes" | "screens" | "checks";
-
-export type ResultClaim = { text: string; evidence: string; show: ReviewTab };
+/**
+ * Where the review artifact opens: a small task's diff, screenshots and checks; a larger task's result
+ * (claims against their proof) and its diff, last.
+ */
+export type ReviewTab = "changes" | "screens" | "checks" | "result" | "diff";
 
 /**
- * The review artifact of a result: what changed, how it looks, what was checked.
+ * Proof that is not the agent's word: a CI run, a diff of the tests, a screenshot, a reviewer agent.
+ * `detail` opens in place under the claim: log lines, diff lines ("+", "-", " ", "@@"), the reviewer's words.
+ */
+export type ClaimSource = {
+  kind: "ci" | "test-diff" | "screenshot" | "reviewer-agent";
+  label: string;
+  ref: string;
+  detail?: string[];
+};
+
+/**
+ * What the agent says it did. Only an outside source makes it verified; "claimed" has none, and the agent's
+ * words never turn into a mark. "contradicted": a source says otherwise (its label says what, "test skipped").
+ * `stepId` is the plan step it belongs to; `criterionId` the brief's done-criterion it speaks to.
+ */
+export type Claim = {
+  id: string;
+  text: string;
+  status: "verified" | "claimed" | "contradicted";
+  source?: ClaimSource;
+  stepId?: string;
+  criterionId?: string;
+  /** Level 1: where the evidence opens in the review. */
+  show?: ReviewTab;
+};
+
+/**
+ * The review artifact of a small task's result: what changed, how it looks, what was checked.
  * Diff lines start with "+", "-", " " or "@@" (hunk header), as in a unified diff.
  */
 export type Review = {
@@ -177,6 +205,65 @@ export type Review = {
   screens: number[];
   checks: { label: string; result: string; items: string[] }[];
 };
+
+/**
+ * What the system found on its own and the agent did not mention. `ref` is the file it points at, shown as a quiet
+ * path; `text` is the test's name for a test flag. The line itself is said by `flagTitle`, from the kind.
+ */
+export type Flag = {
+  id: string;
+  kind: "skipped-test" | "file-outside-brief" | "deleted-test";
+  ref: string;
+  text?: string;
+  criterionId?: string;
+};
+
+/** A flag as one plain line, what happened first: "Skipped test “declines without consent”". */
+export function flagTitle(f: Flag): string {
+  if (f.kind === "file-outside-brief") return "Changed a file outside the brief";
+  const verb = f.kind === "skipped-test" ? "Skipped test" : "Deleted test";
+  return f.text ? `${verb} “${f.text}”` : verb;
+}
+
+export type Tests = {
+  passed: number;
+  added: number;
+  skippedOrDeleted: { name: string; file: string; kind: "skipped" | "deleted" }[];
+};
+
+/**
+ * One round of acceptance of a level 2–3 task: the claims against their proof, what the system found,
+ * the tests, what nobody could check, what to check by hand, why the agent chose what it chose, and the diff.
+ * Risk by area is not stored: it is counted from the files touched (`zoneOf`).
+ */
+export type Acceptance = {
+  iteration: number;
+  /** Since the person last looked: files changed and claims whose status changed. From the 2nd iteration. */
+  changedSince?: { files: string[]; claims: string[] };
+  /** The agent's words in the feed with the result tile. */
+  message: string;
+  claims: Claim[];
+  flags: Flag[];
+  tests: Tests;
+  /** Nobody checked these and nothing can check them automatically. */
+  unverified: string[];
+  /** 3–5 steps for the person to check by hand: the only place they tick things themselves. */
+  manualChecks: { id: string; text: string }[];
+  /** 3–5 lines "выбрал X, потому что Y". */
+  why: string[];
+  files: Review["files"];
+};
+
+/** Areas of the code by path, and how risky a change in them is. The first match wins. */
+export const ZONES: { zone: string; label: string; match: RegExp; level: "high" | "normal" }[] = [
+  { zone: "tests", label: "Tests", match: /\.(spec|test)\.[jt]sx?$/, level: "normal" },
+  { zone: "payments", label: "Payments", match: /^(checkout|server\/payments)\//, level: "high" },
+  { zone: "auth", label: "Auth", match: /^(auth|server\/auth)\//, level: "high" },
+  { zone: "migrations", label: "Migrations", match: /^migrations\//, level: "high" },
+  { zone: "orders", label: "Orders", match: /^server\/orders\//, level: "normal" },
+];
+
+export const zoneOf = (path: string) => ZONES.find((z) => z.match.test(path)) ?? { zone: "other", label: "Other", match: /./, level: "normal" as const };
 
 /* ------------------------------------------------------------------- Task */
 
@@ -210,8 +297,20 @@ export type Task = {
   /** "Plan rules": what the agent changes itself and what it asks about. */
   rules?: { self: string; ask: string };
   edits?: ChatEdit[];
-  /** Level 1: the result card at the end of the chat. */
-  result?: { claims: ResultClaim[]; review?: Review };
+  /**
+   * The result card at the end of the chat. Level 1: 2–3 claims and the review. Levels 2–3: acceptance
+   * rounds (`iterations`) and, for the demo scene, what each step did (`steps`, merged into the plan).
+   */
+  result?: {
+    claims: Claim[];
+    review?: Review;
+    iterations?: Acceptance[];
+    /** Demo: another first round to start the scene from (`?scene=acceptance&round=<key>`), e.g. one with flags but nothing broken. */
+    rounds?: Record<string, Acceptance>;
+    steps?: Record<string, { work: StepWork; result: StepResult }>;
+    /** The chat up to the result, which replaces the chat's mock transcript in the acceptance scene. */
+    transcript?: Turn[];
+  };
   /** Escalation offered in the feed: the level goes up to `to` once the person agrees. */
   escalation?: { to: Level; text: string; afterAgree: Turn[]; afterDecline: string };
   /** Agent message after the current gate is passed. */

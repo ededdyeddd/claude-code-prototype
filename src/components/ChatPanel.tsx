@@ -67,7 +67,9 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
       { replace: true },
     );
   };
-  const turns = transcript && view ? [...transcript, ...view.turns] : transcript;
+  // The acceptance scene replaces the mock chat with the one that led to the result.
+  const base = view?.acceptance ? view.task.result?.transcript ?? transcript : transcript;
+  const turns = base && view ? [...base, ...view.turns] : base;
   // The live row names the plan step in progress, so the feed and the plan say the same thing; the file stays as its target.
   const progress = view ? planProgress(view.live) : undefined;
   const liveBase = chat?.running ? LIVE_STATUS[chat.id] : undefined;
@@ -98,7 +100,11 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
           setParams(
             (p) => {
               const next = new URLSearchParams(p);
-              next.set("review", t);
+              // Levels 2–3: the result and diff are tabs of the task pane; level 1 has a review pane of its own.
+              if (t === "result" || t === "diff") {
+                next.delete("review");
+                next.set("panel", t);
+              } else next.set("review", t);
               return next;
             },
             { replace: true },
@@ -137,7 +143,13 @@ export function ChatPanel({ transcript, chat }: { transcript?: Turn[]; chat?: Se
               {chat && (
                 // The dock sits right under the messages: its text-body matches their prose size.
                 <div className="contents [--cds-font-size-body:var(--cds-font-size-prose)] [--cds-leading-body:var(--cds-leading-prose)]">
-                  <DecisionDock key={chat.id} chatId={chat.id} view={view} setTab={setTab} />
+                  <DecisionDock
+                    // A demo scene is a new moment of the task: the decisions before it do not count as answered.
+                    key={view?.scene ? `${chat.id}:${view.scene}:${view.round ?? ""}` : chat.id}
+                    chatId={chat.id}
+                    view={view}
+                    setTab={setTab}
+                  />
                 </div>
               )}
               {chat?.repo && <RepoBar repo={chat.repo} />}

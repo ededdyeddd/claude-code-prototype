@@ -171,6 +171,7 @@ function BlockView({ block }: { block: Block }) {
     case "result-card":
     case "escalation-card":
     case "edit-note":
+    case "task-note":
     case "question":
       return <TaskBlock block={block} />;
   }
