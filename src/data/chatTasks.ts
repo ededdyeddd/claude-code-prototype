@@ -239,6 +239,13 @@ const CI_412 = [
   "Tests: 41 passed, 1 skipped, 42 total",
 ];
 
+/** Checkout tests the task did not touch: they ran and passed in every round. */
+const OTHER_SPECS = [
+  { file: "checkout/payment-form.spec.ts", passed: 18 },
+  { file: "checkout/use-checkout.spec.ts", passed: 12 },
+  { file: "server/payments/stripe.spec.ts", passed: 6 },
+];
+
 const ONE_CLICK_ITERATIONS: Acceptance[] = [
   {
     iteration: 1,
@@ -317,7 +324,13 @@ const ONE_CLICK_ITERATIONS: Acceptance[] = [
       },
       { id: "orders", kind: "file-outside-brief", ref: "server/orders/schema.ts" },
     ],
-    tests: { passed: 41, added: 6, skippedOrDeleted: [{ name: "declines without consent", file: "checkout/one-click.spec.ts", kind: "skipped" }] },
+    tests: {
+      passed: 41,
+      added: 6,
+      skippedOrDeleted: [{ name: "declines without consent", file: "checkout/one-click.spec.ts", kind: "skipped" }],
+      ci: { kind: "ci", label: "CI · run #412", ref: "#412", detail: CI_412 },
+      byFile: [{ file: "checkout/one-click.spec.ts", passed: 5, skipped: 1, added: 6 }, ...OTHER_SPECS],
+    },
     ...ONE_CLICK_COMMON,
     files: [...ONE_CLICK_FILES, SPEC_SKIPPED, ORDERS_SCHEMA],
   },
@@ -398,7 +411,13 @@ const ONE_CLICK_ITERATIONS: Acceptance[] = [
       },
     ],
     flags: [],
-    tests: { passed: 43, added: 7, skippedOrDeleted: [] },
+    tests: {
+      passed: 43,
+      added: 7,
+      skippedOrDeleted: [],
+      ci: { kind: "ci", label: "CI · run #418", ref: "#418", detail: ["$ npm run test:checkout", "Tests: 43 passed, 0 skipped, 43 total", "Skipped or deleted since main: none"] },
+      byFile: [{ file: "checkout/one-click.spec.ts", passed: 7, added: 7 }, ...OTHER_SPECS],
+    },
     ...ONE_CLICK_COMMON,
     files: [
       {
@@ -428,7 +447,13 @@ const ONE_CLICK_RISKY: Acceptance = {
     c.id === "tests" ? { ...c, status: "verified" as const, source: { kind: "ci" as const, label: "CI · run #415 · 0 skipped", ref: "#415", detail: ["$ npm run test:checkout", "Tests: 42 passed, 0 skipped, 42 total"] } } : c,
   ),
   flags: ONE_CLICK_ITERATIONS[0].flags.filter((f) => f.kind === "file-outside-brief"),
-  tests: { passed: 42, added: 6, skippedOrDeleted: [] },
+  tests: {
+    passed: 42,
+    added: 6,
+    skippedOrDeleted: [],
+    ci: { kind: "ci", label: "CI · run #415", ref: "#415", detail: ["$ npm run test:checkout", "Tests: 42 passed, 0 skipped, 42 total"] },
+    byFile: [{ file: "checkout/one-click.spec.ts", passed: 6, added: 6 }, ...OTHER_SPECS],
+  },
   files: [...ONE_CLICK_FILES, { ...SPEC_SKIPPED, lines: SPEC_SKIPPED.lines.map((l) => l.replace("it.skip(", "it(")) }, ORDERS_SCHEMA],
 };
 

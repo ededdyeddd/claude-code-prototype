@@ -229,6 +229,10 @@ export type Tests = {
   passed: number;
   added: number;
   skippedOrDeleted: { name: string; file: string; kind: "skipped" | "deleted" }[];
+  /** The CI run that counted them: its log opens in place, like a claim's proof. */
+  ci?: ClaimSource;
+  /** The same counts per test file, so it's clear which tests passed and where. */
+  byFile?: { file: string; passed: number; skipped?: number; deleted?: number; added?: number }[];
 };
 
 /**

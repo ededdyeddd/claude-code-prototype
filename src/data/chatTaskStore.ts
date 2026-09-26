@@ -305,11 +305,11 @@ function deriveAcceptance(task: Task, acc: Acceptance, prev: Acceptance | undefi
   const broken = criteria.find((c) => c.state === "broken" && c.locked);
 
   // Risk by area, counted from the files touched: a file outside the brief is said so, whatever its area.
-  const zones = new Map<string, { zone: string; label: string; files: number; level: "high" | "normal"; outsideBrief: boolean }>();
+  const zones = new Map<string, { zone: string; label: string; files: number; paths: string[]; level: "high" | "normal"; outsideBrief: boolean }>();
   for (const f of acc.files) {
     const z = zoneOf(f.name);
-    const cur = zones.get(z.zone) ?? { zone: z.zone, label: z.label, files: 0, level: z.level, outsideBrief: false };
-    zones.set(z.zone, { ...cur, files: cur.files + 1, outsideBrief: cur.outsideBrief || outside(f.name) });
+    const cur = zones.get(z.zone) ?? { zone: z.zone, label: z.label, files: 0, paths: [], level: z.level, outsideBrief: false };
+    zones.set(z.zone, { ...cur, files: cur.files + 1, paths: [...cur.paths, f.name], outsideBrief: cur.outsideBrief || outside(f.name) });
   }
   const riskZones = [...zones.values()].sort((a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level] || b.files - a.files);
 

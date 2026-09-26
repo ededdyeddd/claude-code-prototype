@@ -183,8 +183,17 @@ export function ReviewPane({
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** A claim's status by shape, as everywhere: proven — the "done" dot; only claimed or contradicted — the ring. Never a tick. */
-const claimDot = (c: Claim) => <TaskDot state={c.status === "verified" ? "done" : "ahead"} />;
+const CROSS = "\uE10F";
+
+/**
+ * Status of a claim or a test at a glance: a tick only for what an outside source proved, the ring for the agent's
+ * word alone, a cross for what a source contradicts. The one place in the product with ticks (docs/CHAT_LEVELS.md §4).
+ */
+function StatusMark({ status, needsYou }: { status: Claim["status"]; needsYou?: boolean }) {
+  if (status === "verified") return <Icon glyph={CHECK} size="sm" className="!text-secondary" />;
+  if (status === "contradicted") return <Icon glyph={CROSS} size="sm" className={needsYou ? "!text-clay" : "!text-primary"} />;
+  return <TaskDot state="ahead" />;
+}
 
 /** The proof in words: the source, "Only claimed", or what contradicts it. Text, not color. */
 function proofText(status: Claim["status"], source?: ClaimSource) {
@@ -429,16 +438,11 @@ export function AcceptanceTab({
               .filter(Boolean)
               .join(" · ")}
           >
-            <ol className="flex flex-col">
-              {acc.groups.map((g, gi) => {
-                const last = gi === acc.groups.length - 1;
+            <ol className="flex flex-col gap-md">
+              {acc.groups.map((g) => {
                 return (
-                  <li key={g.step.id} className={cx("relative flex items-start gap-md", !last && "pb-[var(--cds-gap-md)]")}>
-                    {/* The plan's rail: from under this step's dot to the next one; the dot sits on the pane's surface. */}
-                    {!last && <span aria-hidden="true" className="absolute top-[19px] bottom-[-3px] left-[5.5px] w-px bg-alpha-3" />}
-                    <span className="relative mt-[5px] flex bg-surface-2">
-                      <TaskDot state="done" />
-                    </span>
+                  // A step is a heading with a rail down its claims, no mark of its own: the only marks are the claims' statuses.
+                  <li key={g.step.id} className="flex flex-col">
                     <div className="flex min-w-0 flex-1 flex-col gap-xs">
                       <div className="flex flex-col gap-0.5">
                         <h3 className="text-body text-primary">
@@ -451,14 +455,14 @@ export function AcceptanceTab({
                           </Meta>
                         )}
                       </div>
-                      <ul className={LIST}>
+                      <ul className={cx(LIST, "ms-[5.5px] border-s border-alpha-3 ps-[calc(var(--cds-gap-md)-0.5px)]")}>
                         {g.claims.map((c) => {
                           const was = acc.was(c.id);
                           const isOpen = open.has(c.id);
                           return (
                             <li key={c.id} id={`review-claim-${c.id}`} className={cx("flex scroll-mt-md flex-col gap-xs", flashClass(flash === `claim:${c.id}`))}>
                               <Row
-                                mark={claimDot(c)}
+                                mark={<StatusMark status={c.status} />}
                                 onClick={c.source ? () => toggle(c.id) : undefined}
                                 open={isOpen}
                                 meta={
@@ -490,34 +494,54 @@ export function AcceptanceTab({
             </ol>
           </Section>
 
-          <Section title="Tests">
-            <div className="flex flex-col gap-0.5">
-              <p className="text-body text-primary">
-                {acc.tests.passed} passed · {acc.tests.added} new
-              </p>
-              <p className={cx("text-body", acc.tests.skippedOrDeleted.length ? "text-primary" : "text-secondary")}>
-                {skipped} skipped · {deleted} deleted
-              </p>
-            </div>
-            {acc.tests.skippedOrDeleted.length > 0 && (
-              <ul className={LIST}>
-                {acc.tests.skippedOrDeleted.map((t) => (
-                  <li key={t.file + t.name}>
+          {/* Totals in the title; the CI run that counted them opens its log in place; then which tests passed, file by
+              file, with a skipped or deleted test under its file, crossed in clay: the system found it, it needs you. */}
+          <Section
+            title="Tests"
+            aside={[`${acc.tests.passed} passed`, skipped && `${skipped} skipped`, deleted && `${deleted} deleted`, acc.tests.added && `${acc.tests.added} new`]
+              .filter(Boolean)
+              .join(" · ")}
+          >
+            <ul className={LIST}>
+              {acc.tests.ci && (
+                <li className="flex flex-col gap-xs">
+                  <Row mark={<Dot />} onClick={() => toggle("tests-ci")} open={open.has("tests-ci")} meta={<Meta>Open the log</Meta>}>
+                    <span className="text-body text-primary">{acc.tests.ci.label}</span>
+                  </Row>
+                  {open.has("tests-ci") && (
+                    <div className={cx(INDENT, "pb-xs")}>
+                      <Evidence source={acc.tests.ci} />
+                    </div>
+                  )}
+                </li>
+              )}
+              {(acc.tests.byFile ?? []).map((f) => {
+                const problems = acc.tests.skippedOrDeleted.filter((t) => t.file === f.file);
+                const inDiff = acc.files.some((d) => d.name === f.file);
+                return (
+                  <li key={f.file} className="flex flex-col gap-xs">
                     <Row
-                      mark={<Dot />}
-                      onClick={() => revealInReview(`file:${t.file}`)}
+                      mark={<StatusMark status={problems.length ? "contradicted" : "verified"} />}
+                      onClick={inDiff ? () => revealInReview(`file:${f.file}`) : undefined}
                       meta={
                         <Meta>
-                          {t.kind === "skipped" ? "Skipped" : "Deleted"} · <span className="font-mono">{t.file}</span>
+                          {[f.added && "new", `${f.passed} passed`, f.skipped && `${f.skipped} skipped`, f.deleted && `${f.deleted} deleted`].filter(Boolean).join(" · ")}
                         </Meta>
                       }
                     >
-                      <span className="text-body text-primary">{t.name}</span>
+                      <span className="font-mono text-footnote text-primary">{f.file}</span>
                     </Row>
+                    {problems.map((t) => (
+                      <div key={t.name} className={INDENT}>
+                        <Row mark={<StatusMark status="contradicted" needsYou />} meta={<Meta>{t.kind === "skipped" ? "Skipped" : "Deleted"}</Meta>}>
+                          <span className="text-body text-primary">{t.name}</span>
+                        </Row>
+                      </div>
+                    ))}
                   </li>
-                ))}
-              </ul>
-            )}
+                );
+              })}
+            </ul>
           </Section>
 
           {/* Honest about the gaps: no marks, nothing to tick. */}
@@ -573,9 +597,22 @@ export function AcceptanceTab({
                   <Row
                     mark={<Dot />}
                     meta={
-                      <Meta>
-                        {plural(z.files, "file", "files")} · {z.outsideBrief ? "outside the brief" : z.level}
-                      </Meta>
+                      <>
+                        <Meta>
+                          {plural(z.files, "file", "files")} · {z.outsideBrief ? "outside the brief" : `${z.level} risk`}
+                        </Meta>
+                        {/* Which files: each opens in the Diff tab. */}
+                        {z.paths.map((path) => (
+                          <button
+                            key={path}
+                            type="button"
+                            onClick={() => revealInReview(`file:${path}`)}
+                            className="w-fit rounded-sm text-left font-mono text-footnote text-muted outline-none hover:text-primary focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
+                          >
+                            {path}
+                          </button>
+                        ))}
+                      </>
                     }
                   >
                     <span className="text-body text-primary">{z.label}</span>

@@ -730,16 +730,17 @@ export function FlagRow({ flag, onOpen }: { flag: Flag; onOpen?: () => void }) {
       </span>
     </>
   );
-  const row = "flex w-full items-start gap-sm rounded bg-alpha-2 px-sm py-sm text-left";
+  // The same row as the dock's options: a soft fill, their padding; the dot sits on the title line, the chevron centred.
+  const row = "flex w-full items-start gap-sm rounded bg-alpha-1 px-2.5 py-2.5 text-left";
   if (!onOpen) return <div className={row}>{body}</div>;
   return (
     <button
       type="button"
       onClick={onOpen}
-      className={cx(row, "outline-none transition-colors duration-fast hover:bg-alpha-3 focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]")}
+      className={cx(row, "outline-none transition-colors duration-fast hover:bg-alpha-2 focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]")}
     >
       {body}
-      <Icon glyph={CHEVRON} size="sm" className="mt-[3px] shrink-0 !text-muted" />
+      <Icon glyph={CHEVRON} size="sm" className="shrink-0 self-center !text-muted" />
     </button>
   );
 }
