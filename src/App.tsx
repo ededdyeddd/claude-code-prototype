@@ -32,14 +32,14 @@ const ANNOUNCE_STEPS: Coachmark[] = [
 
 /**
  * The app opens where it always does, and a moment later points at the new section in the sidebar.
- * "Take a look" opens Up next, where its intro and tour take over; "Not now" leaves them for when the person opens it.
+ * "Take a look" opens Up next and starts its tour right away; "Not now" leaves the intro and tour for when the person opens it.
  */
 function UpNextAnnouncement() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   useOnboarding();
   const show = useDelay(!announced() && !introSeen() && !pathname.startsWith("/up-next"), ONBOARDING_DELAY);
-  const steps = useMemo(() => [{ ...ANNOUNCE_STEPS[0], action: { label: "Take a look", onClick: () => navigate("/up-next") } }], [navigate]);
+  const steps = useMemo(() => [{ ...ANNOUNCE_STEPS[0], action: { label: "Take a look", onClick: () => navigate("/up-next", { state: { tour: true } }) } }], [navigate]);
   if (!show) return null;
   return <Coachmarks steps={steps} onDone={markAnnounced} skipLabel="Not now" />;
 }

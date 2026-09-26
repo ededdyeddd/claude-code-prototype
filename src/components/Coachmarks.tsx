@@ -12,6 +12,11 @@ export type Coachmark = {
   sides?: Side[];
   /** The primary button of this step, in place of Next / Done (e.g. "Open plan"); the tour ends after it. */
   action?: { label: string; onClick: () => void };
+  /**
+   * A lead step: says what the page is for and asks whether to show the rest. Not counted in "N of M";
+   * its primary button reads `nextLabel` and moves on to the tour.
+   */
+  lead?: { nextLabel: string };
 };
 
 type Side = "bottom" | "top" | "left" | "right";
@@ -104,6 +109,8 @@ export function Coachmarks({
 
   const count = live?.length ?? 0;
   const last = index === count - 1;
+  // "N of M" counts the tour itself, not a lead step before it.
+  const leads = live?.filter((s) => s.lead).length ?? 0;
   const next = useCallback(() => (last ? onDone() : setIndex((i) => i + 1)), [last, onDone]);
   const back = useCallback(() => setIndex((i) => Math.max(0, i - 1)), []);
 
@@ -163,9 +170,9 @@ export function Coachmarks({
         }}
       >
         <div className="flex flex-col gap-xs">
-          {count > 1 && (
+          {count - leads > 1 && !step.lead && (
             <span className="text-footnote tabular-nums text-muted">
-              {index + 1} of {count}
+              {index + 1 - leads} of {count - leads}
             </span>
           )}
           <h2 id="coachmark-title" className="text-heading font-medium text-primary">
@@ -180,7 +187,7 @@ export function Coachmarks({
             {skipLabel}
           </Button>
           <span className="flex-1" />
-          {index > 0 && (
+          {index > 0 && !live?.[index - 1]?.lead && (
             <Button size="xs" onClick={back}>
               Back
             </Button>
@@ -199,7 +206,7 @@ export function Coachmarks({
               </Button>
             ) : (
               <Button size="xs" variant="primary" onClick={next}>
-                {last ? "Done" : "Next"}
+                {step.lead?.nextLabel ?? (last ? "Done" : "Next")}
               </Button>
             )}
           </div>

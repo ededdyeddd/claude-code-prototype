@@ -13,7 +13,6 @@ import { deriveTask, type TaskState } from "../data/chatTaskStore";
 import { openQuestions, useInbox, type Attention } from "../data/inboxStore";
 import { introSeen, markIntroSeen } from "../data/onboarding";
 import { ONBOARDING_DELAY, useDelay } from "../data/useDelay";
-import { UpNextIntro } from "../components/UpNextIntro";
 import { Coachmarks, type Coachmark } from "../components/Coachmarks";
 
 // Anthropicons codepoints (see /tokens#icons)
@@ -52,6 +51,7 @@ function Header({
       {/* Title row: the attention mode belongs to the header and stays on the right edge. */}
       <div className="flex items-center justify-between gap-md">
         <h1
+          data-coach="title"
           className="min-w-0 truncate font-serif text-primary"
           style={{
             fontSize: "var(--cds-page-header-title-size)",
@@ -372,7 +372,17 @@ function NothingNeedsYou() {
 /* ------------------------------------------------------------ Onboarding */
 
 // Micro-onboarding tour: what is inside the page, one element at a time. Steps whose element is not on the page are skipped.
-const TOUR_DELAY = 500;
+// Invited by the sidebar hint, the tour follows the page after a beat, just enough for it to settle.
+const TOUR_DELAY = 200;
+
+// Arrived on their own, nobody asked the person: the page says what it is for first, and the tour is theirs to start.
+const INTRO: Coachmark = {
+  target: "title",
+  title: "Which task to go to first",
+  body: "Agents work on your tasks in parallel. Up next shows where one waits for you, what it needs and what it will cost, then lets you get back to work.",
+  sides: ["bottom"],
+  lead: { nextLabel: "Show me around" },
+};
 
 const TOUR: Coachmark[] = [
   {
@@ -412,12 +422,12 @@ export function InboxPage() {
   const { answers, attention, busyUntil, blocked, canWait, needsYou, running, chats } = useInbox();
   // The first task that needs the person is open on arrival; clicking a task opens it on the right.
   // "Answer in the plan" from a task's chat opens that task (?task=id); otherwise the first task that needs you.
-  const { search } = useLocation();
-  // Onboarding, step two: however the person got here (the sidebar hint or on their own), the intro in a modal, then the tour.
-  const [onboarding, setOnboarding] = useState<"intro" | "tour" | null>(() => (introSeen() ? null : "intro"));
-  // The page comes up first; the intro follows a moment later, the tour a beat after the page (or the modal) settles.
-  const introReady = useDelay(onboarding === "intro", ONBOARDING_DELAY);
-  const tourReady = useDelay(onboarding === "tour", TOUR_DELAY);
+  const { search, state } = useLocation();
+  // Onboarding, step two, one tour of coachmarks either way. By "Take a look" in the sidebar hint the person has asked
+  // to be shown around: the tour starts right away. On their own: the page comes up first, then the intro step asks.
+  const invited = (state as { tour?: boolean } | null)?.tour === true;
+  const [onboarding, setOnboarding] = useState<Coachmark[] | null>(() => (introSeen() ? null : invited ? TOUR : [INTRO, ...TOUR]));
+  const onboardingReady = useDelay(!!onboarding, invited ? TOUR_DELAY : ONBOARDING_DELAY);
   const finishOnboarding = () => {
     markIntroSeen();
     setOnboarding(null);
@@ -553,8 +563,7 @@ export function InboxPage() {
           )}
         </SidePane>
       )}
-      {introReady && <UpNextIntro onTour={() => setOnboarding("tour")} onSkip={finishOnboarding} />}
-      {tourReady && <Coachmarks steps={TOUR} onDone={finishOnboarding} />}
+      {onboardingReady && onboarding && <Coachmarks steps={onboarding} onDone={finishOnboarding} />}
     </div>
   );
 }
