@@ -55,7 +55,14 @@ const BRIEF_PLAN: Task = {
   levelReason: "it touches the chat, the Up next pane and 9 components",
   brief: {
     understanding:
-      "Бриф и план сейчас живут во вкладках чата и перекрывают ленту. Переношу их в панель справа, как в Up next, а в ленте оставляю плитку «Plan» и живой статус шага. Человек видит, где задача, не открывая панель.",
+      "Бриф и план сейчас живут во вкладках чата и перекрывают ленту. Переношу их в панель справа, как в Up next, а в ленте оставляю плитку «Plan» и живой статус шага — человек видит, где задача, не открывая панель.",
+    found: [
+      { text: "Вкладки Chat · Brief · Plan рисует `ChatTask.tsx`, план в Up next — `PlanPane.tsx`; разметка плана у них своя", source: "`src/components/`" },
+      { text: "Отступы плана расходятся в 4 местах: края, этапы, шаги и место под вкладками", source: "Вычисленные стили обеих панелей" },
+      { text: "Прогресс задачи в чате нигде не виден, пока не откроешь вкладку Plan" },
+      { text: "Живой статус в ленте называет вызов инструмента («Editing PlanPane.tsx»), а не шаг плана", source: "`Transcript.tsx`" },
+      { text: "4 похожие задачи с панелями в этом проекте заняли от 2 до 5 часов", source: "История задач yango-prototype" },
+    ],
     assumptions: [
       {
         id: "one-pane",
@@ -67,12 +74,21 @@ const BRIEF_PLAN: Task = {
       { id: "read-only", text: "В панели бриф и план только читаются, все решения — в доке над композером" },
       { id: "url", text: "Открытая панель хранится в адресе: `?panel=brief|plan`" },
       { id: "width", text: "Ширина панели запоминается, как у сайдбара" },
+      { id: "tile", text: "Карточку брифа в ленте заменяет плитка «Plan»" },
+      { id: "narrow", text: "В узком чате панель открывается поверх ленты, а не сжимает её" },
     ],
-    boundaries: ["`design-system.css` не трогаю", "Сайдбар и страницу Routines не меняю", "Модель задачи в `task.ts` не ломаю: только добавляю поля"],
+    boundaries: [
+      "`design-system.css` не трогаю",
+      "Сайдбар и страницу Routines не меняю",
+      "Модель задачи в `task.ts` не ломаю: только добавляю поля",
+      "Док решений над композером не трогаю — он в задаче «Уровни задач в чате»",
+    ],
     doneWhen: [
       { id: "pane", text: "Бриф и план открываются в панели справа, лента остаётся чатом", met: "Проверено на 4 задачах: 3 storefront, 1 astrology-app" },
       { id: "progress", text: "Прогресс плана виден без открытия панели и совпадает на чипе, в шапке и в ленте" },
+      { id: "one-click", text: "Из ленты в план — один клик: плитка и живой статус" },
       { id: "parity", text: "Лента чата совпадает с оригиналом на 3 ширинах", locked: true },
+      { id: "docs", text: "Решения записаны в BRIEF_AND_PLAN.md с причинами и отвергнутыми вариантами" },
       { id: "build", text: "`npm run typecheck` и `npm run build` зелёные", locked: true },
     ],
   },
@@ -189,7 +205,7 @@ const BRIEF_PLAN: Task = {
           work: { agent: "ui-engineer", cost: "~$0.80", time: "~20m", basis: "this task's pace" },
           plan: {
             what: "Строка под последним сообщением называет шаг плана, а не вызов инструмента: «Plan · 8/15», «Now: …». Клик открывает план.",
-            serves: ["progress"],
+            serves: ["progress", "one-click"],
           },
         },
         {
@@ -272,7 +288,7 @@ const BRIEF_PLAN: Task = {
       steps: [
         { id: "narrow", status: "ahead", title: "Узкий чат: панель поверх ленты", work: { agent: "ui-engineer", cost: "~$0.60", time: "~20m", basis: "the agent's estimate" }, plan: { serves: ["pane"] } },
         { id: "parity", status: "ahead", title: "Сверка ленты с оригиналом на 3 ширинах", work: { agent: "test-fixer", cost: "~$0.50", time: "~15m", basis: "9 similar checks in yango-prototype" }, plan: { serves: ["parity"] } },
-        { id: "docs", status: "ahead", title: "BRIEF_AND_PLAN.md: решения и журнал", work: { agent: "docs-writer", cost: "~$0.40", time: "~10m" } },
+        { id: "docs", status: "ahead", title: "BRIEF_AND_PLAN.md: решения и журнал", work: { agent: "docs-writer", cost: "~$0.40", time: "~10m" }, plan: { serves: ["docs"] } },
         { id: "shots", status: "ahead", title: "Скриншоты для ревью", work: { agent: "test-fixer", cost: "~$0.20", time: "~5m" }, plan: { serves: ["parity", "build"] } },
       ],
       gate: { title: "the result", mine: true, status: "ahead", eta: "~19:00", etaSource: "this task's pace" },
@@ -306,17 +322,31 @@ const UP_NEXT: Task = {
   brief: {
     understanding:
       "Агентов много, и каждый останавливается в своём чате. Раздел «Up next» собирает в одном месте всё, что ждёт человека: вопросы, гейты, результаты. Рядом с задачей — её план, и ответить можно не уходя со страницы.",
+    found: [
+      { text: "Единственный сигнал сейчас — точка у чата в сайдбаре; вопрос агента не отличить от законченной работы", source: "`SessionRow.tsx`" },
+      { text: "5 агентов в 3 проектах останавливаются в среднем 11 раз в день, 7 из них — вопросы, которые могли подождать", source: "История чатов за неделю" },
+      { text: "Медиана ожидания ответа — 47 минут, у блокирующих вопросов столько же: срочное не отличается от несрочного", source: "История чатов за неделю" },
+      { text: "План, вопросы и стоимость есть только в данных задачи, интерфейса для них нет", source: "`src/data/`" },
+    ],
     assumptions: [
       { id: "groups", text: "Три группы: Blocked, Can wait, Running — по тому, стоит ли агент", risky: true, why: "Можно резать и по проектам; от этого зависит вся страница", confirmed: true },
       { id: "same-model", text: "У задачи в Up next и в чате одна модель: план, вопросы, гейты" },
-      { id: "no-push", text: "Can wait не шлёт пуш, а приходит в дайджесте" },
+      { id: "answer-here", text: "Ответ в Up next и ответ в чате — одно и то же состояние" },
+      { id: "no-push", text: "Can wait не шлёт пуш, а приходит в дайджесте в 16:00" },
       { id: "name", text: "Название раздела пока «Inbox», переименуем после ревью" },
     ],
-    boundaries: ["Чаты и их транскрипты только читаю", "Страницу Routines не трогаю", "`design-system.css` не трогаю"],
+    boundaries: [
+      "Чаты и их транскрипты только читаю",
+      "Страницу Routines не трогаю",
+      "`design-system.css` не трогаю",
+      "Настоящие уведомления не шлю: пуши и дайджест — только в интерфейсе",
+    ],
     doneWhen: [
       { id: "groups", text: "Задачи разложены по трём группам, у каждой строки сказано, что нужно от тебя", met: "6 задач из 3 проектов, все в своих группах" },
+      { id: "wait", text: "У каждой строки видно, сколько задача ждёт", met: "Справа в строке: «waiting 45m»" },
       { id: "answer", text: "На вопрос можно ответить прямо в панели плана", met: "Ответ меняет план и убирает задачу из Blocked" },
       { id: "signals", text: "Сайдбар сигналит, если где-то блокер: аватар и свёрнутый проект" },
+      { id: "recap", text: "Сводка за время отсутствия считается из задач, а не пишется отдельно" },
       { id: "build", text: "`npm run typecheck` и `npm run build` зелёные", locked: true },
     ],
   },
@@ -442,7 +472,7 @@ const UP_NEXT: Task = {
           status: "ahead",
           title: "Сводка за время отсутствия",
           work: { agent: "ui-engineer", cost: "~$1.20", time: "~35m", basis: "the agent's estimate" },
-          plan: { what: "Наверху страницы — что случилось, пока тебя не было: проверки, решения агентов, расходы. Всё считается из задач, а не пишется отдельно.", serves: ["signals"] },
+          plan: { what: "Наверху страницы — что случилось, пока тебя не было: проверки, решения агентов, расходы. Всё считается из задач, а не пишется отдельно.", serves: ["recap"] },
           question: {
             id: "q1",
             blocking: false,
@@ -486,7 +516,7 @@ const UP_NEXT: Task = {
       title: "Review",
       steps: [
         { id: "docs", status: "ahead", title: "INBOX.md: решения и журнал", work: { agent: "docs-writer", cost: "~$0.30", time: "~10m" } },
-        { id: "scenarios", status: "ahead", title: "Прогон сценариев из PRD", work: { agent: "test-fixer", cost: "~$0.60", time: "~20m", basis: "the agent's estimate" }, plan: { serves: ["groups", "answer", "signals"] } },
+        { id: "scenarios", status: "ahead", title: "Прогон сценариев из PRD", work: { agent: "test-fixer", cost: "~$0.60", time: "~20m", basis: "the agent's estimate" }, plan: { serves: ["groups", "wait", "answer", "signals", "recap"] } },
       ],
       gate: { title: "the section", mine: true, status: "ahead", eta: "tomorrow ~11:00", etaSource: "this task's pace" },
     },
@@ -521,16 +551,31 @@ const CHAT_LEVELS: Task = {
   brief: {
     understanding:
       "Сейчас каждый чат выглядит одинаково, от «поправь отступ» до «сделай оплату». Хочу, чтобы интерфейс задачи появлялся, только когда ему есть что показать: уровень 0 — чат, 1 — карточка результата, 2 — план, 3 — бриф, план и гейты.",
+    found: [
+      { text: "У чата нет понятия задачи: план, вопросы и стоимость видны только в Up next", source: "`ChatPanel.tsx`, `Transcript.tsx`" },
+      { text: "Из 40 последних задач 26 — мелкие правки дешевле $0.50, 6 — дороже $5", source: "История задач трёх проектов" },
+      { text: "2 из 6 похожих задач вышли за бюджет; в обеих решения принимались в трёх разных местах", source: "6 похожих задач" },
+      { text: "Claude Code уже задаёт вопросы панелью над композером — этот паттерн люди знают", source: "`original/`" },
+    ],
     assumptions: [
       { id: "levels", text: "Четыре уровня, от 0 до 3; уровень угадываю до отправки по тексту", risky: true, why: "Можно обойтись двумя уровнями — это меняет всю задачу", confirmed: true },
       { id: "up", text: "Уровень растёт только с согласия человека и сам не падает" },
       { id: "risk", text: "Риск важнее размера: оплата — всегда уровень 3" },
+      { id: "limits", text: "Лимиты задачи — пути, действия и бюджет — задаёт проект, задача может их только сузить" },
+      { id: "text-edit", text: "Бриф правится текстом в чате, без отдельной формы" },
       { id: "demo", text: "Демо — на задачах storefront и astrology-app" },
     ],
-    boundaries: ["Страницу Up next меняю только там, где модель задачи общая", "`design-system.css` не трогаю", "Настоящий вызов модели не делаю: уровень угадываю правилом"],
+    boundaries: [
+      "Страницу Up next меняю только там, где модель задачи общая",
+      "`design-system.css` не трогаю",
+      "Настоящий вызов модели не делаю: уровень угадываю правилом",
+      "Модель в `task.ts` расширяю, но не ломаю: Up next должен работать как был",
+    ],
     doneWhen: [
       { id: "levels", text: "На демо-задачах видны уровни 0, 1, 2 и 3", met: "birth-date — 1, loyalty — 1 → 3, one-click-pay — 3" },
+      { id: "guess", text: "Уровень угадывается до отправки, а причина видна в подсказке", met: "«payments are risky, and 23 similar tasks touched 4 modules»" },
       { id: "decide", text: "Каждое решение — гейт, допущение, вопрос, эскалация, результат — принимается в чате" },
+      { id: "budget", text: "На 80% лимита агент останавливается и спрашивает" },
       { id: "copy", text: "Карточки говорят просто: что нужно от тебя и что будет после" },
       { id: "build", text: "`npm run typecheck` и `npm run build` зелёные", locked: true },
     ],
@@ -685,7 +730,7 @@ const CHAT_LEVELS: Task = {
       id: "demo",
       title: "Demo",
       steps: [
-        { id: "demos", status: "ahead", title: "Демо-задачи в storefront и astrology-app", work: { agent: "ui-engineer", cost: "~$1", time: "~30m", basis: "the agent's estimate" }, plan: { serves: ["levels"] } },
+        { id: "demos", status: "ahead", title: "Демо-задачи в storefront и astrology-app", work: { agent: "ui-engineer", cost: "~$1", time: "~30m", basis: "the agent's estimate" }, plan: { serves: ["levels", "budget"] } },
         { id: "copy", status: "ahead", title: "Проход по текстам: карточки говорят просто", work: { agent: "ux-writer", cost: "~$0.60", time: "~20m", basis: "2 similar passes" }, plan: { serves: ["copy"] } },
         { id: "docs", status: "ahead", title: "CHAT_LEVELS.md: демо-адреса и журнал решений", work: { agent: "docs-writer", cost: "~$0.30", time: "~10m" } },
       ],

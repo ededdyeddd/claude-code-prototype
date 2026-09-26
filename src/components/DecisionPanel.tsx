@@ -231,7 +231,7 @@ export function DockFrame({
       {!nav.collapsed && (
         <>
           {/* What the question is about: the full width under the header, not squeezed beside its controls in a narrow chat. */}
-          {lead && <div className="mt-xs ps-2.5 pe-2">{lead}</div>}
+          {lead && <div className="mt-0.5 ps-2.5 pe-2">{lead}</div>}
           <div className="-mx-1 mt-lg flex min-h-0 flex-col gap-md overflow-y-auto px-1">{children}</div>
           <div className="mt-md flex flex-wrap items-center justify-end gap-xs">
             {/* Ghost button: its text, not its box, lines up with the options' text. */}

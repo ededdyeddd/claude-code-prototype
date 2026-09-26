@@ -216,7 +216,7 @@ function SafeAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
   );
 }
 
-/** "Brief" tab: how I understood it, assumptions, what I won't touch, done when. */
+/** "Brief" tab: how I understood it, what I found, assumptions, what I won't touch, done when. */
 export function BriefView({ view }: { view: ChatTaskView }) {
   const brief = view.task.brief;
   if (!brief) return null;
@@ -240,6 +240,30 @@ export function BriefView({ view }: { view: ChatTaskView }) {
           <Inline text={brief.understanding} />
         </p>
       </section>
+
+      {/* Facts before assumptions: what the agent checked, then what it could not. */}
+      {brief.found && brief.found.length > 0 && (
+        <section className="flex flex-col gap-sm">
+          <SectionTitle aside="checked in code and data">What I found</SectionTitle>
+          <ul className="flex flex-col gap-sm">
+            {brief.found.map((f) => (
+              <li key={f.text} className="flex items-start gap-sm">
+                <Bullet />
+                <div className="min-w-0">
+                  <p className="text-body text-secondary">
+                    <Inline text={f.text} />
+                  </p>
+                  {f.source && (
+                    <p className="text-footnote text-muted">
+                      <Inline text={f.source} />
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="flex flex-col gap-sm">
         <SectionTitle aside={view.unmarked.length ? `${view.unmarked.length} to confirm` : "all confirmed"}>Assumptions</SectionTitle>
