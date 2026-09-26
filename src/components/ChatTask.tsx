@@ -407,6 +407,7 @@ export function PlanView({ view }: { view: ChatTaskView }) {
   const t = totals(view);
   const spent = view.live.stages.flatMap((st) => st.steps).reduce((n, p) => n + (p.status === "done" && p.work ? costRange(p.work.cost).min : 0), 0);
   const progress = planProgress(view.live);
+  const finished = progress.total > 0 && progress.done === progress.total;
   // When the task is expected to finish: the gate after the last stage.
   const finish = view.live.stages[view.live.stages.length - 1]?.gate;
   // Agent working time so far: done steps only.
@@ -439,17 +440,22 @@ export function PlanView({ view }: { view: ChatTaskView }) {
                 meter={{ used: (spent / view.envelope.limit) * 100, over: t.over }}
                 hint={`~${money(t.min, t.max)} more, forecast for what's left in the plan.`}
               />
+              {/* A finished task has no forecast left: what it took, not "of ~". */}
               <Stat
-                label="Working"
-                aside={finish?.eta && `by ${finish.eta}`}
+                label={finished ? "Worked" : "Working"}
+                aside={!finished && finish?.eta && `by ${finish.eta}`}
                 value={duration(worked)}
-                of={`of ~${duration(total)}`}
-                meter={{ used: total ? (worked / total) * 100 : 0 }}
+                of={finished ? undefined : `of ~${duration(total)}`}
+                meter={{ used: finished ? 100 : total ? (worked / total) * 100 : 0 }}
                 hint={
-                  <>
-                    Agent working time: done steps, then the forecast for the rest.
-                    {finish?.eta && ` ${finish.mine ? "Ready for you" : "Done"} ${finish.eta}, ${etaFrom(finish.etaSource)}`}
-                  </>
+                  finished ? (
+                    "Agent working time on the whole task."
+                  ) : (
+                    <>
+                      Agent working time: done steps, then the forecast for the rest.
+                      {finish?.eta && ` ${finish.mine ? "Ready for you" : "Done"} ${finish.eta}, ${etaFrom(finish.etaSource)}`}
+                    </>
+                  )
                 }
               />
             </div>
