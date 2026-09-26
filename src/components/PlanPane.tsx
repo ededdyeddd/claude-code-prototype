@@ -23,9 +23,6 @@ import { answer, answerKey, openQuestions, unanswer } from "../data/inboxStore";
 const I = {
   chevronDown: "",
   chevronRight: "",
-  warning: "",
-  send: "",
-  check: "",
 };
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
@@ -41,10 +38,11 @@ const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 const AGENT_ESTIMATE = "the agent's estimate for this step";
 const costHint = (basis: string | undefined, model: string) => `Cost forecast from ${basis ?? AGENT_ESTIMATE}, priced at ${model} rates.`;
 const timeHint = (basis: string | undefined) => `Agent working time, forecast from ${basis ?? AGENT_ESTIMATE}. Not a deadline.`;
-export const whenHint = (source: string | undefined) =>
-  `When you are likely to be needed, forecast from ${source ?? AGENT_ESTIMATE}. It moves as the agents work.`;
+/** Where a time of day comes from; the tail of every "when" hint. */
+export const etaFrom = (source: string | undefined) => `forecast from ${source ?? AGENT_ESTIMATE}. It moves as the agents work.`;
+export const whenHint = (source: string | undefined) => `When you are likely to be needed, ${etaFrom(source)}`;
 
-/** Money and time; a forecast (~) gets a tooltip each with its source, actual numbers stay plain. */
+/** Money and time; a forecast (~, work not done yet) gets a tooltip each with its source, actual numbers stay plain. */
 function Forecast({
   cost,
   time,
@@ -82,16 +80,17 @@ function Forecast({
 }
 
 /** Plan changes in words instead of + ~ − ◆, so they need no legend; no color coding, the word and strike-through carry it. */
-const DIFF_WORD: Record<PlanDiff["kind"], string> = { add: "New", change: "Changes", remove: "Removed", gate: "New" };
+type ChipKind = Exclude<PlanDiff["kind"], "change">;
+const DIFF_WORD: Record<ChipKind, string> = { add: "New", remove: "Removed", gate: "New" };
 
-function DiffChip({ kind }: { kind: PlanDiff["kind"] }) {
+function DiffChip({ kind }: { kind: ChipKind }) {
   return (
     <span className="ml-sm inline-block rounded-sm bg-alpha-3 px-1.5 text-footnote leading-5 text-secondary">{DIFF_WORD[kind]}</span>
   );
 }
 
 /** Text followed by its chip; the chip is glued to the last word so a wrapped title never leaves it alone on a line. */
-function WithChip({ text, kind }: { text: string; kind?: PlanDiff["kind"] }) {
+function WithChip({ text, kind }: { text: string; kind?: ChipKind }) {
   if (!kind) return <>{text}</>;
   const cut = text.lastIndexOf(" ") + 1;
   return (
@@ -113,7 +112,6 @@ const reversibleShort = (r: string) =>
 export const answerLabel = (q: Question, picked: string) =>
   picked.startsWith("text:") ? `“${picked.slice(5)}”` : (q.options.find((o) => o.id === picked)?.label ?? picked);
 
-/** A question inside its plan step: every option shows its cost, time and reversibility, so they can be compared at a glance. */
 /** A custom answer typed into the card: the agent turns it into a plan change you review and apply. */
 export type CustomAnswer = { text: string; ready: boolean };
 
@@ -124,18 +122,12 @@ const fieldClass =
 const EFFECT_WORD: Record<PlanDiff["kind"], string> = { add: "Adds step", remove: "Drops step", change: "Changes step", gate: "Adds your approval" };
 
 /**
- * What picking this option does to the plan, inside the picked option's row: one line per change, the kind of
- * change in plain words first, then the step, then what a new step costs. Indented to the option's text.
+ * What picking this option does to the plan, inside the picked option's row of the dock: one line per change, the
+ * kind of change in plain words first, then the step, then what a new step costs.
  */
-function OptionEffects({ task, diff, flush }: { task: Task; diff: PlanDiff[]; /** Inside an option row of the dock: no indent. */ flush?: boolean }) {
+function OptionEffects({ task, diff }: { task: Task; diff: PlanDiff[] }) {
   return (
-    <ul
-      aria-label="What this does to the plan"
-      className={cx(
-        "grid grid-cols-[auto_1fr] gap-x-sm gap-y-0.5 text-footnote",
-        flush ? "pt-xs" : "pb-sm ps-[calc(var(--cds-gap-sm)*2+12px)] pe-sm",
-      )}
-    >
+    <ul aria-label="What this does to the plan" className="grid grid-cols-[auto_1fr] gap-x-sm gap-y-0.5 pt-xs text-footnote">
       {diff.map((d) => (
         <li key={d.kind + d.text} className="col-span-2 grid grid-cols-subgrid">
           <span className="text-muted">{EFFECT_WORD[d.kind]}</span>
@@ -151,6 +143,29 @@ function OptionEffects({ task, diff, flush }: { task: Task; diff: PlanDiff[]; /*
         </li>
       ))}
     </ul>
+  );
+}
+
+/** What you said, wherever it shows (an answer, a confirmed or corrected assumption): "You:" muted, your words secondary. */
+export function YouSaid({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <span className="text-muted">You: </span>
+      {children}
+    </>
+  );
+}
+
+/** Undoes what you said. One look everywhere: a small button that shows on hovering its row (`group/change`) or on focus. */
+export function ChangeButton({ onClick }: { onClick?: () => void }) {
+  return (
+    <Button
+      size="xs"
+      className="-my-0.5 opacity-0 transition-opacity duration-fast group-hover/change:opacity-100 focus-visible:opacity-100"
+      onClick={onClick}
+    >
+      Change
+    </Button>
   );
 }
 
@@ -177,7 +192,7 @@ export function QuestionCard({
   custom?: CustomAnswer;
   setCustom: (c: CustomAnswer | undefined) => void;
   onAnswered: () => void;
-  /** List what the picked option changes in the plan: in the chat, where the plan is not beside the card. */
+  /** List what the picked option changes in the plan: in the dock, where the plan is not beside it. */
   showChanges?: boolean;
   /** In the chat's decision dock: drawn as Claude Code's question panel (numbered option rows, Other, Skip, Submit). */
   dock?: DockNav;
@@ -333,7 +348,7 @@ export function QuestionCard({
                   }
                 >
                   {/* The plan is not beside the dock: what the picked option does to it, in its row. */}
-                  {showChanges && on && o.diff.length > 0 && <OptionEffects task={task} diff={o.diff} flush />}
+                  {showChanges && on && o.diff.length > 0 && <OptionEffects task={task} diff={o.diff} />}
                 </OptionRow>
               );
             })}
@@ -360,70 +375,59 @@ export function QuestionCard({
       aria-label={question.text}
       className="flex scroll-mt-[var(--cds-gap-xl)] flex-col gap-md rounded-lg border border-alpha-2 p-lg transition-colors duration-fast data-[linked]:border-alpha-5"
     >
-      <div className="flex flex-col gap-xs">
-        <div className="flex min-h-5 items-center justify-between gap-sm">
-          <span className={cx("text-footnote", question.blocking ? "text-clay" : "text-muted")}>
-            {question.blocking ? "Blocking" : "Can wait"}
-          </span>
-        </div>
+      <div className="flex flex-col gap-0.5">
+        <span className={cx("text-footnote", question.blocking ? "text-clay" : "text-muted")}>
+          {question.blocking ? "Blocking" : "Can wait"}
+        </span>
         <p className="text-body font-medium text-primary">{question.text}</p>
-        {question.context && <p className="text-footnote text-muted">{question.context}</p>}
+        {question.context && <p className="text-body text-secondary">{question.context}</p>}
       </div>
 
       {thread$}
 
       {custom ? (
-        <div className="flex flex-col gap-xs">
+        <div className="flex flex-col gap-0.5">
           <span className="text-footnote text-muted">Your answer</span>
           <p className="text-body text-primary">“{custom.text}”</p>
           <span className="text-footnote text-muted">
-            {custom.ready
-              ? showChanges
-                ? "The change is ready — it's under your answer."
-                : "The plan change is ready — review it in the plan below."
-              : `${task.agent} is drafting the plan change…`}
+            {custom.ready ? "Plan change ready: review it in the plan below, then Apply it or Edit your answer" : "Drafting the plan change…"}
           </span>
         </div>
-      ) : mode === "choose" ? (
-        <div role="radiogroup" aria-label={question.text} className="flex flex-col gap-xs">
+      ) : mode !== "ask" ? (
+        // The same option rows as the decision dock over the composer, Other included, without keycaps: the pane has no number keys.
+        <OptionList label={question.text}>
           {question.options.map((o) => {
-            const on = o.id === chosen?.id;
+            const on = mode === "choose" && o.id === chosen?.id;
             return (
-              // What an option does to the plan is previewed in the plan itself, right below the card.
-              <div key={o.id} className={cx("rounded transition-colors duration-fast", on ? "bg-alpha-2" : "hover:bg-fill-ghost-hover")}>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={on}
-                  onClick={() => setChoice(o.id)}
-                  className="flex w-full items-start gap-sm rounded px-sm py-sm text-left outline-none focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
-                >
-                  <span
-                    aria-hidden="true"
-                    className={cx(
-                      "mt-[3px] size-[12px] shrink-0 rounded-full border",
-                      on ? "border-[4px] border-[var(--cds-text-primary)]" : "border-alpha-4",
-                    )}
-                  />
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="text-body">
-                      <span className={on ? "text-primary" : "text-secondary"}>{o.label}</span>
-                      {o.recommended && <span className="text-footnote text-muted"> · Recommended</span>}
-                    </span>
-                    <span className="text-footnote tabular-nums text-secondary">
-                      <Forecast cost={o.cost} time={o.toAcceptance} basis={o.forecastSource} model={task.model} focusable={false} /> ·{" "}
-                      <Hint text={`Reversible: ${o.reversible}.`} focusable={false}>
-                        {reversibleShort(o.reversible)}
-                      </Hint>
-                    </span>
+              <OptionRow
+                key={o.id}
+                title={o.label}
+                recommended={o.recommended}
+                selected={on}
+                onSelect={() => (setChoice(o.id), setMode("choose"))}
+                description={
+                  <span className="tabular-nums">
+                    <Forecast cost={o.cost} time={o.toAcceptance} basis={o.forecastSource} model={task.model} focusable={false} /> ·{" "}
+                    <Hint text={`Reversible: ${o.reversible}.`} focusable={false}>
+                      {reversibleShort(o.reversible)}
+                    </Hint>
                   </span>
-                </button>
-                {/* In the chat the plan is not beside the card: what the picked option does to it, under that option. */}
-                {showChanges && on && o.diff.length > 0 && <OptionEffects task={task} diff={o.diff} />}
-              </div>
+                }
+              />
             );
           })}
-        </div>
+          <OptionRow title="Other" selected={mode === "other"} onSelect={() => (setMode("other"), window.setTimeout(() => otherRef.current?.focus()))}>
+            <RowField
+              ref={otherRef}
+              value={draft}
+              onChange={setDraft}
+              onFocus={() => mode !== "other" && setMode("other")}
+              onEnter={sendOther}
+              placeholder="Type your own answer here"
+              label="Your answer"
+            />
+          </OptionRow>
+        </OptionList>
       ) : (
         <textarea
           autoFocus
@@ -433,17 +437,12 @@ export function QuestionCard({
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              if (mode === "other") sendOther();
-              else sendAsk();
+              sendAsk();
             }
             if (e.key === "Escape") setMode("choose");
           }}
-          placeholder={
-            mode === "other"
-              ? `Your answer in your own words. ${showChanges ? "I'll" : `${task.agent} will`} turn it into a plan change you can review.`
-              : "Ask about this question"
-          }
-          aria-label={mode === "other" ? "Your answer" : "Ask about this question"}
+          placeholder="Ask me about this question"
+          aria-label="Ask about this question"
           className={fieldClass}
         />
       )}
@@ -474,20 +473,19 @@ export function QuestionCard({
               Apply
             </Button>
           </>
-        ) : mode === "choose" ? (
+        ) : mode !== "ask" ? (
           <>
             <Button size="sm" className="me-auto" onClick={() => (setDraft(""), setMode("ask"))}>
               Ask about it
             </Button>
-            <Button size="sm" variant="secondary" onClick={() => (setDraft(""), setMode("other"))}>
-              Other answer…
-            </Button>
+            {/* Other: your words come back as a plan change to apply; an option answers right away. */}
             <Button
               size="sm"
               variant="primary"
-              title={chosen ? `Go with “${chosen.label}”` : "Pick an option first"}
-              disabled={!chosen}
+              title={mode === "other" ? undefined : chosen ? `Go with “${chosen.label}”` : "Pick an option first"}
+              disabled={mode === "other" ? !draft.trim() : !chosen}
               onClick={() => {
+                if (mode === "other") return sendOther();
                 if (!chosen) return;
                 answer(task.id, question.id, chosen.id);
                 onAnswered();
@@ -501,8 +499,8 @@ export function QuestionCard({
             <Button size="sm" variant="secondary" onClick={() => setMode("choose")}>
               Cancel
             </Button>
-            <Button size="sm" variant="primary" disabled={!draft.trim()} onClick={mode === "other" ? sendOther : sendAsk}>
-              {mode === "other" ? "Send" : "Ask"}
+            <Button size="sm" variant="primary" disabled={!draft.trim()} onClick={sendAsk}>
+              Ask
             </Button>
           </>
         )}
@@ -522,18 +520,18 @@ function AutoDecisions({ task }: { task: Task }) {
         onClick={() => setOpen(!open)}
         className="-mx-sm flex items-center gap-xs rounded-sm px-sm py-xs text-left text-footnote text-muted outline-none hover:bg-fill-ghost-hover hover:text-secondary focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
       >
-        Auto-decided · {task.autoDecisions.length}
+        Auto-decided {task.autoDecisions.length}
         <Icon glyph={open ? I.chevronDown : I.chevronRight} size="sm" />
       </button>
       {open && (
         <ul className="flex flex-col">
           {task.autoDecisions.map((d) => (
-            <li key={d.id} className="flex items-center gap-sm py-xs">
+            <li key={d.id} className="group/change flex items-center gap-sm py-xs">
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="text-body text-primary">{d.text}</span>
                 <span className="text-footnote text-muted">{d.why}</span>
               </div>
-              <Button size="xs">Change</Button>
+              <ChangeButton />
             </li>
           ))}
         </ul>
@@ -544,30 +542,36 @@ function AutoDecisions({ task }: { task: Task }) {
 
 const fmtNum = (n: number) => n.toLocaleString("en-US");
 
-/** The agent's intent for a step ahead. That the plan may change is said once, by the plan rules below it. */
+/*
+ * Plan typography: four roles, two weights, three text colors (clay only for "needs you").
+ *   Title    serif `--cds-font-size-title`, primary: the pane's heading (SidePane).
+ *   Heading  text-body medium, primary: stage titles, the "Plan" heading, a question, Brief section titles.
+ *   Body     text-body regular: primary for what is done, running or needs you; secondary for steps ahead and the
+ *            agent's words about a step (result summary, intent).
+ *   Meta     text-footnote regular: muted for labels and numbers (cost · time, "Changed 1 file");
+ *            secondary for content set small (decisions, file paths, plan rules).
+ * Spacing inside the plan, smallest to largest, so a gap inside a group never matches the gap between groups:
+ *   gap-0.5  lines of one element: a title and its description or answer line; a label and its list; list items.
+ *   gap-xs   blocks inside an element (description → decisions → files, title → question card).
+ *   gap-sm   between collapsed steps.
+ *   gap-md   after an opened step; between collapsed stages; inside a question card.
+ *   SECTION_GAP + stage padding   after an open stage; gap-lg between the pane's sections.
+ */
+
+/** The agent's intent for a step ahead, right under its title. That the plan may change is said once, by the plan rules. */
 function StepPlanView({ what }: { what: string }) {
-  return <p className="pt-xs text-body text-secondary">{what}</p>;
+  return <p className="text-body text-secondary">{what}</p>;
 }
 
 /**
- * Which done-criteria a step ahead gets the task to, as a quiet line under its title: the one part of a
- * step's plan that holds however the step is done. A step that covers them all says so instead of listing.
+ * What a finished step produced, under its summary (which sits right under the title, as its description):
+ * the agent's own decisions and changed files with diff stats as in chats. Each is a block: label, then its lines.
  */
-function servesLine(task: Task, ids: string[] | undefined) {
-  const all = task.brief?.doneWhen ?? [];
-  const list = all.filter((c) => ids?.includes(c.id));
-  if (!list.length) return null;
-  if (all.length > 1 && list.length === all.length) return "For: all done criteria";
-  return `For: ${list.map((c) => c.text).join(" · ")}`;
-}
-
-/** What a finished step produced: summary, the agent's own decisions, and changed files with diff stats as in chats. */
 function StepResultView({ result }: { result: StepResult }) {
   return (
-    <div className="flex flex-col gap-md pt-xs">
-      <p className="text-body text-secondary">{result.summary}</p>
+    <>
       {result.decisions && result.decisions.length > 0 && (
-        <div className="flex flex-col gap-xs">
+        <div className="flex flex-col gap-0.5">
           <span className="text-footnote text-muted">Decided on the way</span>
           <ul className="flex flex-col gap-0.5">
             {result.decisions.map((d) => (
@@ -579,7 +583,7 @@ function StepResultView({ result }: { result: StepResult }) {
         </div>
       )}
       {result.files && result.files.length > 0 && (
-        <div className="flex flex-col gap-xs">
+        <div className="flex flex-col gap-0.5">
           <span className="text-footnote text-muted">
             Changed {result.files.length} {plural(result.files.length, "file", "files")}
           </span>
@@ -597,7 +601,7 @@ function StepResultView({ result }: { result: StepResult }) {
           </ul>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -654,7 +658,9 @@ export const PANE_BODY = "px-[var(--cds-gap-lg)] pt-xs pb-[var(--cds-gap-xl)]";
 /** Room between plan stages (and before the plan rules). */
 export const SECTION_GAP = "pb-[var(--cds-gap-md)]";
 /** Room between steps; the last step of a stage has none, the stage's own room follows. */
-const STEP_GAP = "pb-[var(--cds-gap-xs)]";
+const STEP_GAP = "pb-[var(--cds-gap-sm)]";
+/** Room after an opened step: more than between its own blocks (gap-xs), so the next step reads as the next one. */
+const OPEN_STEP_GAP = "pb-[var(--cds-gap-md)]";
 
 /**
  * The plan of a task, with open questions expanded on their steps. One component for the Inbox side pane
@@ -673,8 +679,8 @@ export function PlanPane({
   onTaskDone?: () => void;
   /** Changes made outside the question cards (text edits in the chat): shown struck through with "Removed". */
   edits?: PlanDiff[];
-  /** Replaces the summary and meta line at the top (the chat shows the total against its envelope). */
-  header?: ReactNode;
+  /** Over the stages: the meta line in Up next, the stat cards in the chat. The summary is in the pane's header. */
+  header: ReactNode;
   /** The decision at the gate the plan stands at, opened right on it (like a question card on its step). */
   gateCard?: ReactNode;
 }) {
@@ -734,7 +740,7 @@ export function PlanPane({
     Object.fromEntries(task.stages.map((st) => [st.id, stageDone(st)])),
   );
 
-  // Name the agent only where it changes along the plan; repeating the same name on every step reads as a table.
+  // Name the agent only where it differs from the one before (the task's own agent to start with); the same name on every step reads as a table.
   const newAgent = new Set<string>();
   items.reduce<string | undefined>((prev, it) => {
     // Done steps show their line on hover only (with the agent), so they do not count here.
@@ -746,16 +752,22 @@ export function PlanPane({
     const agent = it.step.work?.agent;
     if (agent && agent !== prev) newAgent.add(it.step.id);
     return agent ?? prev;
-  }, undefined);
+  }, task.agent);
 
-  const renderItem = (item: Item, last: boolean) => {
+  /** Details of a stage nobody has started yet (costs, times): on hover, so the plan ahead reads as a list of titles. */
+  const onHover = (group: "step" | "stage") =>
+    cx(
+      "transition-opacity duration-fast motion-reduce:transition-none",
+      group === "step" ? "opacity-0 group-hover/step:opacity-100 group-focus-within/step:opacity-100" : "opacity-0 group-hover/stage:opacity-100 group-focus-visible/stage:opacity-100",
+    );
+  const renderItem = (item: Item, last: boolean, planned = false) => {
     // The line runs from under this mark to the next one; the mark sits on a pane-colored backing so the line never shows through it.
-    const rail = !last && <span aria-hidden="true" className="absolute top-[18px] bottom-[-2px] left-[5.5px] w-px bg-alpha-3" />;
+    const rail = !last && <span aria-hidden="true" className="absolute top-[19px] bottom-[-3px] left-[5.5px] w-px bg-alpha-3" />;
     if (item.kind === "added")
       return (
         <li key={item.key} className={cx("group/step relative flex items-start gap-md", !last && STEP_GAP)}>
           {rail}
-          <span className="relative mt-[4px] flex bg-[var(--plan-surface,var(--cds-surface-2))]">
+          <span className="relative mt-[5px] flex bg-[var(--plan-surface,var(--cds-surface-2))]">
             <TaskDot state="ahead" />
           </span>
           <span className="flex min-w-0 flex-1 items-baseline justify-between gap-md">
@@ -763,8 +775,8 @@ export function PlanPane({
               <WithChip text={item.text} kind={item.preview ? "add" : undefined} />
             </span>
             {item.diff.time && (
-              <span className="relative shrink-0 text-footnote tabular-nums text-secondary">
-                {item.diff.agent && newAgent.has(item.key) && <span className="text-muted">{item.diff.agent} · </span>}
+              <span className="relative shrink-0 text-footnote tabular-nums text-muted">
+                {item.diff.agent && newAgent.has(item.key) && <>{item.diff.agent} · </>}
                 <Forecast cost={item.diff.cost} time={item.diff.time} basis={item.diff.basis} model={task.model} />
               </span>
             )}
@@ -773,20 +785,22 @@ export function PlanPane({
       );
     if (item.kind === "gate")
       return (
-        <li key={item.key} className={cx("relative flex items-start gap-md", !last && STEP_GAP)}>
+        <li key={item.key} className={cx("group/step relative flex items-start gap-md", !last && STEP_GAP)}>
           {rail}
-          <span className="relative mt-[4px] flex bg-[var(--plan-surface,var(--cds-surface-2))]">
+          <span className="relative mt-[5px] flex bg-[var(--plan-surface,var(--cds-surface-2))]">
             {/* Gates take the same dots as steps: who approves is said by the text ("You approve …" / "Check: …"). */}
             <GateMark gate={item.gate} />
           </span>
-          <div className="flex min-w-0 flex-1 flex-col gap-sm">
-            <span className="flex flex-wrap items-baseline justify-between gap-x-md gap-y-xs">
-              <span className={cx("text-body", item.gate.status === "current" ? "text-primary" : "text-secondary")}>{gateText(item.gate)}</span>
+          <div className="flex min-w-0 flex-1 flex-col gap-xs">
+            <span className="flex flex-wrap items-baseline justify-between gap-x-md gap-y-0.5">
+              <span className={cx("text-body", item.gate.status === "current" ? "text-primary" : "text-secondary")}>
+                {gateText(item.gate)}
+              </span>
               {item.gate.status === "current" ? (
                 <span className="shrink-0 text-footnote text-clay">{item.gate.mine ? "waiting for you" : "running"}</span>
               ) : item.gate.eta ? (
-                <span className="shrink-0 text-footnote tabular-nums text-secondary">
-                  <Hint text={whenHint(item.gate.etaSource)}>{item.gate.eta}</Hint>
+                <span className={cx("shrink-0 text-footnote tabular-nums text-muted", planned && onHover("step"))}>
+                  <Hint text={whenHint(item.gate.etaSource)}>by {item.gate.eta}</Hint>
                 </span>
               ) : null}
             </span>
@@ -804,13 +818,18 @@ export function PlanPane({
     // Finished steps open to show what they produced; steps ahead, what they will do.
     const result = status === "done" ? step.result : undefined;
     const stepPlan = status !== "done" && !removing ? step.plan : undefined;
-    const serves = stepPlan && servesLine(task, stepPlan.serves);
+    // In a stage not started yet, the cost shows on hover.
+    const quiet = planned && status === "ahead" && !removing && !changed;
     const canOpen = !!result || !!stepPlan?.what;
     const expanded = canOpen && !!openSteps[step.id];
+    const foldedQuestion = !!q && !picked && !q.blocking && hasBlocking && !openQs[q.id];
+    const card = !!q && !picked && (q.blocking || !hasBlocking || !!openQs[q.id]);
+    // An opened step (details or a question card) gets more room after it than a closed one: its own blocks are xs apart.
+    const opened = expanded || card || foldedQuestion;
     return (
-      <li key={item.key} className={cx("group/step relative flex items-start gap-md", !last && STEP_GAP)}>
+      <li key={item.key} className={cx("group/step relative flex items-start gap-md", !last && (opened ? OPEN_STEP_GAP : STEP_GAP))}>
         {rail}
-        <span className="relative mt-[4px] flex bg-[var(--plan-surface,var(--cds-surface-2))]">
+        <span className="relative mt-[5px] flex bg-[var(--plan-surface,var(--cds-surface-2))]">
           <TaskDot
             state={
               status === "waiting"
@@ -825,60 +844,70 @@ export function PlanPane({
             }
           />
         </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-sm">
-          <div className="flex items-baseline justify-between gap-md">
-            {canOpen ? (
-              <button
-                type="button"
-                aria-expanded={expanded}
-                onClick={() => setOpenSteps((o) => ({ ...o, [step.id]: !expanded }))}
-                className="flex min-w-0 items-baseline gap-sm rounded-sm text-left outline-none focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
-              >
-                <span className={cx("text-body", status === "ahead" ? "text-secondary" : "text-primary")}>{step.title}</span>
-                <Icon
-                  glyph={I.chevronRight}
-                  size="sm"
-                  className={cx(
-                    "self-center text-muted transition-[opacity,transform] duration-fast motion-reduce:transition-none",
-                    expanded ? "rotate-90" : "opacity-0 group-hover/step:opacity-100",
-                  )}
-                />
-              </button>
-            ) : (
-              <span className="min-w-0">
-                <span
-                  className={cx("text-body", removing ? "text-muted line-through" : status === "ahead" ? "text-secondary" : "text-primary")}
+        <div className="flex min-w-0 flex-1 flex-col gap-xs">
+          {/* The title and the lines that describe it read as one: a change, the summary or intent, your answer. */}
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-baseline justify-between gap-md">
+              {canOpen ? (
+                <button
+                  type="button"
+                  aria-expanded={expanded}
+                  onClick={() => setOpenSteps((o) => ({ ...o, [step.id]: !expanded }))}
+                  className="flex min-w-0 items-baseline gap-sm rounded-sm text-left outline-none focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]"
                 >
-                  <WithChip text={step.title} kind={removing ? "remove" : undefined} />
+                  <span className={cx("text-body", status === "ahead" ? "text-secondary" : "text-primary")}>{step.title}</span>
+                  <Icon
+                    glyph={I.chevronRight}
+                    size="sm"
+                    className={cx(
+                      "self-center text-muted transition-[opacity,transform] duration-fast motion-reduce:transition-none",
+                      expanded ? "rotate-90" : "opacity-0 group-hover/step:opacity-100",
+                    )}
+                  />
+                </button>
+              ) : (
+                <span className="min-w-0">
+                  <span
+                    className={cx(
+                      "text-body",
+                      removing ? "text-muted line-through" : status === "ahead" ? "text-secondary" : "text-primary",
+                    )}
+                  >
+                    <WithChip text={step.title} kind={removing ? "remove" : undefined} />
+                  </span>
                 </span>
-              </span>
-            )}
-            {work && (
-              // Done steps keep their cost on hover; for steps ahead it is a forecast that informs the answer, so it stays visible.
-              <span
-                className={cx(
-                  "relative shrink-0 text-footnote tabular-nums",
-                  status === "done"
-                    ? cx("text-muted transition-opacity duration-fast", !expanded && "opacity-0 group-hover/step:opacity-100")
-                    : "text-secondary",
-                  removing && "text-muted line-through",
-                )}
-              >
-                {/* Agent: only where it changes along the plan; the same name on every step reads as a table. */}
-                {work.agent && newAgent.has(step.id) && <span className="text-muted">{work.agent} · </span>}
-                <Forecast cost={work.cost} time={work.time} basis={work.basis} model={task.model} />
+              )}
+              {work && (
+                // Done steps and steps of a stage not started keep their cost on hover; for the stage in work it is a forecast that informs the answer, so it stays visible.
+                // Meta role: every cost · time in the plan is the same muted footnote, on steps, stages, gates and options.
+                <span
+                  className={cx(
+                    "relative shrink-0 text-footnote tabular-nums text-muted",
+                    (status === "done" || quiet) && !expanded && onHover("step"),
+                    removing && "line-through",
+                  )}
+                >
+                  {/* Agent: only where it changes along the plan; the same name on every step reads as a table. */}
+                  {work.agent && newAgent.has(step.id) && <>{work.agent} · </>}
+                  <Forecast cost={work.cost} time={work.time} basis={work.basis} model={task.model} />
+                </span>
+              )}
+            </div>
+            {/* What the step becomes; no chip: "New" and "Removed" already say the plan is changing. */}
+            {changed && <span className="text-footnote text-secondary">{changed.text}</span>}
+            {expanded && result && <p className="text-body text-secondary">{result.summary}</p>}
+            {expanded && stepPlan?.what && <StepPlanView what={stepPlan.what} />}
+            {q && picked && (
+              <span className="group/change flex flex-wrap items-center gap-x-xs text-footnote text-secondary">
+                <span>
+                  <YouSaid>{answerLabel(q, picked)}</YouSaid>
+                </span>
+                <ChangeButton onClick={() => unanswer(task.id, q.id)} />
               </span>
             )}
           </div>
-          {serves && <span className="-mt-xs text-footnote text-muted">{serves}</span>}
-          {changed && (
-            <span className="text-footnote text-secondary">
-              <WithChip text={changed.text} kind={changed.preview ? "change" : undefined} />
-            </span>
-          )}
           {expanded && result && <StepResultView result={result} />}
-          {expanded && stepPlan?.what && <StepPlanView what={stepPlan.what} />}
-          {q && !picked && !q.blocking && hasBlocking && !openQs[q.id] && (
+          {foldedQuestion && q && (
             // A blocking question is open elsewhere in the task: this one folds into a line so it does not compete.
             <div
               id={questionAnchor(task.id, q.id)}
@@ -894,7 +923,7 @@ export function PlanPane({
               </Button>
             </div>
           )}
-          {q && !picked && (q.blocking || !hasBlocking || openQs[q.id]) && (
+          {card && q && (
             <QuestionCard
               task={task}
               question={q}
@@ -905,18 +934,6 @@ export function PlanPane({
               setCustom={(c) => setCustoms((m) => ({ ...m, [q.id]: c }))}
             />
           )}
-          {q && picked && (
-            <span className="flex flex-wrap items-center gap-x-xs text-footnote text-muted">
-              Your answer: {answerLabel(q, picked)}
-              <button
-                type="button"
-                onClick={() => unanswer(task.id, q.id)}
-                className="rounded-sm px-1 text-secondary outline-none hover:bg-fill-ghost-hover hover:text-primary focus-visible:shadow-focus"
-              >
-                Change
-              </button>
-            </span>
-          )}
         </div>
       </li>
     );
@@ -924,13 +941,7 @@ export function PlanPane({
 
   return (
     <div className={cx("flex flex-col gap-[var(--cds-gap-lg)]", PANE_BODY)}>
-      {/* Under the title: the summary as a subtitle, then one quiet meta line. */}
-      {header ?? (
-        <div className="flex flex-col gap-xs">
-          <p className="text-body text-secondary">{task.summary}</p>
-          <PaneMeta task={task} answers={answers} />
-        </div>
-      )}
+      {header}
 
       {/* Questions sit on their steps, so it is clear where in the task you are. */}
       <ol aria-label="Plan" className="flex flex-col">
@@ -939,6 +950,8 @@ export function PlanPane({
           const kept = list.flatMap((it) => (it.kind === "step" && !effectOn(it.step.id, "remove") ? [it.step] : []));
           const total = kept.length + list.filter((it) => it.kind === "added").length;
           const done = kept.filter((x) => x.status === "done" && !x.question).length;
+          // Not started: nothing done, running or asking yet. Its details wait for hover.
+          const planned = !single && kept.every((x) => x.status === "ahead" && !x.question) && stage.gate?.status !== "current";
           // Stage total: actual for done steps, estimates for the rest, as the plan would be with the picked options.
           const costs = [
             ...kept.flatMap((x) => {
@@ -976,15 +989,9 @@ export function PlanPane({
           );
           const isCollapsed = !single && collapsed[stage.id];
           return (
-            // Room comes after an open stage; collapsed stages stack tightly, like the Inbox groups.
-            <li key={stage.id} className={cx("flex flex-col", isCollapsed ? "pb-md" : (si < stages.length - 1 || hasTail) && SECTION_GAP)}>
-              {/* One stage: a plain "Plan" heading; several: numbered, collapsible stages. */}
-              {single && (
-                <div className="sticky top-0 z-[2] flex items-baseline gap-sm bg-[var(--plan-surface,var(--cds-surface-2))] py-xs mb-[var(--cds-gap-xs)]">
-                  <h3 className="text-body font-medium text-primary">Plan</h3>
-                  <span className="ms-auto shrink-0 text-footnote tabular-nums text-muted">{stageMeta}</span>
-                </div>
-              )}
+            // Room comes after an open stage; collapsed stages stack tightly (their rows' own padding), like the Inbox groups.
+            <li key={stage.id} className={cx("flex flex-col", !isCollapsed && (si < stages.length - 1 || hasTail) && SECTION_GAP)}>
+              {/* One stage: just its steps (the pane's header already says where it stands); several: numbered, collapsible stages. */}
               {!single && (
                 <button
                   type="button"
@@ -993,7 +1000,6 @@ export function PlanPane({
                   className={cx(
                     // Sticky while its steps scroll by, so you always know which stage you are in.
                     "group/stage sticky top-0 z-[2] flex w-full items-baseline gap-sm bg-[var(--plan-surface,var(--cds-surface-2))] py-xs text-left outline-none focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]",
-                    !isCollapsed && "pb-[var(--cds-gap-xs)]",
                   )}
                 >
                   <span className="text-body font-medium text-primary">
@@ -1010,10 +1016,10 @@ export function PlanPane({
                       !isCollapsed && "rotate-90",
                     )}
                   />
-                  <span className="ms-auto shrink-0 text-footnote tabular-nums text-muted">{stageMeta}</span>
+                  <span className={cx("ms-auto shrink-0 text-footnote tabular-nums text-muted", planned && onHover("stage"))}>{stageMeta}</span>
                 </button>
               )}
-              {!isCollapsed && <ol className="flex flex-col">{list.map((item, idx) => renderItem(item, idx === list.length - 1))}</ol>}
+              {!isCollapsed && <ol className="flex flex-col">{list.map((item, idx) => renderItem(item, idx === list.length - 1, planned))}</ol>}
             </li>
           );
         })}
@@ -1023,7 +1029,7 @@ export function PlanPane({
           </li>
         )}
         {task.rules && (
-          <li className="flex flex-col gap-xs border-t border-alpha-2 pt-md text-footnote">
+          <li className="flex flex-col gap-0.5 border-t border-alpha-2 pt-md text-footnote">
             <span className="text-muted">Plan rules</span>
             <span className="text-secondary">
               I'll change on my own: {task.rules.self}. I'll ask first about: {task.rules.ask}.
@@ -1035,11 +1041,10 @@ export function PlanPane({
   );
 }
 
-/** Free-text reply to the agent: answers the first open question in your own words, or just adds a note. */
 /** Minutes from "18m" / "1h 10m"; estimates ("~20m") are not counted. */
 const minutes = (t: string) => (t.startsWith("~") ? 0 : Number(t.match(/(\d+)h/)?.[1] ?? 0) * 60 + Number(t.match(/(\d+)m/)?.[1] ?? 0));
 /** Minutes from "18m" / "~1h 20m", estimates included. */
-const anyMinutes = (t: string) => Number(t.match(/(\d+)h/)?.[1] ?? 0) * 60 + Number(t.match(/(\d+)m/)?.[1] ?? 0);
+export const anyMinutes = (t: string) => Number(t.match(/(\d+)h/)?.[1] ?? 0) * 60 + Number(t.match(/(\d+)m/)?.[1] ?? 0);
 /** Passed = grey dot, waits for you = clay dot, ahead (or an automatic check running) = grey ring. */
 function GateMark({ gate }: { gate: Gate }) {
   if (gate.status === "passed") return <TaskDot state="done" />;
@@ -1048,7 +1053,8 @@ function GateMark({ gate }: { gate: Gate }) {
 
 /** Actual sums keep cents ("$1.60"); ranges read as ranges ("$4–7"). */
 const cost = (min: number, max = min) => (Math.abs(max - min) < 0.005 ? `$${min.toFixed(2)}` : moneyRange(min, max));
-const duration = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`);
+/** "35m", "2h 29m", "5h": no "0m" on a whole hour. */
+export const duration = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `${m}m`);
 
 const questionAnchor = (taskId: string, questionId: string) => `question-${taskId}-${questionId}`;
 

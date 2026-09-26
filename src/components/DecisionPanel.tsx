@@ -53,7 +53,8 @@ export function OptionRow({
   onSelect,
   children,
 }: {
-  n: number;
+  /** Its number key; left out where the keys do not work (the plan pane), so no keycap promises a shortcut. */
+  n?: number;
   title: ReactNode;
   recommended?: boolean;
   description?: ReactNode;
@@ -90,7 +91,7 @@ export function OptionRow({
         {description && <div className="text-footnote text-muted">{description}</div>}
         {children}
       </div>
-      <Keycap>{n}</Keycap>
+      {n !== undefined && <Keycap>{n}</Keycap>}
     </div>
   );
 }

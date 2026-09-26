@@ -8,11 +8,11 @@ import { useSearchParams } from "react-router-dom";
 import { useChatTask } from "../data/chatTaskStore";
 import { planProgress, type ReviewTab, type Task } from "../data/task";
 
-/** "3/6 · ~17:30": steps done of all, and when you are next needed. */
+/** "3/6 · by 17:30": steps done of all, and when you are next needed. An ETA says "by", not "~": its hint says it is a forecast. */
 function chipStatus(task: Task) {
   const p = planProgress(task);
   if (!p.total) return undefined;
-  return [`${p.done}/${p.total}`, p.yourTurn].filter(Boolean).join(" · ");
+  return [`${p.done}/${p.total}`, p.yourTurn && `by ${p.yourTurn}`].filter(Boolean).join(" · ");
 }
 import { usePersistentWidth } from "../data/usePersistentWidth";
 import { ReviewPane } from "./ReviewPane";

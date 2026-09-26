@@ -15,7 +15,7 @@ const TASK = "\uE041";
  */
 export type TaskPaneToggle = {
   label: string;
-  /** Progress of a running task, after the label: "3/6 · ~17:30". Visible without opening the pane. */
+  /** Progress of a running task, after the label: "3/6 · by 17:30". Visible without opening the pane. */
   status?: string;
   open: boolean;
   changed?: boolean;

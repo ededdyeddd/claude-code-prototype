@@ -7,7 +7,7 @@ import { AttentionMenu } from "../components/AttentionMenu";
 import { usePersistentWidth } from "../data/usePersistentWidth";
 import { AWAY, TASKS } from "../data/inbox";
 import { currentGate, gateText, type Task } from "../data/task";
-import { PaneMeta, PlanPane, whenHint } from "../components/PlanPane";
+import { ChangeButton, PaneMeta, PlanPane, whenHint } from "../components/PlanPane";
 import { BriefView, GateCard } from "../components/ChatTask";
 import { deriveTask, type TaskState } from "../data/chatTaskStore";
 import { openQuestions, useInbox, type Attention } from "../data/inboxStore";
@@ -124,7 +124,7 @@ function RecapRow({
   onOpenTask: (id: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-sm rounded-sm px-sm py-xs hover:bg-fill-ghost-hover">
+    <div className="group/change flex items-center gap-sm rounded-sm px-sm py-xs hover:bg-fill-ghost-hover">
       <button
         type="button"
         onClick={() => onOpenTask(task.id)}
@@ -194,7 +194,7 @@ function AwayRecap({ onOpenTask }: { onOpenTask: (id: string) => void }) {
             ))}
           {open === "decisions" &&
             decisions.map(({ task, d }) => (
-              <RecapRow key={task.id + d.id} task={task} withAgent onOpenTask={go} trailing={<Button size="xs">Change</Button>}>
+              <RecapRow key={task.id + d.id} task={task} withAgent onOpenTask={go} trailing={<ChangeButton />}>
                 {d.text}
               </RecapRow>
             ))}
@@ -287,7 +287,7 @@ function TaskRow({
       )}
     >
       {/* Clay only when the agent stopped for you. Can wait keeps working: the running dot, as in the sidebar; the group and "1 question" say it has a question. */}
-      <TaskDot state={group === "canWait" ? "running" : group} className="mt-[4px]" />
+      <TaskDot state={group === "canWait" ? "running" : group} className="mt-[5px]" />
       <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-md gap-y-0.5">
         <span className="truncate text-body font-medium text-primary">{task.title}</span>
         <span className="justify-self-end text-footnote tabular-nums text-secondary">
@@ -295,7 +295,7 @@ function TaskRow({
             `waiting ${task.waitingFor}`
           ) : !needs && nextGate ? (
             <Hint text={whenHint(nextGate.etaSource)} focusable={false}>
-              Your turn {nextGate.eta}
+              Your turn by {nextGate.eta}
             </Hint>
           ) : (
             ""
@@ -371,13 +371,13 @@ function NothingNeedsYou() {
         <h2 className="px-sm pb-xs text-footnote text-muted">Coming up for you</h2>
         {upcoming.map(({ task, gate }) => (
           <div key={task.id + gate.title} className="flex items-start gap-sm px-sm py-xs">
-            <TaskDot state="ahead" className="mt-[4px]" />
+            <TaskDot state="ahead" className="mt-[5px]" />
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="text-body text-primary">
                 {gateText(gate)} · {task.title}
               </span>
               <span className="text-footnote text-muted">
-                {gate.eta} · based on {gate.etaSource}
+                by {gate.eta} · based on {gate.etaSource}
               </span>
             </div>
           </div>

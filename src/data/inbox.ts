@@ -98,7 +98,7 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
           { id: "c", status: "ahead", title: "Сверка экранов с оригиналом" },
           { id: "d", status: "ahead", title: "Проверка контраста текста" },
         ],
-        gate: { title: "the light theme", mine: true, status: "ahead", eta: "~17:00", etaSource: "3 similar tasks" },
+        gate: { title: "the light theme", mine: true, status: "ahead", eta: "17:00", etaSource: "3 similar tasks" },
       },
     ],
     autoDecisions: [
@@ -219,7 +219,7 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
           { id: "g", status: "ahead", title: "Прогон на стейджинге" },
           { id: "h", status: "ahead", title: "Сводка изменений и риски" },
         ],
-        gate: { title: "the result", mine: true, status: "ahead", eta: "~18:30", etaSource: "12 similar tasks" },
+        gate: { title: "the result", mine: true, status: "ahead", eta: "18:30", etaSource: "12 similar tasks" },
       },
     ],
     autoDecisions: [
@@ -294,7 +294,7 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
           { id: "c", status: "ahead", title: "Утренний пуш с прогнозом" },
           { id: "s", status: "ahead", title: "Сегменты аудитории" },
         ],
-        gate: { title: "the first push on a real phone", mine: true, status: "ahead", eta: "~18:00", etaSource: "5 similar tasks" },
+        gate: { title: "the first push on a real phone", mine: true, status: "ahead", eta: "18:00", etaSource: "5 similar tasks" },
       },
     ],
     autoDecisions: [
@@ -356,7 +356,7 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
             },
           },
         ],
-        gate: { title: "the brief", mine: true, status: "ahead", eta: "~16:40", etaSource: "the task plan" },
+        gate: { title: "the brief", mine: true, status: "ahead", eta: "16:40", etaSource: "the task plan" },
       },
       {
         id: "s2",
@@ -445,7 +445,7 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
         id: "s1",
         title: "Review",
         steps: [{ id: "a", status: "running", title: "e2e на стейджинге" }],
-        gate: { title: "the result", mine: true, status: "ahead", eta: "tomorrow ~11:00", etaSource: "the CI queue" },
+        gate: { title: "the result", mine: true, status: "ahead", eta: "tomorrow 11:00", etaSource: "the CI queue" },
       },
     ],
     autoDecisions: [],
