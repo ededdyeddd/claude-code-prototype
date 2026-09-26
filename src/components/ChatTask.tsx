@@ -1183,7 +1183,7 @@ function EscalationChoice({ view, nav }: { view: ChatTaskView; nav: DockNav }) {
           title="Finish as is"
           selected={picked === 1}
           onSelect={() => setPicked(1)}
-          description="No brief or plan; I'll still ask before going past your limits"
+          description="No gates; the plan stays, and I'll still ask before going past your limits"
         />
       </OptionList>
     </DockFrame>
