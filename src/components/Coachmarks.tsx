@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "../ui";
+import { useFadeIn } from "../data/useDelay";
 
 export type Coachmark = {
   /** Matches `data-coach="…"` on the element the step points at. A step whose element is missing is skipped. */
@@ -125,10 +126,16 @@ export function Coachmarks({
     if (live && live.length === 0) onDone();
   }, [live, onDone]);
 
+  const shown = useFadeIn();
   if (!step) return null;
 
   return createPortal(
-    <div className="cds-root fixed inset-0 z-[var(--cds-z-coachmark)]" data-mode="dark" data-density="comfortable" data-font="anthropic">
+    <div
+      className={
+        "cds-root fixed inset-0 z-[var(--cds-z-coachmark)] transition-opacity duration-slow ease-out motion-reduce:transition-none " +
+        (shown ? "opacity-100" : "opacity-0")
+      }
+      data-mode="dark" data-density="comfortable" data-font="anthropic">
       {/* Clicks outside the card do nothing: the tour ends only by Skip, Done or Escape. */}
       <div className="absolute inset-0" />
       {rect && (
