@@ -237,8 +237,9 @@ function TaskRow({
   // Blocked without a question: what exactly the person has to do, in the same words as "1 question".
   const session = deriveTask(task, chat);
   const gate = currentGate(task);
-  const decision =
-    group !== "blocked" || blocking
+  const decision = session.acceptancePending
+    ? "accept the result"
+    : group !== "blocked" || blocking
       ? undefined
       : session.escalationPending
         ? "split into stages?"
@@ -266,7 +267,8 @@ function TaskRow({
       )}
     >
       {/* Clay only when the agent stopped for you. Can wait keeps working: the running dot, as in the sidebar; the group and "1 question" say it has a question. */}
-      <TaskDot state={group === "canWait" ? "running" : group} className="mt-[5px]" />
+      {/* A result to accept holds no agent: the still grey dot, as in the sidebar; a broken locked criterion makes it Blocked. */}
+      <TaskDot state={group === "canWait" ? (session.acceptancePending ? "done" : "running") : group} className="mt-[5px]" />
       <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-md gap-y-0.5">
         <span className="truncate text-body font-medium text-primary">{task.title}</span>
         <span className="justify-self-end text-footnote tabular-nums text-secondary">
@@ -543,6 +545,7 @@ export function InboxPage() {
                   <GateCard
                     view={{ id: selected.id, task: selected, ...session }}
                     onOpenBrief={selected.brief ? () => setPaneTab("brief") : undefined}
+                    onOpenResult={() => navigate(`/code/${selected.id}?review=result`)}
                     onDone={openNext}
                   />
                 )

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { DockFrame, OptionList, OptionRow, RowField, type DockNav } from "./DecisionPanel";
 import type { Block } from "../data/transcripts";
-import { costRange, currentGate, gateText, money, planProgress, type Assumption, type Question, type ReviewTab } from "../data/task";
+import { costRange, currentGate, flagTitle, gateText, money, planProgress, type Assumption, type Flag, type Question, type ReviewTab } from "../data/task";
 import { useInbox } from "../data/inboxStore";
 import { ChangeButton, PANE_BODY, PlanPane, QuestionCard, YouSaid, anyMinutes, answerLabel, duration, etaFrom, type CustomAnswer } from "./PlanPane";
 import { TASKS } from "../data/inbox";
@@ -11,16 +11,19 @@ import {
   escalate,
   launch,
   markAssumption,
+  nextIteration,
+  sendBack,
   type ChatTaskView,
   type TaskTab,
 } from "../data/chatTaskStore";
+import { revealInReview, type RevealTarget } from "../data/reveal";
 import { Button, Hint, Icon } from "../ui";
 import { TaskDot } from "./StatusMark";
 import { Meter } from "./BudgetLine";
 import { Inline } from "./Transcript";
 
-const LOCK = "";
-const CHEVRON = "\uE02A";
+export const LOCK = "";
+export const CHEVRON = "\uE02A";
 const FILES = "\uE02D";
 const TASK = "\uE041";
 const PEN = "";
@@ -60,7 +63,7 @@ function totals(view: ChatTaskView) {
 
 /* ------------------------------------------------------------------ Brief */
 
-function SectionTitle({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
+export function SectionTitle({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   return (
     <div className="flex items-baseline gap-sm">
       <h2 className="text-body font-medium text-primary">{children}</h2>
@@ -177,7 +180,7 @@ function AssumptionState({ view, a }: { view: ChatTaskView; a: Assumption }) {
 }
 
 /** A plain list marker in the brief, in the slot of a status dot: rings mean "up next" in the plan, so lists don't use them. */
-function Bullet() {
+export function Bullet() {
   return (
     <span aria-hidden="true" className="mt-[5px] flex size-3 shrink-0 items-center justify-center">
       <span className="block size-1 rounded-full bg-alpha-5" />
@@ -397,6 +400,7 @@ function Stat({
 /** "Plan" tab: the same plan as in the Inbox pane, headed by what is left against the envelope. */
 export function PlanView({ view }: { view: ChatTaskView }) {
   const { answers } = useInbox();
+  const { openReview } = useContext(ChatTaskContext);
   const t = totals(view);
   const spent = view.live.stages.flatMap((st) => st.steps).reduce((n, p) => n + (p.status === "done" && p.work ? costRange(p.work.cost).min : 0), 0);
   const progress = planProgress(view.live);
@@ -413,6 +417,13 @@ export function PlanView({ view }: { view: ChatTaskView }) {
         task={view.live}
         answers={answers}
         edits={view.planEdits}
+        // A result to accept: the approval row leads to the review; the decision itself stays in the dock.
+        gateCard={
+          view.acceptancePending &&
+          openReview && (
+            <TextLink onClick={() => openReview("result")}>{acceptanceMeta(view)}</TextLink>
+          )
+        }
         header={
           <div className="flex flex-col gap-xs">
             <div className="grid grid-cols-3 gap-sm">
@@ -460,13 +471,25 @@ export function PlanView({ view }: { view: ChatTaskView }) {
  * footer with what still blocks the start (or the forecast) right next to the one primary action.
  * An escalation offer takes the same place: split the task into stages, or finish it as is.
  */
-export function GateCard({ view, onOpenBrief, onDone }: { view: ChatTaskView; onOpenBrief?: () => void; onDone?: () => void }) {
+export function GateCard({
+  view,
+  onOpenBrief,
+  onOpenResult,
+  onDone,
+}: {
+  view: ChatTaskView;
+  onOpenBrief?: () => void;
+  /** A result waiting for acceptance: "Details" opens the task's chat at the review. */
+  onOpenResult?: () => void;
+  onDone?: () => void;
+}) {
   const esc = view.task.escalation;
   const [open, setOpen] = useState(false);
   if (view.escalationPending && esc)
     return (
       <EscalationDecision view={view} open={open} setOpen={setOpen} onAgree={() => escalate(view.id, true)} onDecline={() => (escalate(view.id, false), onDone?.())} />
     );
+  if (view.acceptancePending && onOpenResult) return <AcceptanceCard view={view} onDetails={onOpenResult} onDone={onDone} />;
   const gate = currentGate(view.live);
   if (!view.atGate || !gate) return null;
   const left = view.unmarked.length;
@@ -503,7 +526,7 @@ export function GateCard({ view, onOpenBrief, onDone }: { view: ChatTaskView; on
 }
 
 /** A quiet inline link inside a card: to the full brief, or "Details" that unfold under it. */
-function TextLink({
+export function TextLink({
   onClick,
   children,
   underline = true,
@@ -690,6 +713,38 @@ function BriefCard({ view, setTab }: { view: ChatTaskView; setTab: (t: TaskTab) 
   );
 }
 
+/**
+ * A flag the system found, as a row like a risky assumption: soft fill, the clay dot (needs you), what happened
+ * as the line and the file as a quiet mono path under it. With `onOpen` the whole row opens the file: hover fill
+ * and a chevron, no underline.
+ */
+export function FlagRow({ flag, onOpen }: { flag: Flag; onOpen?: () => void }) {
+  const body = (
+    <>
+      <span className="mt-[5px] flex">
+        <TaskDot state="blocked" />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-body text-primary">{flagTitle(flag)}</span>
+        <span className="truncate font-mono text-footnote text-muted">{flag.ref}</span>
+      </span>
+    </>
+  );
+  // The same row as the dock's options: a soft fill, their padding; the dot sits on the title line, the chevron centred.
+  const row = "flex w-full items-start gap-sm rounded bg-alpha-1 px-2.5 py-2.5 text-left";
+  if (!onOpen) return <div className={row}>{body}</div>;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cx(row, "outline-none transition-colors duration-fast hover:bg-alpha-2 focus-visible:shadow-focus cursor-[var(--cds-cursor-interactive)]")}
+    >
+      {body}
+      <Icon glyph={CHEVRON} size="sm" className="shrink-0 self-center !text-muted" />
+    </button>
+  );
+}
+
 /** Task icon, shared by the Plan tile and the live step card. */
 export const TASK_ICON = TASK;
 
@@ -716,8 +771,44 @@ export function ArtifactTile({ icon, title, meta, onOpen }: { icon: string; titl
   );
 }
 
-function ResultCard({ view }: { view: ChatTaskView }) {
+/** "7 claims · 2 flags · 1 file outside the brief": what the review holds, in one line. */
+function acceptanceMeta(view: ChatTaskView) {
+  const acc = view.acceptance!;
+  const n = acc.claims.length;
+  return [
+    `${n} ${n === 1 ? "claim" : "claims"}`,
+    acc.counts.verified === n && "all proven",
+    acc.flags.length > 0 && `${acc.flags.length} ${acc.flags.length === 1 ? "flag" : "flags"}`,
+    acc.outsideBrief > 0 && `${acc.outsideBrief} ${acc.outsideBrief === 1 ? "file" : "files"} outside the brief`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/**
+ * A level 2–3 result in the feed: the agent's words stay above, the proof opens beside the chat. An older round
+ * keeps its tile, marked as sent back; every tile opens the review as it stands now.
+ */
+function AcceptanceTile({ view, iteration }: { view: ChatTaskView; iteration?: number }) {
   const { openReview } = useContext(ChatTaskContext);
+  const acc = view.acceptance!;
+  const current = !iteration || iteration === acc.iteration;
+  const meta =
+    !current || view.sentBack
+      ? `Round ${iteration ?? acc.iteration} · sent back`
+      : view.accepted
+        ? `${acceptanceMeta(view)} · accepted`
+        : acceptanceMeta(view);
+  return (
+    <div className="not-prose pt-xs">
+      <ArtifactTile icon={FILES} title="Review the result" meta={meta} onOpen={() => openReview?.("result")} />
+    </div>
+  );
+}
+
+function ResultCard({ view, iteration }: { view: ChatTaskView; iteration?: number }) {
+  const { openReview } = useContext(ChatTaskContext);
+  if (view.acceptance) return <AcceptanceTile view={view} iteration={iteration} />;
   const claims = view.task.result?.claims ?? [];
   const review = view.task.result?.review;
   return (
@@ -737,14 +828,14 @@ function ResultCard({ view }: { view: ChatTaskView }) {
               {review && openReview ? (
                 <button
                   type="button"
-                  onClick={() => openReview(c.show)}
+                  onClick={() => openReview(c.show ?? "changes")}
                   className="w-fit rounded-sm text-left text-footnote text-muted underline decoration-alpha-4 underline-offset-2 outline-none hover:text-primary focus-visible:shadow-focus"
                 >
-                  <Inline text={c.evidence} />
+                  <Inline text={c.source?.label ?? ""} />
                 </button>
               ) : (
                 <span className="text-footnote text-muted">
-                  <Inline text={c.evidence} />
+                  <Inline text={c.source?.label ?? ""} />
                 </span>
               )}
             </div>
@@ -1141,12 +1232,230 @@ function ResultDecision({ view, nav }: { view: ChatTaskView; nav: DockNav }) {
   );
 }
 
+type AcceptanceChoice = "accept" | "send-back" | "deeper" | "other";
+
+/**
+ * The options of accepting a level 2–3 result, shared by the dock and the Up next card. Accept is off while a
+ * locked criterion is broken; "Look deeper first" shows only when something high-risk is only claimed or the
+ * system flagged something. "(Recommended)" follows the state: Accept when all is proven and nothing is flagged,
+ * Look deeper when there is something to look at, Send back when Accept is blocked.
+ */
+function acceptanceChoices(view: ChatTaskView, reveal: (t: RevealTarget) => void) {
+  const acc = view.acceptance!;
+  const choices: { id: AcceptanceChoice; title: string; description: ReactNode }[] = [
+    {
+      id: "accept",
+      title: "Accept",
+      description: acc.broken ? (
+        <span className="flex flex-wrap items-baseline gap-x-1">
+          Blocked:
+          <TextLink onClick={() => reveal(`criterion:${acc.broken!.id}`)}>
+            <Inline text={acc.blockReason ?? ""} />
+          </TextLink>
+        </span>
+      ) : (
+        "Marks the task done · plan and log become the PR description"
+      ),
+    },
+    {
+      id: "send-back",
+      title: "Send back with the facts",
+      description: acc.sendBackFacts ? `I'll fix: ${acc.sendBackFacts}` : "Type what to fix below; I'll redo it",
+    },
+    ...(acc.deeper
+      ? [{ id: "deeper" as const, title: "Look deeper first", description: "Opens the review at the first unproven claim" }]
+      : []),
+  ];
+  return choices;
+}
+
+/** The claims by status in one quiet line: "4 proven · 2 only claimed · 1 contradicted"; the flags are said elsewhere. */
+function acceptanceCounts(view: ChatTaskView) {
+  const acc = view.acceptance!;
+  return [
+    acc.counts.verified && `${acc.counts.verified} proven`,
+    acc.counts.claimed && `${acc.counts.claimed} only claimed`,
+    acc.counts.contradicted && `${acc.counts.contradicted} contradicted`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** What the picked option does. "Look deeper first" opens the review and leaves the decision open. */
+function submitAcceptance(view: ChatTaskView, choice: AcceptanceChoice, words: string, reveal: (t: RevealTarget) => void) {
+  const acc = view.acceptance!;
+  if (choice === "accept" && acc.canAccept) accept(view.id);
+  if (choice === "send-back") sendBack(view.id, acc.sendBackFacts, words.trim());
+  if (choice === "other") sendBack(view.id, "", words.trim());
+  if (choice === "deeper") {
+    const first = acc.firstUnverified;
+    reveal(first ? `claim:${first.id}` : `file:${acc.flags[0].ref}`);
+  }
+}
+
+const canSubmitAcceptance = (view: ChatTaskView, choice: AcceptanceChoice | null, words: string) =>
+  choice === "accept"
+    ? !!view.acceptance?.canAccept
+    : choice === "send-back"
+      ? !!view.acceptance?.sendBackFacts || !!words.trim()
+      : choice === "other"
+        ? !!words.trim()
+        : choice === "deeper";
+
+/**
+ * Accepting a level 2–3 result, in the dock after the agent's questions. Nothing is picked up front. Accept has
+ * no number key unless it is the recommended option: one key must not accept a result with something flagged.
+ */
+function AcceptanceDecision({ view, nav }: { view: ChatTaskView; nav: DockNav }) {
+  const { openReview } = useContext(ChatTaskContext);
+  const acc = view.acceptance!;
+  const [picked, setPicked] = useState<AcceptanceChoice | null>(null);
+  const [words, setWords] = useState("");
+  const [other, setOther] = useState("");
+  const otherRef = useRef<HTMLInputElement>(null);
+  const reveal = (t: RevealTarget) => (openReview?.("result"), revealInReview(t));
+  const choices = acceptanceChoices(view, reveal);
+  const ids: AcceptanceChoice[] = [...choices.map((c) => c.id), "other"];
+  const acceptKey = acc.recommended === "accept";
+  const pick = (i: number) => {
+    const id = ids[i];
+    if (!id || (id === "accept" && (!acceptKey || !acc.canAccept))) return;
+    setPicked(id);
+    if (id === "other") window.setTimeout(() => otherRef.current?.focus());
+  };
+  const text = picked === "other" ? other : words;
+  const submit = () => {
+    if (!picked || !canSubmitAcceptance(view, picked, text)) return;
+    submitAcceptance(view, picked, text, reveal);
+    if (picked === "deeper") setPicked(null);
+  };
+  const title = "Accept the result?";
+  return (
+    <DockFrame
+      nav={nav}
+      title={title}
+      count={ids.length}
+      pick={pick}
+      canSubmit={!!picked && canSubmitAcceptance(view, picked, text)}
+      onSubmit={submit}
+      lead={
+        <p className="flex flex-wrap items-baseline gap-x-1 text-footnote text-muted">
+          <span>{acceptanceCounts(view)} ·</span>
+          <TextLink onClick={() => openReview?.("result")}>Open the review</TextLink>
+        </p>
+      }
+    >
+      <OptionList label={title}>
+        {choices.map((c, i) => (
+          <OptionRow
+            key={c.id}
+            n={c.id === "accept" && !acceptKey ? undefined : i + 1}
+            title={c.title}
+            recommended={acc.recommended === c.id}
+            selected={picked === c.id}
+            disabled={c.id === "accept" && !acc.canAccept}
+            onSelect={() => setPicked(c.id)}
+            description={c.description}
+          >
+            {c.id === "send-back" && picked === "send-back" && (
+              <RowField
+                value={words}
+                onChange={setWords}
+                onEnter={submit}
+                placeholder={acc.sendBackFacts ? "Anything else to fix? (optional)" : "Type what to fix"}
+                label="What else to fix"
+              />
+            )}
+          </OptionRow>
+        ))}
+        <OptionRow n={ids.length} title="Other" selected={picked === "other"} onSelect={() => pick(ids.length - 1)}>
+          <RowField
+            ref={otherRef}
+            value={other}
+            onChange={setOther}
+            onFocus={() => setPicked("other")}
+            onEnter={submit}
+            placeholder="Type your own answer here"
+            label="Your answer"
+          />
+        </OptionRow>
+      </OptionList>
+    </DockFrame>
+  );
+}
+
+/**
+ * The same decision in the Up next pane, under "You approve the result": the flags as lines, the claims by
+ * status, the same options without number keys, and "Details", which opens the task's chat at the review.
+ */
+export function AcceptanceCard({ view, onDetails, onDone }: { view: ChatTaskView; onDetails: () => void; onDone?: () => void }) {
+  const acc = view.acceptance!;
+  const [picked, setPicked] = useState<AcceptanceChoice | null>(null);
+  const [words, setWords] = useState("");
+  const reveal = () => onDetails();
+  const choices = acceptanceChoices(view, reveal);
+  const submit = () => {
+    if (!picked || !canSubmitAcceptance(view, picked, words)) return;
+    if (picked === "deeper") return onDetails();
+    submitAcceptance(view, picked, words, reveal);
+    onDone?.();
+  };
+  return (
+    <DecisionCard
+      aside={<TextLink onClick={onDetails}>Details</TextLink>}
+      actions={
+        <Button size="sm" variant="primary" disabled={!picked || !canSubmitAcceptance(view, picked, words)} onClick={submit}>
+          Submit
+        </Button>
+      }
+    >
+      <div className="flex flex-col gap-xs">
+        {acc.flags.length > 0 && (
+          <ul className="flex flex-col gap-xs">
+            {acc.flags.map((f) => (
+              <li key={f.id}>
+                <FlagRow flag={f} />
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="text-footnote text-muted">{acceptanceCounts(view)}</p>
+      </div>
+      <OptionList label="Accept the result?">
+        {[...choices, { id: "other" as const, title: "Other", description: undefined }].map((c) => (
+          <OptionRow
+            key={c.id}
+            title={c.title}
+            recommended={acc.recommended === c.id}
+            selected={picked === c.id}
+            disabled={c.id === "accept" && !acc.canAccept}
+            onSelect={() => setPicked(c.id)}
+            description={c.description}
+          >
+            {((c.id === "send-back" && picked === "send-back") || c.id === "other") && (
+              <RowField
+                value={picked === c.id ? words : ""}
+                onChange={setWords}
+                onFocus={() => picked !== c.id && (setPicked(c.id), setWords(""))}
+                onEnter={submit}
+                placeholder={c.id === "other" ? "Type your own answer here" : acc.sendBackFacts ? "Anything else to fix? (optional)" : "Type what to fix"}
+                label={c.id === "other" ? "Your answer" : "What else to fix"}
+              />
+            )}
+          </OptionRow>
+        ))}
+      </OptionList>
+    </DecisionCard>
+  );
+}
+
 type Decision =
   | { key: string; kind: "escalation" }
   | { key: string; kind: "assumption"; a: Assumption }
   | { key: string; kind: "gate" }
   | { key: string; kind: "question"; q: Question }
-  | { key: string; kind: "result" };
+  | { key: string; kind: "result" }
+  | { key: string; kind: "acceptance" };
 
 /**
  * Every decision of the chat, docked over the composer one at a time, drawn as Claude Code's question panel:
@@ -1170,6 +1479,8 @@ export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: 
     ...(view?.atGate ? [{ key: "gate", kind: "gate" as const }] : []),
     ...open.map((q) => ({ key: `q:${q.id}`, kind: "question" as const, q })),
     ...(view?.resultPending ? [{ key: "result", kind: "result" as const }] : []),
+    // A level 2–3 result comes last, after the agent's questions, like a small task's result.
+    ...(view?.acceptancePending ? [{ key: `acceptance:${view.acceptance?.iteration}`, kind: "acceptance" as const }] : []),
   ];
   // Every decision the dock has shown in this chat: those gone from the queue are done, and the counter keeps them.
   const [seen, setSeen] = useState<{ chat: string; keys: string[] }>({ chat: chatId, keys: [] });
@@ -1202,6 +1513,7 @@ export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: 
       <GateDecision key={item.key} view={view} nav={nav} setTab={setTab} toAssumption={() => setIndex(items.findIndex((d) => d.kind === "assumption"))} />
     );
   if (item.kind === "result" && view) return <ResultDecision key={item.key} view={view} nav={nav} />;
+  if (item.kind === "acceptance" && view) return <AcceptanceDecision key={item.key} view={view} nav={nav} />;
   if (item.kind === "question") {
     // Keyed by task and question: question ids repeat across tasks ("q1").
     const key = answerKey(task.id, item.q.id);
@@ -1227,9 +1539,10 @@ export function DecisionDock({ chatId, view, setTab }: { chatId: string; view?: 
 export function TaskBlock({
   block,
 }: {
-  block: Extract<Block, { type: "brief-card" | "result-card" | "escalation-card" | "edit-note" | "question" }>;
+  block: Extract<Block, { type: "brief-card" | "result-card" | "escalation-card" | "edit-note" | "task-note" | "question" }>;
 }) {
   const { chatId, view, setTab } = useContext(ChatTaskContext);
+  if (block.type === "task-note") return view ? <TaskNote view={view} text={block.text} demo={block.demo} /> : null;
   if (block.type === "question") return chatId ? <QuestionLine chatId={chatId} questionId={block.id} /> : null;
   if (block.type === "edit-note")
     return (
@@ -1245,6 +1558,31 @@ export function TaskBlock({
     );
   if (!view) return null;
   if (block.type === "brief-card") return <BriefCard view={view} setTab={setTab} />;
-  if (block.type === "result-card") return <ResultCard view={view} />;
+  if (block.type === "result-card") return <ResultCard view={view} iteration={block.iteration} />;
   return <EscalationCard view={view} setTab={setTab} />;
+}
+
+/**
+ * A quiet line about the task in the feed: "Sent back: …", "Accepted · PR description ready". The demo line carries
+ * only a button that skips to the agent's next round, while the task is still being fixed.
+ */
+function TaskNote({ view, text, demo }: { view: ChatTaskView; text: string; demo?: "next-iteration" }) {
+  if (demo)
+    return view.sentBack ? (
+      <p className="not-prose">
+        <Button size="xs" onClick={() => nextIteration(view.id)}>
+          Show the next round (demo)
+        </Button>
+      </p>
+    ) : null;
+  return (
+    <p className={cx("not-prose flex items-start gap-sm text-body text-secondary", CODE)}>
+      <span className="mt-[5px] flex">
+        <TaskDot state="done" />
+      </span>
+      <span>
+        <Inline text={text} />
+      </span>
+    </p>
+  );
 }

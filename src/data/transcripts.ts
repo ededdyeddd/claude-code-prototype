@@ -12,11 +12,13 @@ export type Block =
   /** Card listing changed files; rows beyond `visible` hide behind "Show N more". */
   | { type: "files"; title: string; diff: Diff; files: { name: string; diff: Diff }[]; visible?: number }
   /** Task chats (chatTasks.ts): pointer to the brief, result card, escalation offer; their content comes from the task. */
-  | { type: "brief-card" | "result-card" | "escalation-card" }
+  | { type: "brief-card" | "result-card" | "escalation-card"; /** result-card of a level 2–3 task: the acceptance round it came with. */ iteration?: number }
   /** A question of the chat's task (Inbox model), answered right in the chat; `id` is the question id in its plan. */
   | { type: "question"; id: string }
   /** One-line note that an edit changed the brief or plan ("Removed Apple Pay, the plan is one task shorter"). */
-  | { type: "edit-note"; text: string };
+  | { type: "edit-note"; text: string }
+  /** A quiet line about what happened to the task ("Sent back: …", "Accepted · …"); `demo` adds the demo's skip-ahead button. */
+  | { type: "task-note"; text: string; demo?: "next-iteration" };
 
 export type Diff = { added: number; removed: number };
 
