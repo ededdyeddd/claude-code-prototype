@@ -15,25 +15,43 @@ function chipStatus(task: Task) {
   return [`${p.done}/${p.total}`, p.yourTurn && `by ${p.yourTurn}`].filter(Boolean).join(" · ");
 }
 import { usePersistentWidth } from "../data/usePersistentWidth";
-import { ReviewPane } from "./ReviewPane";
+import { AcceptanceTab, ReviewPane } from "./ReviewPane";
+
+/** Tabs of the task pane: the plan and brief, and at acceptance the result and its diff (last: proof comes first). */
+type PaneTab = "plan" | "brief" | "result" | "diff";
+const PANE_TAB_LABEL: Record<PaneTab, string> = { plan: "Plan", brief: "Brief", result: "Result", diff: "Diff" };
 import { SIDE_PANE, SidePane } from "./SidePane";
 import { BriefView, ChatTaskContext, PlanView } from "./ChatTask";
 import { Tabs } from "../ui";
-import { seeTab, type TaskTab } from "../data/chatTaskStore";
+import { enterAcceptance, seeTab, type TaskTab } from "../data/chatTaskStore";
 import { useEffect, useMemo, useState } from "react";
 import { Coachmarks, type Coachmark } from "./Coachmarks";
 import { markPlanHintSeen, planHintSeen } from "../data/onboarding";
 import { ONBOARDING_DELAY, useDelay } from "../data/useDelay";
 
 export function ChatShell({ name, transcript, chat }: { name: string; transcript?: Turn[]; chat?: Session }) {
-  // One pane on the right of the chat, like the task pane in the Inbox: the task's brief or plan (?panel=brief|plan),
-  // or a result's review (?review=changes|screens|checks). The chat stays where it is; decisions stay in its dock.
+  // One pane on the right of the chat, like the task pane in the Inbox: the task's plan and brief (?panel=plan|brief),
+  // and at acceptance its result and diff as two more tabs (?panel=result|diff); a small task's result has its own
+  // review (?review=changes|screens|checks). The chat stays where it is; decisions stay in its dock.
   const [params, setParams] = useSearchParams();
   const view = useChatTask(chat?.id);
   const reviewTab = params.get("review") as ReviewTab | null;
-  const review = view?.task.result?.review && reviewTab ? reviewTab : null;
-  const panelParam = params.get("panel") as TaskTab | null;
-  const panel = !review && view && panelParam && panelParam !== "chat" && view.tabs.includes(panelParam) ? panelParam : null;
+  // Level 1 reviews a result as a diff, screenshots and checks, in a pane of its own.
+  const review =
+    reviewTab && !view?.acceptance && view?.task.result?.review && ["changes", "screens", "checks"].includes(reviewTab) ? reviewTab : null;
+  // Demo: ?scene=acceptance jumps the task to its result waiting for acceptance.
+  const scene = params.get("scene");
+  const round = params.get("round");
+  useEffect(() => {
+    if (scene === "acceptance" && chat?.id) enterAcceptance(chat.id, round ?? undefined);
+  }, [scene, round, chat?.id]);
+  // Levels 2–3 at acceptance: Result and Diff are tabs of the task pane. Old links with ?review=result|diff land on them.
+  // The plan first, as always; the result and its diff after the brief, the diff last.
+  const paneTabs: PaneTab[] = view
+    ? [...(["plan", "brief"] as const).filter((t) => view.tabs.includes(t)), ...(view.acceptance ? (["result", "diff"] as const) : [])]
+    : [];
+  const panelParam = (params.get("panel") ?? (view?.acceptance ? reviewTab : null)) as PaneTab | null;
+  const panel = !review && view && panelParam && paneTabs.includes(panelParam) ? panelParam : null;
   const setPane = (key: "review" | "panel", value: string | null) =>
     setParams(
       (p) => {
@@ -46,14 +64,14 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
       { replace: true },
     );
   const setReview = (t: ReviewTab | null) => setPane("review", t);
-  const setPanel = (t: TaskTab | null) => {
-    if (t && t !== "chat" && view) seeTab(view.id, t);
+  const setPanel = (t: PaneTab | "chat" | null) => {
+    if ((t === "plan" || t === "brief") && view) seeTab(view.id, t);
     setPane("panel", t && t !== "chat" ? t : null);
   };
   // An open panel counts as seen, also when an edit lands while it is open.
-  const unseen = !!(panel && view?.changed.includes(panel));
+  const unseen = !!((panel === "plan" || panel === "brief") && view?.changed.includes(panel));
   useEffect(() => {
-    if (view && panel && unseen) seeTab(view.id, panel);
+    if (view && (panel === "plan" || panel === "brief") && unseen) seeTab(view.id, panel);
   }, [view, panel, unseen]);
   // First task chat with a "Plan" toggle: light it up once and say what is behind it.
   const hasToggle = !!view && view.tabs.length > 1;
@@ -126,7 +144,7 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
                         // One word at every level: the pane opens on the plan, the brief is a tab inside.
                         label: "Plan",
                         // A running task shows its progress right here, so it needs no opening; a gate asks in the dock instead.
-                        status: view.atGate ? undefined : chipStatus(view.live),
+                        status: view.atGate || view.acceptancePending ? undefined : chipStatus(view.live),
                         open: !!panel,
                         changed: view.changed.length > 0,
                         // Opens on the plan: it is what the task will do and what it costs; the brief is one tab away.
@@ -147,7 +165,9 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
     </div>
     {showPlanHint && <Coachmarks key={view?.id} steps={planHintSteps} onDone={endPlanHint} skipLabel="Got it" />}
     {panel && view && (
-      <ChatTaskContext.Provider value={{ chatId: view.id, view, setTab: (t) => setPanel(t) }}>
+      <ChatTaskContext.Provider
+        value={{ chatId: view.id, view, setTab: (t) => setPanel(t), openReview: (t) => (t === "result" || t === "diff" ? setPanel(t) : setReview(t)) }}
+      >
         {/* Beside 14px messages the task pane reads at the same size: its text-body maps to the prose size. */}
         <div className="contents [--cds-font-size-body:var(--cds-font-size-prose)] [--cds-leading-body:var(--cds-leading-prose)]">
           <SidePane
@@ -157,15 +177,18 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
             subheader={
               <div className="flex flex-col gap-md pt-xs">
                 <p className="text-body text-secondary">{view.task.summary}</p>
-                {view.tabs.includes("brief") && (
+                {paneTabs.length > 1 && (
                   <Tabs
-                    label="Plan and brief"
+                    label="Task"
                     value={panel}
                     onChange={(t) => setPanel(t)}
-                    items={(["plan", "brief"] as const).map((t) => ({
+                    items={paneTabs.map((t) => ({
                       value: t,
-                      label: t === "brief" ? "Brief" : "Plan",
-                      badge: view.changed.includes(t) && panel !== t ? <span aria-label="Changed" className="block size-[6px] rounded-full bg-muted" /> : undefined,
+                      label: PANE_TAB_LABEL[t],
+                      badge:
+                        (t === "plan" || t === "brief") && view.changed.includes(t) && panel !== t ? (
+                          <span aria-label="Changed" className="block size-[6px] rounded-full bg-muted" />
+                        ) : undefined,
                     }))}
                   />
                 )}
@@ -176,12 +199,20 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
             onResize={setPaneWidth}
             onClose={() => setPanel(null)}
           >
-            {panel === "brief" ? <BriefView view={view} /> : <PlanView view={view} />}
+            {(panel === "result" || panel === "diff") && view.acceptance ? (
+              <AcceptanceTab view={view} acc={view.acceptance} tab={panel} onTab={setPanel} />
+            ) : panel === "brief" ? (
+              <BriefView view={view} />
+            ) : (
+              <PlanView view={view} />
+            )}
           </SidePane>
         </div>
       </ChatTaskContext.Provider>
     )}
     {review && view && (
+      // Beside the chat the review reads at the chat's size, as the plan does.
+      <div className="contents [--cds-font-size-body:var(--cds-font-size-prose)] [--cds-leading-body:var(--cds-leading-prose)]">
       <ReviewPane
         view={view}
         tab={review}
@@ -191,6 +222,7 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
         maxWidth={paneMax}
         onResize={setPaneWidth}
       />
+      </div>
     )}
     </div>
   );

@@ -786,9 +786,9 @@ const DEV_PORT: Task = {
   ],
   result: {
     claims: [
-      { text: "`npm run dev` берёт порт из `PORT`, без него — 5173, как раньше", evidence: "`PORT=5180 npm run dev` → Local: http://localhost:5180/code", show: "changes" },
-      { text: "Два превью поднимаются рядом и не мешают друг другу", evidence: "5173 и 5180 открыты одновременно, обе страницы отвечают 200", show: "checks" },
-      { text: "`npm run original` не тронут и остаётся на 5174", evidence: "package.json не менялся", show: "changes" },
+      { id: "port", text: "`npm run dev` берёт порт из `PORT`, без него — 5173, как раньше", status: "verified", source: { kind: "ci", label: "`PORT=5180 npm run dev` → Local: http://localhost:5180/code", ref: "dev" }, show: "changes" },
+      { id: "two", text: "Два превью поднимаются рядом и не мешают друг другу", status: "verified", source: { kind: "ci", label: "5173 и 5180 открыты одновременно, обе страницы отвечают 200", ref: "preview" }, show: "checks" },
+      { id: "original", text: "`npm run original` не тронут и остаётся на 5174", status: "verified", source: { kind: "test-diff", label: "package.json не менялся", ref: "package.json" }, show: "changes" },
     ],
   },
   autoDecisions: [],

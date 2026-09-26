@@ -4,7 +4,7 @@
  * The tasks here use the same model as the Inbox (task.ts) and are listed there too.
  */
 import type { Turn } from "./transcripts";
-import type { Level, Task } from "./task";
+import type { Acceptance, Level, Task } from "./task";
 import { YANGO_TASKS, YANGO_TASK_TRANSCRIPTS } from "./yangoTasks";
 
 /* ---------------------------------------------------------------- Envelope */
@@ -54,10 +54,463 @@ export function envelopeScope(e: Envelope) {
 /* ------------------------------------------------------------------- Mocks */
 
 const READ = "";
-const RUN = "";
+/** Status-row icon of a command run, for turns the store adds. */
+export const RUN = "";
 const SEARCH = "";
 
 const RULES = { self: "subtasks and their order within a stage", ask: "a new stage or approval step, scope, anything over +$2" };
+
+/** First message of the S3 scenario; the S2 demo prefills it so sending leads to that chat. */
+export const ONE_CLICK_PROMPT =
+  "Сделай оплату в один клик: покупатель, который уже платил, оплачивает следующий заказ сохранённой картой.";
+
+/** The chat of "Оплата в один клик" up to the brief and plan (S3). */
+const ONE_CLICK_START: Turn[] = [
+  { role: "user", text: ONE_CLICK_PROMPT },
+  {
+    role: "assistant",
+    thought: "Ran 4 steps",
+    time: "1 minute ago",
+    steps: [
+      { icon: READ, label: "Read checkout/", detail: "PaymentForm.tsx, useCheckout.ts" },
+      { icon: READ, label: "Read server/payments/stripe.ts" },
+      { icon: SEARCH, label: "Found 23 similar tasks", detail: "payments · 4 modules" },
+    ],
+    blocks: [
+      { type: "p", text: "Stripe уже подключён, карты можно хранить в Stripe Customer — своих таблиц не понадобится." },
+      { type: "brief-card" },
+    ],
+  },
+];
+
+/* ------------------------------------------ Acceptance scene (?scene=acceptance) */
+
+const ONE_CLICK_FILES: Acceptance["files"] = [
+  {
+    name: "checkout/OneClickPay.tsx",
+    added: 88,
+    removed: 0,
+    lines: [
+      "@@ -0,0 +1,88 @@",
+      "+export function OneClickPay({ order, card }: Props) {",
+      "+  const { pay, state } = useCheckout(order);",
+      "+  if (!card) return <PaymentForm order={order} />;",
+      "+  return (",
+      "+    <Button onClick={() => pay({ paymentMethod: card.id, offSession: true })}>",
+      "+      Оплатить картой •• {card.last4}",
+      "+    </Button>",
+      "+  );",
+      "+}",
+    ],
+  },
+  {
+    name: "checkout/SaveCardCheckbox.tsx",
+    added: 34,
+    removed: 0,
+    lines: [
+      "@@ -0,0 +1,34 @@",
+      "+export function SaveCardCheckbox({ checked, onChange }: Props) {",
+      "+  // Off by default: the card is saved only with consent.",
+      "+  return <Checkbox checked={checked} onChange={onChange} label=\"Запомнить карту\" />;",
+      "+}",
+    ],
+  },
+  {
+    name: "checkout/SavedCards.tsx",
+    added: 52,
+    removed: 0,
+    lines: [
+      "@@ -0,0 +1,52 @@",
+      "+export function SavedCards({ customer }: Props) {",
+      "+  const cards = useSavedCards(customer);",
+      "+  return cards.map((c) => (",
+      "+    <CardRow key={c.id} card={c} onDelete={() => detachCard(c.id)} />",
+      "+  ));",
+      "+}",
+    ],
+  },
+  {
+    name: "server/payments/customer.ts",
+    added: 61,
+    removed: 0,
+    lines: [
+      "@@ -0,0 +1,61 @@",
+      "+export async function saveCard(userId: string, paymentMethod: string) {",
+      "+  const customer = await ensureCustomer(userId);",
+      "+  await stripe.paymentMethods.attach(paymentMethod, { customer: customer.id });",
+      "+  // We keep the token and the last 4 digits, nothing else.",
+      "+  return { customerId: customer.id, paymentMethod, last4: pm.card.last4 };",
+      "+}",
+    ],
+  },
+  {
+    name: "server/payments/stripe.ts",
+    added: 14,
+    removed: 3,
+    lines: [
+      "@@ -41,9 +41,20 @@ export async function createPaymentIntent(order: Order) {",
+      "   return stripe.paymentIntents.create({",
+      "     amount: order.total,",
+      "     currency: order.currency,",
+      "-    confirm: false,",
+      "+    customer: order.customerId,",
+      "+    payment_method: order.paymentMethod,",
+      "+    off_session: !!order.paymentMethod,",
+      "+    confirm: !!order.paymentMethod,",
+      "   });",
+    ],
+  },
+];
+
+const SPEC_SKIPPED: Acceptance["files"][number] = {
+  name: "checkout/one-click.spec.ts",
+  added: 96,
+  removed: 0,
+  lines: [
+    "@@ -0,0 +1,96 @@",
+    "+describe(\"one-click pay\", () => {",
+    "+  it(\"pays a repeat order with the saved card\", async () => { … });",
+    "+  it(\"asks for 3-D Secure when the bank wants it\", async () => { … });",
+    "+  it(\"shows the bank's decline and offers another card\", async () => { … });",
+    "+  it.skip(\"declines without consent\", async () => {",
+    "+    await payWith(card, { saveCard: false });",
+    "+    expect(await savedCards(customer)).toHaveLength(0);",
+    "+  });",
+    "+});",
+  ],
+};
+
+const SPEC_FIXED: Acceptance["files"][number] = {
+  name: "checkout/one-click.spec.ts",
+  added: 97,
+  removed: 0,
+  lines: [
+    "@@ -0,0 +1,97 @@",
+    "+describe(\"one-click pay\", () => {",
+    "+  it(\"pays a repeat order with the saved card\", async () => { … });",
+    "+  it(\"asks for 3-D Secure when the bank wants it\", async () => { … });",
+    "+  it(\"shows the bank's decline and offers another card\", async () => { … });",
+    "+  it(\"declines without consent\", async () => {",
+    "+    await payWith(card, { saveCard: false });",
+    "+    expect(await savedCards(customer)).toHaveLength(0);",
+    "+  });",
+    "+  it(\"deletes a saved card from the profile\", async () => { … });",
+    "+});",
+  ],
+};
+
+const ORDERS_SCHEMA: Acceptance["files"][number] = {
+  name: "server/orders/schema.ts",
+  added: 2,
+  removed: 0,
+  lines: [
+    "@@ -18,6 +18,8 @@ export const orders = table(\"orders\", {",
+    "   customerId: text(\"customer_id\"),",
+    "   total: integer(\"total\"),",
+    "+  // Card of a one-click payment, to show it in the order",
+    "+  savedCardId: text(\"saved_card_id\"),",
+    "   createdAt: timestamp(\"created_at\"),",
+  ],
+};
+
+const ONE_CLICK_COMMON = {
+  unverified: [
+    "Письмо о заказе, оплаченном сохранённой картой: тестов на письма нет",
+    "Три и больше сохранённых карт у одного покупателя: в тестовых данных максимум две",
+    "Настоящие банки вне тестового режима Stripe",
+  ],
+  manualChecks: [
+    { id: "pay", text: "На staging оплати повторный заказ картой 4242: списание одним нажатием" },
+    { id: "no-save", text: "Сними галочку «Запомнить карту» и оплати: в профиле карты нет" },
+    { id: "delete", text: "Удали карту в профиле: в чекауте её больше нет" },
+  ],
+  why: [
+    "Выбрал Stripe Customer, а не свою таблицу карт, потому что так не нужна миграция, а данные карт остаются у Stripe",
+    "Выбрал последнюю использованную карту по умолчанию, потому что 71% повторных заказов оплачены ею же",
+    "Выбрал переиспользовать `handleNextAction`, потому что 3-D Secure там уже обработан и покрыт тестами",
+    "Выбрал `off_session` для повторной оплаты, потому что CVC Stripe уже проверил при первой",
+  ],
+};
+
+const CI_412 = [
+  "$ npm run test:checkout",
+  "✓ checkout/one-click.spec.ts › asks for 3-D Secure when the bank wants it (4.1s)",
+  "  PaymentIntent pi_3Q… requires_action → succeeded",
+  "Tests: 41 passed, 1 skipped, 42 total",
+];
+
+/** Checkout tests the task did not touch: they ran and passed in every round. */
+const OTHER_SPECS = [
+  { file: "checkout/payment-form.spec.ts", passed: 18 },
+  { file: "checkout/use-checkout.spec.ts", passed: 12 },
+  { file: "server/payments/stripe.spec.ts", passed: 6 },
+];
+
+const ONE_CLICK_ITERATIONS: Acceptance[] = [
+  {
+    iteration: 1,
+    message: "Готово, все тесты чекаута проходят. Повторный заказ оплачивается сохранённой картой в одно нажатие, 3-D Secure и отказ банка покрыты тестами.",
+    claims: [
+      { id: "consent", text: "Карта сохраняется, только если отмечена галочка «Запомнить карту»", status: "claimed", stepId: "save-card", criterionId: "no-consent" },
+      {
+        id: "token",
+        text: "У нас хранятся только токен Stripe и последние 4 цифры",
+        status: "verified",
+        stepId: "save-card",
+        source: {
+          kind: "reviewer-agent",
+          label: "Reviewer agent · read the diff",
+          ref: "security-reviewer",
+          detail: ["Проверил `server/payments/customer.ts` и схему: полей с номером карты и CVC нет.", "В базу пишутся `customerId`, `paymentMethod` и `last4`."],
+        },
+      },
+      {
+        id: "one-click",
+        text: "Повторный заказ оплачивается одним нажатием, без ввода карты",
+        status: "verified",
+        stepId: "pick-card",
+        criterionId: "one-click",
+        source: { kind: "screenshot", label: "Screenshots · 375 and 1440", ref: "shots-1" },
+      },
+      { id: "delete", text: "Сохранённую карту можно удалить в профиле", status: "claimed", stepId: "pick-card", criterionId: "delete" },
+      {
+        id: "3ds",
+        text: "3-D Secure проходит в тестовом режиме Stripe",
+        status: "verified",
+        stepId: "3ds",
+        criterionId: "3ds",
+        source: { kind: "ci", label: "CI · run #412", ref: "#412", detail: CI_412 },
+      },
+      {
+        id: "decline",
+        text: "Отказ банка — понятный текст и выбор другой карты",
+        status: "verified",
+        stepId: "3ds",
+        criterionId: "decline",
+        source: {
+          kind: "test-diff",
+          label: "Test diff · 2 new tests",
+          ref: "checkout/one-click.spec.ts",
+          detail: [
+            "@@ checkout/one-click.spec.ts @@",
+            "+  it(\"shows the bank's decline and offers another card\", async () => {",
+            "+    await payWith(declinedCard);",
+            "+    expect(screen.getByText(\"Банк отклонил оплату\")).toBeVisible();",
+            "+  });",
+          ],
+        },
+      },
+      {
+        id: "tests",
+        text: "Все тесты чекаута проходят",
+        status: "contradicted",
+        stepId: "e2e",
+        criterionId: "tests",
+        source: {
+          kind: "test-diff",
+          label: "test skipped",
+          ref: "checkout/one-click.spec.ts",
+          detail: ["@@ checkout/one-click.spec.ts @@", "+  it.skip(\"declines without consent\", async () => {", "+    await payWith(card, { saveCard: false });", "+    expect(await savedCards(customer)).toHaveLength(0);", "+  });"],
+        },
+      },
+    ],
+    flags: [
+      {
+        id: "skip",
+        kind: "skipped-test",
+        text: "declines without consent",
+        ref: "checkout/one-click.spec.ts",
+        criterionId: "tests",
+      },
+      { id: "orders", kind: "file-outside-brief", ref: "server/orders/schema.ts" },
+    ],
+    tests: {
+      passed: 41,
+      added: 6,
+      skippedOrDeleted: [{ name: "declines without consent", file: "checkout/one-click.spec.ts", kind: "skipped" }],
+      ci: { kind: "ci", label: "CI · run #412", ref: "#412", detail: CI_412 },
+      byFile: [{ file: "checkout/one-click.spec.ts", passed: 5, skipped: 1, added: 6 }, ...OTHER_SPECS],
+    },
+    ...ONE_CLICK_COMMON,
+    files: [...ONE_CLICK_FILES, SPEC_SKIPPED, ORDERS_SCHEMA],
+  },
+  {
+    iteration: 2,
+    changedSince: { files: ["checkout/one-click.spec.ts", "server/orders/schema.ts", "checkout/OneClickPay.tsx"], claims: ["consent", "delete", "tests"] },
+    message: "Вернул тест про отказ без согласия и починил его. Правку `server/orders/schema.ts` откатил: карта заказа теперь в метаданных платежа Stripe.",
+    claims: [
+      {
+        id: "consent",
+        text: "Карта сохраняется, только если отмечена галочка «Запомнить карту»",
+        status: "verified",
+        stepId: "save-card",
+        criterionId: "no-consent",
+        source: {
+          kind: "test-diff",
+          label: "Test diff · declines without consent",
+          ref: "checkout/one-click.spec.ts",
+          detail: ["@@ checkout/one-click.spec.ts @@", "-  it.skip(\"declines without consent\", async () => {", "+  it(\"declines without consent\", async () => {", "     await payWith(card, { saveCard: false });", "     expect(await savedCards(customer)).toHaveLength(0);"],
+        },
+      },
+      {
+        id: "token",
+        text: "У нас хранятся только токен Stripe и последние 4 цифры",
+        status: "verified",
+        stepId: "save-card",
+        source: {
+          kind: "reviewer-agent",
+          label: "Reviewer agent · read the diff",
+          ref: "security-reviewer",
+          detail: ["Проверил `server/payments/customer.ts` и метаданные платежа: номера карты и CVC нет.", "Схема заказов не менялась."],
+        },
+      },
+      {
+        id: "one-click",
+        text: "Повторный заказ оплачивается одним нажатием, без ввода карты",
+        status: "verified",
+        stepId: "pick-card",
+        criterionId: "one-click",
+        source: { kind: "screenshot", label: "Screenshots · 375 and 1440", ref: "shots-2" },
+      },
+      {
+        id: "delete",
+        text: "Сохранённую карту можно удалить в профиле",
+        status: "verified",
+        stepId: "pick-card",
+        criterionId: "delete",
+        source: {
+          kind: "test-diff",
+          label: "Test diff · deletes a saved card",
+          ref: "checkout/one-click.spec.ts",
+          detail: ["@@ checkout/one-click.spec.ts @@", "+  it(\"deletes a saved card from the profile\", async () => {", "+    await deleteCard(card);", "+    expect(await savedCards(customer)).toHaveLength(0);", "+  });"],
+        },
+      },
+      {
+        id: "3ds",
+        text: "3-D Secure проходит в тестовом режиме Stripe",
+        status: "verified",
+        stepId: "3ds",
+        criterionId: "3ds",
+        source: { kind: "ci", label: "CI · run #418", ref: "#418", detail: CI_412.map((l) => l.replace("41 passed, 1 skipped, 42 total", "43 passed, 0 skipped, 43 total")) },
+      },
+      {
+        id: "decline",
+        text: "Отказ банка — понятный текст и выбор другой карты",
+        status: "verified",
+        stepId: "3ds",
+        criterionId: "decline",
+        source: { kind: "ci", label: "CI · run #418", ref: "#418", detail: ["$ npm run test:checkout", "✓ checkout/one-click.spec.ts › shows the bank's decline and offers another card (2.3s)"] },
+      },
+      {
+        id: "tests",
+        text: "Все тесты чекаута проходят",
+        status: "verified",
+        stepId: "e2e",
+        criterionId: "tests",
+        source: { kind: "ci", label: "CI · run #418 · 0 skipped", ref: "#418", detail: ["$ npm run test:checkout", "Tests: 43 passed, 0 skipped, 43 total", "Skipped or deleted since main: none"] },
+      },
+    ],
+    flags: [],
+    tests: {
+      passed: 43,
+      added: 7,
+      skippedOrDeleted: [],
+      ci: { kind: "ci", label: "CI · run #418", ref: "#418", detail: ["$ npm run test:checkout", "Tests: 43 passed, 0 skipped, 43 total", "Skipped or deleted since main: none"] },
+      byFile: [{ file: "checkout/one-click.spec.ts", passed: 7, added: 7 }, ...OTHER_SPECS],
+    },
+    ...ONE_CLICK_COMMON,
+    files: [
+      {
+        ...ONE_CLICK_FILES[0],
+        added: 91,
+        lines: [
+          ...ONE_CLICK_FILES[0].lines.slice(0, 3),
+          "+  // The card goes into the payment's Stripe metadata, not the orders table.",
+          "+  const metadata = { savedCard: card?.id };",
+          ...ONE_CLICK_FILES[0].lines.slice(3),
+        ],
+      },
+      ...ONE_CLICK_FILES.slice(1),
+      SPEC_FIXED,
+    ],
+  },
+];
+
+/**
+ * Demo: a first round with something to look at but nothing broken. The tests are whole, yet a file outside the
+ * brief changed and two payment claims are only the agent's word: Accept is open, "Look deeper first" is recommended.
+ */
+const ONE_CLICK_RISKY: Acceptance = {
+  ...ONE_CLICK_ITERATIONS[0],
+  message: "Готово, все тесты чекаута проходят. Повторный заказ оплачивается сохранённой картой в одно нажатие, 3-D Secure и отказ банка покрыты тестами.",
+  claims: ONE_CLICK_ITERATIONS[0].claims.map((c) =>
+    c.id === "tests" ? { ...c, status: "verified" as const, source: { kind: "ci" as const, label: "CI · run #415 · 0 skipped", ref: "#415", detail: ["$ npm run test:checkout", "Tests: 42 passed, 0 skipped, 42 total"] } } : c,
+  ),
+  flags: ONE_CLICK_ITERATIONS[0].flags.filter((f) => f.kind === "file-outside-brief"),
+  tests: {
+    passed: 42,
+    added: 6,
+    skippedOrDeleted: [],
+    ci: { kind: "ci", label: "CI · run #415", ref: "#415", detail: ["$ npm run test:checkout", "Tests: 42 passed, 0 skipped, 42 total"] },
+    byFile: [{ file: "checkout/one-click.spec.ts", passed: 6, added: 6 }, ...OTHER_SPECS],
+  },
+  files: [...ONE_CLICK_FILES, { ...SPEC_SKIPPED, lines: SPEC_SKIPPED.lines.map((l) => l.replace("it.skip(", "it(")) }, ORDERS_SCHEMA],
+};
+
+/** What each step did by the time the result is ready (acceptance scene): facts, not forecasts. */
+const ONE_CLICK_STEPS: NonNullable<Task["result"]>["steps"] = {
+  "save-card": {
+    work: { agent: "payments-engineer", cost: "$2.10", time: "38m" },
+    result: {
+      summary: "Галочка «Запомнить карту» в форме оплаты, по умолчанию выключена. С ней платёж создаёт Stripe Customer и сохраняет карту.",
+      files: [
+        { name: "checkout/SaveCardCheckbox.tsx", added: 34, removed: 0 },
+        { name: "server/payments/customer.ts", added: 61, removed: 0 },
+      ],
+    },
+  },
+  "pick-card": {
+    work: { agent: "payments-engineer", cost: "$2.40", time: "44m" },
+    result: {
+      summary: "Кнопка «Оплатить картой •• 4242» в повторном заказе, список карт в профиле с удалением.",
+      files: [
+        { name: "checkout/OneClickPay.tsx", added: 88, removed: 0 },
+        { name: "checkout/SavedCards.tsx", added: 52, removed: 0 },
+        { name: "server/orders/schema.ts", added: 2, removed: 0 },
+      ],
+    },
+  },
+  "3ds": {
+    work: { agent: "payments-engineer", cost: "$1.30", time: "21m" },
+    result: {
+      summary: "Повторная оплата уходит в 3-D Secure через `handleNextAction` и возвращается в заказ. Отказ банка — текст и выбор другой карты.",
+      files: [{ name: "server/payments/stripe.ts", added: 14, removed: 3 }],
+    },
+  },
+  wallets: {
+    work: { agent: "payments-engineer", cost: "$1.10", time: "18m" },
+    result: { summary: "Кнопка Apple Pay и Google Pay рядом с сохранённой картой, если кошелёк есть в браузере.", decisions: ["Кнопку кошелька встроил в `OneClickPay.tsx`, отдельного файла не понадобилось"] },
+  },
+  e2e: {
+    work: { agent: "test-fixer", cost: "$0.90", time: "16m" },
+    result: { summary: "Прогнал путь в тестовом режиме Stripe: оплата в одно нажатие, 3-D Secure, отказ банка.", files: [{ name: "checkout/one-click.spec.ts", added: 96, removed: 0 }] },
+  },
+};
+
+/** The chat in the acceptance scene: the brief and plan, then the agent's result with its tile. */
+const ONE_CLICK_RESULT_TRANSCRIPT: Turn[] = [
+  ...ONE_CLICK_START,
+  {
+    role: "assistant",
+    thought: "Ran 5 steps",
+    time: "2 minutes ago",
+    steps: [
+      { icon: RUN, label: "Ran checkout tests", detail: "CI run #412" },
+      { icon: RUN, label: "Took screenshots", detail: "375 and 1440" },
+    ],
+    blocks: [{ type: "p", text: ONE_CLICK_ITERATIONS[0].message }, { type: "result-card", iteration: 1 }],
+  },
+];
 
 /** S3: a large task (payments) right after the first message: the gate on the brief and plan. */
 const ONE_CLICK: Task = {
@@ -209,6 +662,8 @@ const ONE_CLICK: Task = {
   ],
   rules: RULES,
   autoDecisions: [],
+  // The result arrives in the acceptance scene only (?scene=acceptance); until then the task waits at the gate.
+  result: { claims: [], iterations: ONE_CLICK_ITERATIONS, rounds: { risky: ONE_CLICK_RISKY }, steps: ONE_CLICK_STEPS, transcript: ONE_CLICK_RESULT_TRANSCRIPT },
   edits: [
     {
       id: "no-wallets",
@@ -527,29 +982,10 @@ export const CHAT_TASK_LIST: Task[] = [...YANGO_TASKS, ONE_CLICK, BIRTH_DATE, LO
 
 export const CHAT_TASKS: Record<string, Task> = Object.fromEntries(CHAT_TASK_LIST.map((t) => [t.id, t]));
 
-/** First message of the S3 scenario; the S2 demo prefills it so sending leads to that chat. */
-export const ONE_CLICK_PROMPT =
-  "Сделай оплату в один клик: покупатель, который уже платил, оплачивает следующий заказ сохранённой картой.";
 
 export const CHAT_TASK_TRANSCRIPTS: Record<string, Turn[]> = {
   ...YANGO_TASK_TRANSCRIPTS,
-  "one-click-pay": [
-    { role: "user", text: ONE_CLICK_PROMPT },
-    {
-      role: "assistant",
-      thought: "Ran 4 steps",
-      time: "1 minute ago",
-      steps: [
-        { icon: READ, label: "Read checkout/", detail: "PaymentForm.tsx, useCheckout.ts" },
-        { icon: READ, label: "Read server/payments/stripe.ts" },
-        { icon: SEARCH, label: "Found 23 similar tasks", detail: "payments · 4 modules" },
-      ],
-      blocks: [
-        { type: "p", text: "Stripe уже подключён, карты можно хранить в Stripe Customer — своих таблиц не понадобится." },
-        { type: "brief-card" },
-      ],
-    },
-  ],
+  "one-click-pay": ONE_CLICK_START,
   "birth-date": [
     { role: "user", text: "У некоторых пользователей в профиле дата рождения на день раньше, чем они ввели. Почини." },
     {
