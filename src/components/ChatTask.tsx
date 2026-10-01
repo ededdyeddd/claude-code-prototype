@@ -231,6 +231,8 @@ export function BriefView({ view }: { view: ChatTaskView }) {
       .join(", ");
   return (
     <div className={cx("flex flex-col gap-[var(--cds-gap-lg)]", PANE_BODY, CODE)}>
+      {/* Accepted: the brief is history now, the same line as over the Result and Diff tabs. */}
+      {view.acceptance && view.accepted && <p className="text-body text-secondary">Accepted · PR description ready</p>}
       <section className="flex flex-col gap-xs">
         <SectionTitle>How I understood the task</SectionTitle>
         <p className="text-body text-primary">
