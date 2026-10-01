@@ -6,6 +6,7 @@
 import type { Turn } from "./transcripts";
 import type { Acceptance, Level, Task } from "./task";
 import { YANGO_TASKS, YANGO_TASK_TRANSCRIPTS } from "./yangoTasks";
+import { RETURNS, RETURNS_TRANSCRIPT } from "./returns";
 
 /* ---------------------------------------------------------------- Envelope */
 
@@ -993,7 +994,7 @@ const LOYALTY: Task = {
   autoDecisions: [],
 };
 
-export const CHAT_TASK_LIST: Task[] = [...YANGO_TASKS, ONE_CLICK, BIRTH_DATE, LOYALTY, I18N];
+export const CHAT_TASK_LIST: Task[] = [...YANGO_TASKS, ONE_CLICK, BIRTH_DATE, LOYALTY, I18N, RETURNS];
 
 export const CHAT_TASKS: Record<string, Task> = Object.fromEntries(CHAT_TASK_LIST.map((t) => [t.id, t]));
 
@@ -1001,6 +1002,7 @@ export const CHAT_TASKS: Record<string, Task> = Object.fromEntries(CHAT_TASK_LIS
 export const CHAT_TASK_TRANSCRIPTS: Record<string, Turn[]> = {
   ...YANGO_TASK_TRANSCRIPTS,
   "one-click-pay": ONE_CLICK_START,
+  returns: RETURNS_TRANSCRIPT,
   "birth-date": [
     { role: "user", text: "У некоторых пользователей в профиле дата рождения на день раньше, чем они ввели. Почини." },
     {

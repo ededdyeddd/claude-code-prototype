@@ -2,7 +2,7 @@
 
 Экран чата Claude Code остаётся основой и не заменяется. Элементы задачи (табы, бриф, план, гейты, прогнозы) появляются только тогда, когда задаче есть что в них показать. Всё начинается как обычный чат.
 
-- Маршруты демо: `/code?scene=s2` (S2), `/code/one-click-pay` (S3; план и бриф — `?panel=plan|brief`), `/code/birth-date` (уровень 1, в работе), `/code/i18n` (уровень 3 в работе: принятый бриф, прогресс плана), `/code/loyalty` (эскалация), `/code/chat-levels` (уровень 3 заблокирован на шаге, два агента работают параллельно), приёмка уровней 2–3 — `/code/chart-pdf` (результат ждёт приёмки сразу) и `/code/one-click-pay?scene=acceptance` (обе за тогглом `acceptance`, см. §2.6).
+- Маршруты демо: `/code?scene=s2` (S2), `/code/one-click-pay` (S3; план и бриф — `?panel=plan|brief`), `/code/birth-date` (уровень 1, в работе), `/code/i18n` (уровень 3 в работе: принятый бриф, прогресс плана), `/code/loyalty` (эскалация), `/code/chat-levels` (уровень 3 заблокирован на шаге, два агента работают параллельно), приёмка уровней 2–3 — `/code/chart-pdf` и `/code/returns` (результат ждёт приёмки сразу) и `/code/one-click-pay?scene=acceptance` (обе за тогглом `acceptance`, см. §2.6).
 - Код: модель `src/data/task.ts` (общая с Inbox), моки `src/data/chatTasks.ts`, состояние `src/data/chatTaskStore.ts`, экран `src/components/ChatTask.tsx`, план `src/components/PlanPane.tsx` (общий с Inbox), конверт `src/components/EnvelopeChip.tsx`, сборка в `src/components/ChatPanel.tsx`.
 - Принципы Inbox (`docs/INBOX.md`, §1) действуют и здесь: прогноз подписан, терракота значит только «нужен ты», тише со временем.
 
@@ -104,6 +104,7 @@
 
 **Маршруты состояний** (сцена живёт в памяти: в Up next переходи из чата по сайдбару, без перезагрузки):
 - `/code/chart-pdf` — «PDF натальной карты» (уровень 2) открывается уже на приёмке (`result.ready`, данные в `src/data/chartPdf.ts`), так что в Up next всегда есть результат на приёмку. Раунд 1: ничего не нарушено, но изменён файл вне брифа (`src/chart/Wheel.tsx`) и символы в PDF — только слова агента: рекомендован Look deeper first, в Up next — To review. Send back → «Show the next round (demo)» → раунд 2, 4 из 4, рекомендован Accept.
+- `/code/returns` — «Возврат заказа из профиля» (уровень 3, `src/data/returns.ts`) тоже открывается на приёмке. Один раунд, всё доказано, флагов нет, хотя задеты платежи и миграция: рекомендован Accept с клавишей 1, в Up next — To review.
 - `/code/one-click-pay?scene=acceptance` — раунд 1, защищённый критерий нарушен: Accept заблокирована, рекомендован Send back, в Up next — To review, первой и с терракотовой точкой.
 - `/code/one-click-pay?scene=acceptance&round=risky` — флаг вне брифа и «only claimed» в платежах, но ничего не нарушено: Accept доступна без клавиши, рекомендован Look deeper first, в Up next — To review.
 - Из первого: Send back → кнопка «Show the next round (demo)» в ленте → раунд 2, всё доказано, флагов нет: рекомендован Accept с клавишей 1.

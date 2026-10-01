@@ -14,8 +14,12 @@ type State = {
   attention: Attention;
 };
 
+export const answerKey = (taskId: string, questionId: string) => `${taskId}:${questionId}`;
+
+// Answered before this visit, with the recommended option: these tasks run, and Blocked keeps only what matters.
+const ANSWERED_BEFORE: Record<string, string> = { [answerKey("light-theme", "q1")]: "tokens", [answerKey("transit-push", "q1")]: "expo" };
 // Shared between the sidebar (counter) and the page, so a tiny external store instead of prop drilling.
-let state: State = { answers: {}, attention: "available", busyUntil: "16:00" };
+let state: State = { answers: ANSWERED_BEFORE, attention: "available", busyUntil: "16:00" };
 const listeners = new Set<() => void>();
 
 function set(next: Partial<State>) {
@@ -23,7 +27,6 @@ function set(next: Partial<State>) {
   listeners.forEach((l) => l());
 }
 
-export const answerKey = (taskId: string, questionId: string) => `${taskId}:${questionId}`;
 
 export function answer(taskId: string, questionId: string, optionId: string) {
   set({ answers: { ...state.answers, [answerKey(taskId, questionId)]: optionId } });

@@ -51,6 +51,8 @@ export const SESSIONS: Session[] = [
   // storefront: chat levels (chatTasks.ts): a large task at its first gate, a small one with a result, one that grew.
   { id: "one-click-pay", title: "Оплата в один клик", project: "storefront", repo: { name: "storefront", branch: "feat/one-click-pay", added: 0, removed: 0 }, status: "active", env: "local", lastActivity: 1, created: 1 },
   { id: "loyalty", title: "Скидка постоянным покупателям", project: "storefront", repo: { name: "storefront", branch: "feat/loyalty-discount", added: 84, removed: 5 }, status: "active", env: "local", lastActivity: 8, created: 25 },
+  // storefront: a large task whose result waits for acceptance (returns.ts).
+  { id: "returns", title: "Возврат заказа из профиля", project: "storefront", repo: { name: "storefront", branch: "feat/returns", added: 304, removed: 0 }, status: "active", env: "cloud", lastActivity: 6, created: 1100, pr: "draft" },
   // storefront: three tasks from "Inbox" and a merged one.
   { id: "checkout", title: "Новый чекаут", project: "storefront", repo: { name: "storefront", branch: "feat/checkout", added: 1240, removed: 310 }, status: "active", env: "local", lastActivity: 32, created: 600 },
   { id: "search", title: "Поиск по каталогу", project: "storefront", repo: { name: "storefront", branch: "feat/search", added: 86, removed: 4 }, status: "active", env: "local", lastActivity: 70, created: 300, running: true },
