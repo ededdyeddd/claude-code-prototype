@@ -635,6 +635,9 @@ export function PaneMeta({ task, answers }: { task: Task; answers: Record<string
   // Stopped on a step with no question on it: a decision of yours waits there (a small task that grew).
   const stopped = task.stages.flatMap((st) => st.steps).find((x) => x.status === "waiting" && !x.question);
   const branch = SESSIONS.find((x) => x.id === task.id)?.repo?.branch;
+  const spentTime = task.stages
+    .flatMap((st) => st.steps)
+    .reduce((n, x) => n + minutes(x.work?.time ?? "0m"), 0);
   const target = () => (open[0] ? document.getElementById(questionAnchor(task.id, open[0].id)) : null);
   const link = (on: boolean) => target()?.toggleAttribute("data-linked", on);
   return (
@@ -665,7 +668,10 @@ export function PaneMeta({ task, answers }: { task: Task; answers: Record<string
       {" · "}
       {task.project}
       {branch && ` · ${branch}`}
-      {/* Money and time are in the cards under this line, against the task's limit. */}
+      {" · "}
+      <span title={`${task.tokens} tokens`}>
+        {task.spent} spent · {duration(spentTime)}
+      </span>
     </p>
   );
 }
@@ -1080,6 +1086,8 @@ export function PlanPane({
   );
 }
 
+/** Minutes from "18m" / "1h 10m"; estimates ("~20m") are not counted. */
+const minutes = (t: string) => (t.startsWith("~") ? 0 : Number(t.match(/(\d+)h/)?.[1] ?? 0) * 60 + Number(t.match(/(\d+)m/)?.[1] ?? 0));
 /** Minutes from "18m" / "~1h 20m", estimates included. */
 export const anyMinutes = (t: string) => Number(t.match(/(\d+)h/)?.[1] ?? 0) * 60 + Number(t.match(/(\d+)m/)?.[1] ?? 0);
 /** Passed = grey dot, waits for you = clay dot, ahead (or an automatic check running) = grey ring. */
