@@ -262,20 +262,23 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         <SectionTitle aside={risky.length === 0 ? undefined : view.unmarked.length ? `${view.unmarked.length} to confirm` : "all confirmed"}>
           Assumptions
         </SectionTitle>
-        <ul className="flex flex-col gap-sm">
-          {risky.map((a) =>
-            view.rejected.has(a.id) ? (
-              <SafeAssumption key={a.id} view={view} a={a} />
-            ) : view.atGate ? (
-              // At the gate the brief is where you read the assumption, so you can confirm it right there; the dock follows.
-              <RiskyAssumption key={a.id} view={view} a={a} className="-mx-sm" />
-            ) : (
-              <AssumptionState key={a.id} view={view} a={a} />
-            ),
-          )}
-        </ul>
+        {/* Only safe assumptions: no empty list above them, or its gap pushes the note away from the heading. */}
+        {risky.length > 0 && (
+          <ul className="flex flex-col gap-sm">
+            {risky.map((a) =>
+              view.rejected.has(a.id) ? (
+                <SafeAssumption key={a.id} view={view} a={a} />
+              ) : view.atGate ? (
+                // At the gate the brief is where you read the assumption, so you can confirm it right there; the dock follows.
+                <RiskyAssumption key={a.id} view={view} a={a} className="-mx-sm" />
+              ) : (
+                <AssumptionState key={a.id} view={view} a={a} />
+              ),
+            )}
+          </ul>
+        )}
         {safe.length > 0 && (
-          <div className="mt-xs flex flex-col gap-xs">
+          <div className={cx("flex flex-col gap-xs", risky.length > 0 && "mt-xs")}>
             <span className="text-footnote text-muted">No need to confirm: checked in code or easy to undo</span>
             <ul className="flex flex-col gap-xs">
               {safe.map((a) => (
