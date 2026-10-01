@@ -8,7 +8,7 @@ import { usePersistentWidth } from "../data/usePersistentWidth";
 import { AWAY, TASKS } from "../data/inbox";
 import { currentGate, gateText, type Task } from "../data/task";
 import { ChangeButton, PaneMeta, PlanPane, whenHint } from "../components/PlanPane";
-import { BriefView, GateCard } from "../components/ChatTask";
+import { AcceptanceCard, BriefView, GateCard } from "../components/ChatTask";
 import { AcceptanceTab } from "../components/ReviewPane";
 import { deriveTask, type TaskState } from "../data/chatTaskStore";
 import { openQuestions, useInbox, type Attention } from "../data/inboxStore";
@@ -538,6 +538,14 @@ export function InboxPage() {
             setSelectedId(null);
             setExpanded(false);
           }}
+          footer={
+            // Reading the proof, the decision stays at hand: the same options as under the plan, pinned under the review.
+            (tab === "result" || tab === "diff") && view?.acceptancePending ? (
+              <div className="px-lg pb-lg">
+                <AcceptanceCard key={view.acceptance?.iteration} view={view} onDetails={() => setPaneTab("result")} onDone={openNext} inReview />
+              </div>
+            ) : undefined
+          }
           actions={
             // Talking to the agent happens in the session.
             <Button size="xs" onClick={() => navigate(`/code/${selected.id}`)}>
