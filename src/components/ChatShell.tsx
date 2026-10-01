@@ -20,6 +20,8 @@ import { AcceptanceTab, ReviewPane } from "./ReviewPane";
 /** Tabs of the task pane: the plan and brief, and at acceptance the result and its diff (last: proof comes first). */
 type PaneTab = "plan" | "brief" | "result" | "diff";
 const PANE_TAB_LABEL: Record<PaneTab, string> = { plan: "Plan", brief: "Brief", result: "Result", diff: "Diff" };
+/** The pane stays open across chats: links in the sidebar carry no ?panel, so the last open tab is remembered here. */
+let rememberedPanel: PaneTab | null = null;
 import { SIDE_PANE, SidePane } from "./SidePane";
 import { BriefView, ChatTaskContext, PlanView } from "./ChatTask";
 import { Tabs } from "../ui";
@@ -50,9 +52,17 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
   const paneTabs: PaneTab[] = view
     ? [...(["plan", "brief"] as const).filter((t) => view.tabs.includes(t)), ...(view.acceptance ? (["result", "diff"] as const) : [])]
     : [];
-  const panelParam = (params.get("panel") ?? (view?.acceptance ? reviewTab : null)) as PaneTab | null;
+  const urlPanel = (params.get("panel") ?? (view?.acceptance ? reviewTab : null)) as PaneTab | null;
+  // No ?panel in the URL (a chat opened from the sidebar): the pane stays as it was, on the same tab if this task has it,
+  // else on its plan.
+  const panelParam =
+    urlPanel ?? (rememberedPanel && !reviewTab ? (paneTabs.includes(rememberedPanel) ? rememberedPanel : "plan") : null);
   const panel = !review && view && panelParam && paneTabs.includes(panelParam) ? panelParam : null;
-  const setPane = (key: "review" | "panel", value: string | null) =>
+  useEffect(() => {
+    if (urlPanel && view && paneTabs.includes(urlPanel)) rememberedPanel = urlPanel;
+  }, [urlPanel, view]); // eslint-disable-line react-hooks/exhaustive-deps
+  const setPane = (key: "review" | "panel", value: string | null) => {
+    rememberedPanel = key === "panel" ? (value as PaneTab | null) : value ? null : rememberedPanel;
     setParams(
       (p) => {
         const next = new URLSearchParams(p);
@@ -63,6 +73,7 @@ export function ChatShell({ name, transcript, chat }: { name: string; transcript
       },
       { replace: true },
     );
+  };
   const setReview = (t: ReviewTab | null) => setPane("review", t);
   const setPanel = (t: PaneTab | "chat" | null) => {
     if ((t === "plan" || t === "brief") && view) seeTab(view.id, t);
