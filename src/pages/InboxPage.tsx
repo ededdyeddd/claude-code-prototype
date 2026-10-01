@@ -259,7 +259,7 @@ function TaskRow({
   const needs = open.length > 0 || !!decision;
   // Blocked on one step, not stopped: steps that do not need the answer keep running in parallel.
   const working = group === "blocked" ? task.stages.flatMap((st) => st.steps).filter((p) => p.status === "running" && !p.question).length : 0;
-  const nextGate = task.stages.flatMap((s) => (s.gate?.status === "ahead" && s.gate.eta ? [s.gate] : []))[0];
+  const turn = turnEta(task);
   const stageText = needs ? task.stage : task.waitingFor ? `${task.stage} · resumed` : task.now;
 
   // Two lines, same height for every row: what + how long it waits (or when it is your turn);
@@ -282,9 +282,9 @@ function TaskRow({
         <span className="justify-self-end text-footnote tabular-nums text-secondary">
           {needs && task.waitingFor ? (
             `waiting ${task.waitingFor}`
-          ) : !needs && nextGate ? (
-            <Hint text={whenHint(nextGate.etaSource)} focusable={false}>
-              Your turn by {nextGate.eta}
+          ) : !needs && turn ? (
+            <Hint text={whenHint(turn.source)} focusable={false}>
+              Your turn by {turn.eta}
             </Hint>
           ) : (
             ""
@@ -355,12 +355,49 @@ function NothingNeedsYou() {
   return <EmptyState illustration={<AllRunningIllustration />}>Nothing needs you</EmptyState>;
 }
 
-/** Minutes from the start of today to a task's next turn of yours ("17:30", "tomorrow 11:00"); none goes last. */
-function turnAt(t: Task) {
-  const eta = t.stages.flatMap((s) => (s.gate?.status === "ahead" && s.gate.eta ? [s.gate.eta] : []))[0];
-  const m = eta?.match(/(tomorrow )?(\d{1,2}):(\d{2})/);
-  return m ? (m[1] ? 24 * 60 : 0) + Number(m[2]) * 60 + Number(m[3]) : Infinity;
+/** "Now" in the prototype: the end of the away window ("14:00–16:00"), in minutes from the start of today. */
+const NOW = (() => {
+  const m = AWAY.window.match(/(\d{1,2}):(\d{2})$/);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : 16 * 60;
+})();
+
+/** Minutes in a step's time, "~1h 20m" or "40m"; none if the step has no time. */
+function minutesOf(time: string | undefined) {
+  const h = time?.match(/(\d+)\s*h/);
+  const m = time?.match(/(\d+)\s*m/);
+  return (h ? Number(h[1]) * 60 : 0) + (m ? Number(m[1]) : 0);
 }
+
+const clock = (min: number) => {
+  const day = Math.floor(min / (24 * 60));
+  const t = min % (24 * 60);
+  const hhmm = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
+  return day > 0 ? `tomorrow ${hhmm}` : hhmm;
+};
+
+/**
+ * When the person is likely needed next: the next gate's own time, if it has one; otherwise now plus the estimates of
+ * the steps left before that gate (or before the end of the plan, where the result waits for them), rounded up to
+ * 5 minutes. None when no step left has an estimate.
+ */
+function turnEta(t: Task): { eta: string; source?: string; at: number } | undefined {
+  const gate = t.stages.flatMap((s) => (s.gate?.status === "ahead" && s.gate.eta ? [s.gate] : []))[0];
+  if (gate?.eta) {
+    const m = gate.eta.match(/(tomorrow )?(\d{1,2}):(\d{2})/);
+    return { eta: gate.eta, source: gate.etaSource, at: m ? (m[1] ? 24 * 60 : 0) + Number(m[2]) * 60 + Number(m[3]) : Infinity };
+  }
+  let left = 0;
+  for (const st of t.stages) {
+    left += st.steps.filter((p) => p.status === "running" || p.status === "ahead").reduce((n, p) => n + minutesOf(p.work?.time), 0);
+    if (st.gate?.mine && st.gate.status !== "passed") break;
+  }
+  if (left === 0) return undefined;
+  const at = Math.ceil((NOW + left) / 5) * 5;
+  return { eta: clock(at), source: "the estimates of the steps left", at };
+}
+
+/** Minutes from the start of today to a task's next turn of yours; none goes last. */
+const turnAt = (t: Task) => turnEta(t)?.at ?? Infinity;
 
 /* ------------------------------------------------------------ Onboarding */
 
