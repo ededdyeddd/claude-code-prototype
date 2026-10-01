@@ -95,13 +95,15 @@ export function useInbox() {
   const running = live.filter((t) => status.get(t.id) === "running" && listed(t));
   const results = of("result");
   const smallRunning = live.filter((t) => status.get(t.id) === "running" && !listed(t));
-  return { ...s, chats, blocked, toReview, canWait, needsYou, running, results, smallRunning };
+  // Accepted results: the task is done. It leaves the lists, and its chat and sidebar row stop showing work.
+  const done = live.filter((t) => status.get(t.id) === "none" && !!deriveTask(t, chats[t.id]).accepted);
+  return { ...s, chats, blocked, toReview, canWait, needsYou, running, results, smallRunning, done };
 }
 
 /** Live state of a task chat for the sidebar and the chat view; undefined for chats that are not tasks. */
 export function taskState(
   id: string,
-  n: { blocked: Task[]; toReview: Task[]; canWait: Task[]; running: Task[]; results: Task[]; smallRunning: Task[] },
+  n: { blocked: Task[]; toReview: Task[]; canWait: Task[]; running: Task[]; results: Task[]; smallRunning: Task[]; done: Task[] },
 ) {
   // Blocked stops one step, not always the task: steps that do not need the answer may keep running in parallel.
   const blocked = n.blocked.find((t) => t.id === id);
@@ -111,5 +113,6 @@ export function taskState(
   if (n.canWait.some((t) => t.id === id)) return { waiting: "canWait" as const, running: true };
   if (n.results.some((t) => t.id === id)) return { waiting: "result" as const, running: false };
   if (n.running.some((t) => t.id === id) || n.smallRunning.some((t) => t.id === id)) return { waiting: undefined, running: true };
+  if (n.done.some((t) => t.id === id)) return { waiting: undefined, running: false };
   return undefined;
 }
