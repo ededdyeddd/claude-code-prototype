@@ -265,6 +265,9 @@ export const ZONES: { zone: string; label: string; match: RegExp; level: "high" 
   { zone: "auth", label: "Auth", match: /^(auth|server\/auth)\//, level: "high" },
   { zone: "migrations", label: "Migrations", match: /^migrations\//, level: "high" },
   { zone: "orders", label: "Orders", match: /^server\/orders\//, level: "normal" },
+  { zone: "pdf", label: "PDF export", match: /^server\/pdf\//, level: "normal" },
+  { zone: "api", label: "API", match: /^server\/routes\//, level: "normal" },
+  { zone: "chart", label: "Chart", match: /^src\/chart\//, level: "normal" },
 ];
 
 export const zoneOf = (path: string) => ZONES.find((z) => z.match.test(path)) ?? { zone: "other", label: "Other", match: /./, level: "normal" as const };
