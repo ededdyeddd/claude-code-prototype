@@ -100,12 +100,12 @@
 
 **После решения.** Send back — в ленте «Sent back: …», ответ агента, задача уходит в Running, в плане появляется шаг «Исправить по итогам приёмки». Accept — «Accepted · PR description ready», гейт пройден, задача уходит из Up next, точка в сайдбаре гаснет.
 
-**Up next.** Задача на приёмке лежит в Can wait (серая неподвижная точка: агент закончил и никого не держит), а с нарушенным защищённым критерием — в Blocked. Во второй строке — «accept the result». В плане под «You approve the result» — карточка: флаги строками, «4 proven · 2 only claimed · 1 contradicted», те же варианты без клавиш, «Details» открывает чат с `?review=result`.
+**Up next.** Задача на приёмке лежит в группе To review (серая неподвижная точка: агент закончил). С нарушенным защищённым критерием — там же, но первой, с терракотовой точкой и строкой «a locked criterion is broken». Во второй строке — «accept the result». В плане под «You approve the result» — карточка: флаги строками, «4 proven · 2 only claimed · 1 contradicted», те же варианты без клавиш, «Details» открывает чат с `?review=result`.
 
 **Маршруты состояний** (сцена живёт в памяти: в Up next переходи из чата по сайдбару, без перезагрузки):
-- `/code/chart-pdf` — «PDF натальной карты» (уровень 2) открывается уже на приёмке (`result.ready`, данные в `src/data/chartPdf.ts`), так что в Up next всегда есть результат на приёмку. Раунд 1: ничего не нарушено, но изменён файл вне брифа (`src/chart/Wheel.tsx`) и символы в PDF — только слова агента: рекомендован Look deeper first, в Up next — Can wait. Send back → «Show the next round (demo)» → раунд 2, 4 из 4, рекомендован Accept.
-- `/code/one-click-pay?scene=acceptance` — раунд 1, защищённый критерий нарушен: Accept заблокирована, рекомендован Send back, в Up next — Blocked.
-- `/code/one-click-pay?scene=acceptance&round=risky` — флаг вне брифа и «only claimed» в платежах, но ничего не нарушено: Accept доступна без клавиши, рекомендован Look deeper first, в Up next — Can wait.
+- `/code/chart-pdf` — «PDF натальной карты» (уровень 2) открывается уже на приёмке (`result.ready`, данные в `src/data/chartPdf.ts`), так что в Up next всегда есть результат на приёмку. Раунд 1: ничего не нарушено, но изменён файл вне брифа (`src/chart/Wheel.tsx`) и символы в PDF — только слова агента: рекомендован Look deeper first, в Up next — To review. Send back → «Show the next round (demo)» → раунд 2, 4 из 4, рекомендован Accept.
+- `/code/one-click-pay?scene=acceptance` — раунд 1, защищённый критерий нарушен: Accept заблокирована, рекомендован Send back, в Up next — To review, первой и с терракотовой точкой.
+- `/code/one-click-pay?scene=acceptance&round=risky` — флаг вне брифа и «only claimed» в платежах, но ничего не нарушено: Accept доступна без клавиши, рекомендован Look deeper first, в Up next — To review.
 - Из первого: Send back → кнопка «Show the next round (demo)» в ленте → раунд 2, всё доказано, флагов нет: рекомендован Accept с клавишей 1.
 - `&review=result` / `&review=diff` открывает панель сразу.
 

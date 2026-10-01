@@ -31,21 +31,23 @@ const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
 function Header({
   blocked,
+  toReview,
   canWait,
   attention,
   busyUntil,
   onOpenTask,
 }: {
   blocked: number;
+  toReview: number;
   canWait: number;
   attention: Attention;
   busyUntil: string;
   onOpenTask: (id: string) => void;
 }) {
   const summary =
-    blocked + canWait === 0
+    blocked + toReview + canWait === 0
       ? "All tasks are running"
-      : [blocked && `${blocked} blocked`, canWait && `${canWait} can wait`].filter(Boolean).join(" · ");
+      : [blocked && `${blocked} blocked`, toReview && `${toReview} to review`, canWait && `${canWait} can wait`].filter(Boolean).join(" · ");
   return (
     <header className="flex flex-col gap-xs">
       {/* Title row: the attention mode belongs to the header and stays on the right edge. */}
@@ -227,7 +229,7 @@ function TaskRow({
   /** Session of a task chat: marked assumptions, escalation. */
   chat?: TaskState;
   /** The group the row sits in: a task can be blocked by a gate or an escalation, not only by a question. */
-  group: "blocked" | "canWait" | "running";
+  group: "blocked" | "toReview" | "canWait" | "running";
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -238,7 +240,9 @@ function TaskRow({
   const session = deriveTask(task, chat);
   const gate = currentGate(task);
   const decision = session.acceptancePending
-    ? "accept the result"
+    ? session.acceptance?.canAccept
+      ? "accept the result"
+      : "a locked criterion is broken"
     : group !== "blocked" || blocking
       ? undefined
       : session.escalationPending
@@ -267,8 +271,11 @@ function TaskRow({
       )}
     >
       {/* Clay only when the agent stopped for you. Can wait keeps working: the running dot, as in the sidebar; the group and "1 question" say it has a question. */}
-      {/* A result to accept holds no agent: the still grey dot, as in the sidebar; a broken locked criterion makes it Blocked. */}
-      <TaskDot state={group === "canWait" ? (session.acceptancePending ? "done" : "running") : group} className="mt-[5px]" />
+      {/* To review: the agent finished, the still grey dot as in the sidebar; clay if a locked criterion is broken. */}
+      <TaskDot
+        state={group === "canWait" ? "running" : group === "toReview" ? (session.acceptance?.canAccept ? "done" : "blocked") : group}
+        className="mt-[5px]"
+      />
       <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-md gap-y-0.5">
         <span className="truncate text-body font-medium text-primary">{task.title}</span>
         <span className="justify-self-end text-footnote tabular-nums text-secondary">
@@ -375,8 +382,9 @@ const TOUR: Coachmark[] = [
     title: "Start at the top",
     body: (
       <>
-        <span className="text-primary">Blocked</span>: the agent stopped and waits for you. <span className="text-primary">Can wait</span>: it
-        has a question but keeps working. <span className="text-primary">Running</span>: nothing needed yet.
+        <span className="text-primary">Blocked</span>: the agent stopped and waits for you. <span className="text-primary">To review</span>:
+        it finished, and the result waits for you to accept it. <span className="text-primary">Can wait</span>: it has a question but keeps
+        working. <span className="text-primary">Running</span>: nothing needed yet.
       </>
     ),
     sides: ["right", "bottom", "top"],
@@ -404,7 +412,7 @@ const TOUR: Coachmark[] = [
 /* -------------------------------------------------------------------- Page */
 
 export function InboxPage() {
-  const { answers, attention, busyUntil, blocked, canWait, needsYou, running, chats } = useInbox();
+  const { answers, attention, busyUntil, blocked, toReview, canWait, needsYou, running, chats } = useInbox();
   // The first task that needs the person is open on arrival; clicking a task opens it on the right.
   // "Answer in the plan" from a task's chat opens that task (?task=id); otherwise the first task that needs you.
   const { search, state } = useLocation();
@@ -449,6 +457,7 @@ export function InboxPage() {
             <div className="mx-auto flex w-full max-w-[800px] flex-col gap-lg px-xl pt-[var(--cds-gap-lg)] pb-xl">
               <Header
                 blocked={blocked.length}
+                toReview={toReview.length}
                 canWait={canWait.length}
                 attention={attention}
                 busyUntil={busyUntil}
@@ -460,6 +469,8 @@ export function InboxPage() {
                 {(
                   [
                     ["Blocked", blocked],
+                    // The agent finished: it waits for you like Blocked, but nothing is stuck mid-work.
+                    ["To review", toReview],
                     ["Can wait", canWait],
                     // Running: the soonest "Your turn by" first, so the list also says when you will be needed.
                     ["Running", [...running].sort((a, b) => turnAt(a) - turnAt(b))],
@@ -472,7 +483,7 @@ export function InboxPage() {
                         <TaskRow
                           key={t.id}
                           task={t}
-                          group={title === "Blocked" ? "blocked" : title === "Can wait" ? "canWait" : "running"}
+                          group={title === "Blocked" ? "blocked" : title === "To review" ? "toReview" : title === "Can wait" ? "canWait" : "running"}
                           chat={chats[t.id]}
                           answers={answers}
                           selected={t.id === selectedId}

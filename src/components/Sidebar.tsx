@@ -17,7 +17,8 @@ import { SidebarContents } from "./SidebarContents";
 import { useInbox } from "../data/inboxStore";
 
 export function Sidebar(resize: { width: number; min: number; max: number; defaultWidth: number; onResize: (w: number) => void }) {
-  const { blocked } = useInbox();
+  // The counter is what is urgent: blocked tasks and results that cannot be accepted.
+  const { blocked, urgentReview } = useInbox();
   return (
     <aside className="dframe-sidebar df-hub-rail" data-variant="web" data-density="comfortable">
       <ResizeHandle {...resize} />
@@ -74,7 +75,7 @@ export function Sidebar(resize: { width: number; min: number; max: number; defau
           </div>
           <div className="dframe-nav-scroll relative flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden pl-1 pt-1 pb-2 -ml-1 -mt-1 -mr-2 pr-[max(0px,calc(8px-var(--df-nav-scrollbar-lane,0px)))] [scrollbar-gutter:stable]">
             <div data-testid="nav-pin-rows" className="-mt-1">
-              <NavigationRow label="Up next" icon={"\uE0C9"} variant="standard" to="/up-next" count={blocked.length} coach="nav-up-next" />
+              <NavigationRow label="Up next" icon={"\uE0C9"} variant="standard" to="/up-next" count={blocked.length + urgentReview.length} coach="nav-up-next" />
               <NavigationEntry />
               <NavigationRow label="Routines" icon="" variant="standard" to="/routines" />
               <NavigationRow label="Customize" icon="" variant="standard" />
