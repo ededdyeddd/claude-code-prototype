@@ -1417,55 +1417,40 @@ function AcceptanceDecision({ view, nav }: { view: ChatTaskView; nav: DockNav })
 /**
  * The same decision in the Up next pane, under "You approve the result": the flags as lines, the claims by
  * status, the same options without number keys, and "Details", which opens the review (the Result tab).
- * `inReview`: the card pinned under the Result and Diff tabs. The review is right above it, so no flags, counts
- * or "Details"; its links and "Look deeper first" open rows of that review in place.
  */
-export function AcceptanceCard({
-  view,
-  onDetails,
-  onDone,
-  inReview,
-}: {
-  view: ChatTaskView;
-  onDetails: () => void;
-  onDone?: () => void;
-  inReview?: boolean;
-}) {
+export function AcceptanceCard({ view, onDetails, onDone }: { view: ChatTaskView; onDetails: () => void; onDone?: () => void }) {
   const acc = view.acceptance!;
   const [picked, setPicked] = useState<AcceptanceChoice | null>(null);
   const [words, setWords] = useState("");
-  const reveal = (t: RevealTarget) => (inReview ? revealInReview(t) : onDetails());
+  const reveal = () => onDetails();
   const choices = acceptanceChoices(view, reveal);
   const submit = () => {
     if (!picked || !canSubmitAcceptance(view, picked, words)) return;
-    if (picked === "deeper" && !inReview) return onDetails();
+    if (picked === "deeper") return onDetails();
     submitAcceptance(view, picked, words, reveal);
-    if (picked === "deeper") return setPicked(null);
     onDone?.();
   };
   return (
     <DecisionCard
-      aside={inReview ? undefined : <TextLink onClick={onDetails}>Details</TextLink>}
+      aside={<TextLink onClick={onDetails}>Details</TextLink>}
       actions={
         <Button size="sm" variant="primary" disabled={!picked || !canSubmitAcceptance(view, picked, words)} onClick={submit}>
           Submit
         </Button>
       }
     >
-      {!inReview && (
-        <div className="flex flex-col gap-xs">
-          {acc.flags.length > 0 && (
-            <ul className="flex flex-col gap-xs">
-              {acc.flags.map((f) => (
-                <li key={f.id}>
-                  <FlagRow flag={f} />
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="text-footnote text-muted">{acceptanceCounts(view)}</p>
-        </div>
-      )}
+      <div className="flex flex-col gap-xs">
+        {acc.flags.length > 0 && (
+          <ul className="flex flex-col gap-xs">
+            {acc.flags.map((f) => (
+              <li key={f.id}>
+                <FlagRow flag={f} />
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="text-footnote text-muted">{acceptanceCounts(view)}</p>
+      </div>
       <OptionList label="Accept the result?">
         {[...choices, { id: "other" as const, title: "Other", description: undefined }].map((c) => (
           <OptionRow
