@@ -213,9 +213,14 @@ export function BriefView({ view }: { view: ChatTaskView }) {
   const brief = view.task.brief;
   if (!brief) return null;
   const risky = brief.assumptions.filter((a) => a.risky);
+  // At acceptance the criteria stand as the Result tab counts them: met with its proof, or broken by what was found.
+  const judged = new Map((view.acceptance?.criteria ?? []).map((c) => [c.id, c]));
   const criteria = [
-    ...brief.doneWhen.map((c) => ({ ...c, mine: false })),
-    ...view.criteria.map((text, i) => ({ id: `mine-${i}`, text, locked: true, mine: true })),
+    ...brief.doneWhen.map((c) => {
+      const j = judged.get(c.id);
+      return { ...c, mine: false, met: j ? (j.state === "met" ? j.proof : undefined) : c.met, broken: j?.state === "broken" ? j.broken : undefined };
+    }),
+    ...view.criteria.map((text, i) => ({ id: `mine-${i}`, text, locked: true, mine: true, met: undefined, broken: undefined })),
   ];
   const safe = brief.assumptions.filter((a) => !a.risky);
   const env = view.envelope;
@@ -327,7 +332,7 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         <SectionTitle
           aside={
             <Hint text="I check these at the end and mark each one with its proof">
-              {criteria.filter((c) => "met" in c && c.met).length} of {criteria.length} met
+              {criteria.filter((c) => c.met).length} of {criteria.length} met
             </Hint>
           }
         >
@@ -338,11 +343,11 @@ export function BriefView({ view }: { view: ChatTaskView }) {
             <li key={c.id} className="flex items-start gap-sm text-body text-primary">
               {/* Not met yet: the plan's "ahead" ring; met: its "done" dot, with the check that proves it. A ring, not a box: nobody ticks these by hand. */}
               <span className="mt-[5px] flex">
-                <TaskDot state={"met" in c && c.met ? "done" : "ahead"} />
+                <TaskDot state={c.met ? "done" : c.broken && c.locked ? "blocked" : "ahead"} />
               </span>
               {/* The lock sits right after its criterion, not at the far edge of the pane. */}
               <span className="min-w-0">
-                <span className={"met" in c && c.met ? "text-secondary" : undefined}>
+                <span className={c.met ? "text-secondary" : undefined}>
                   <Inline text={c.text} />
                 </span>
                 {c.mine && <span className="text-muted"> · added by you</span>}
@@ -351,7 +356,12 @@ export function BriefView({ view }: { view: ChatTaskView }) {
                     <Icon glyph={LOCK} size="sm" className="!text-muted" />
                   </Hint>
                 )}
-                {"met" in c && c.met && <span className="block text-footnote text-muted">{c.met}</span>}
+                {c.met && <span className="block text-footnote text-muted">{c.met}</span>}
+                {c.broken && (
+                  <span className={cx("block text-footnote", c.locked ? "text-clay" : "text-muted")}>
+                    Broken: <Inline text={c.broken} />
+                  </span>
+                )}
               </span>
             </li>
           ))}
