@@ -1,7 +1,8 @@
 /**
  * "Возврат заказа из профиля" (returns), level 3: like chart-pdf, the result already waits for acceptance when the
- * prototype opens (`result.ready`). The third acceptance state: every claim proven, no flags, Accept recommended,
- * even though the refund touches payments.
+ * prototype opens (`result.ready`). Round 1 is the presentation's case: the agent says all tests pass, but the system
+ * found a skipped test and a file outside the brief; a locked criterion is broken, so Accept is off and Send back
+ * carries the facts. Round 2, after Send back: every claim proven, no flags, Accept recommended.
  */
 import type { Turn } from "./transcripts";
 import type { Acceptance, Task } from "./task";
@@ -88,9 +89,11 @@ const CI = [
   "Tests: 58 passed, 0 skipped, 58 total",
 ];
 
-const ROUND: Acceptance = {
-  iteration: 1,
-  message: "Готово: кнопка «Вернуть» в заказе, заявка уходит на склад, деньги возвращаются частично через Stripe. Все тесты проходят, миграцию прогнал на копии базы.",
+/** Round 2, after Send back: the test is back and passes, the checkout edit is rolled back. */
+const ROUND_2: Acceptance = {
+  iteration: 2,
+  changedSince: { files: ["e2e/returns.spec.ts", "checkout/OrderSummary.tsx"], claims: ["once", "tests"] },
+  message: "Вернул тест на повторный вебхук и починил ключ идемпотентности. Правку `checkout/OrderSummary.tsx` откатил: ссылка на возврат теперь только в профиле.",
   claims: [
     {
       id: "button",
@@ -178,6 +181,71 @@ const ROUND: Acceptance = {
   files: FILES,
 };
 
+const CI_1 = [
+  "$ npm run e2e -- returns",
+  "✓ e2e/returns.spec.ts › returns one item of two and refunds its price (3.4s)",
+  "✓ e2e/returns.spec.ts › hides the button after 14 days (1.1s)",
+  "✓ e2e/returns.spec.ts › never refunds more than was paid (2.2s)",
+  "- e2e/returns.spec.ts › a repeated webhook refunds once (skipped)",
+  "Tests: 57 passed, 1 skipped, 58 total",
+];
+
+const SPEC_SKIPPED: Acceptance["files"][number] = {
+  ...FILES[4],
+  lines: FILES[4].lines.map((l) => l.replace('+test("a repeated webhook', '+test.skip("a repeated webhook')),
+};
+
+const CHECKOUT: Acceptance["files"][number] = {
+  name: "checkout/OrderSummary.tsx",
+  added: 6,
+  removed: 1,
+  lines: [
+    "@@ -28,7 +28,12 @@ export function OrderSummary({ order }: Props) {",
+    "   <Total value={order.total} />",
+    "-  <Link to={`/orders/${order.id}`}>Детали заказа</Link>",
+    "+  <Row>",
+    "+    <Link to={`/orders/${order.id}`}>Детали заказа</Link>",
+    "+    {/* Return right after paying, until delivery */}",
+    "+    <Link to={`/orders/${order.id}/return`}>Вернуть</Link>",
+    "+  </Row>",
+  ],
+};
+
+/**
+ * Round 1: the agent says everything passes. The system found what it left out: the test of a repeated webhook is
+ * skipped and the checkout, which the brief leaves alone, changed. "All tests pass" is contradicted, the locked
+ * criterion "no test skipped" is broken: Accept is off, Send back is recommended and carries the facts.
+ */
+const ROUND_1: Acceptance = {
+  ...ROUND_2,
+  iteration: 1,
+  changedSince: undefined,
+  message: "Готово: кнопка «Вернуть» в заказе, заявка уходит на склад, деньги возвращаются частично через Stripe. Все тесты проходят, миграцию прогнал на копии базы.",
+  claims: ROUND_2.claims.map((c) =>
+    c.id === "once"
+      ? { id: c.id, text: c.text, status: "claimed" as const, stepId: c.stepId, criterionId: c.criterionId }
+      : c.id === "tests"
+        ? {
+            ...c,
+            status: "contradicted" as const,
+            source: { kind: "test-diff" as const, label: "test skipped", ref: "e2e/returns.spec.ts", detail: ["@@ e2e/returns.spec.ts @@", '+test.skip("a repeated webhook refunds once", async () => { … });'] },
+          }
+        : c,
+  ),
+  flags: [
+    { id: "skip", kind: "skipped-test", text: "a repeated webhook refunds once", ref: "e2e/returns.spec.ts", criterionId: "tests" },
+    { id: "checkout", kind: "file-outside-brief", ref: "checkout/OrderSummary.tsx" },
+  ],
+  tests: {
+    passed: 57,
+    added: 4,
+    skippedOrDeleted: [{ name: "a repeated webhook refunds once", file: "e2e/returns.spec.ts", kind: "skipped" }],
+    ci: { kind: "ci", label: "CI · run #503", ref: "#503", detail: CI_1 },
+    byFile: [{ file: "e2e/returns.spec.ts", passed: 3, skipped: 1, added: 4 }, ...ROUND_2.tests.byFile!.slice(1)],
+  },
+  files: [...FILES.slice(0, 4), SPEC_SKIPPED, CHECKOUT],
+};
+
 const START: Turn[] = [
   { role: "user", text: "Сделай возврат заказа из профиля: покупатель выбирает товары и причину, деньги возвращаются на карту." },
   {
@@ -208,11 +276,11 @@ const TRANSCRIPT: Turn[] = [
     thought: "Ran 5 steps",
     time: "6 minutes ago",
     steps: [
-      { icon: RUN, label: "Ran tests", detail: "CI run #508" },
+      { icon: RUN, label: "Ran tests", detail: "CI run #503" },
       { icon: RUN, label: "Checked the migration on a DB copy" },
       { icon: RUN, label: "Took screenshots", detail: "375 and 1440" },
     ],
-    blocks: [{ type: "p", text: ROUND.message }, { type: "result-card", iteration: 1 }],
+    blocks: [{ type: "p", text: ROUND_1.message }, { type: "result-card", iteration: 1 }],
   },
 ];
 
@@ -296,11 +364,17 @@ export const RETURNS: Task = {
   result: {
     claims: [],
     ready: true,
-    iterations: [ROUND],
+    iterations: [ROUND_1, ROUND_2],
     steps: {
       form: {
         work: { agent: "payments-engineer", cost: "$1.20", time: "35m" },
-        result: { summary: "Кнопка «Вернуть» в заказе 14 дней после доставки, форма с товарами и причиной.", files: [{ name: "profile/ReturnRequest.tsx", added: 96, removed: 0 }] },
+        result: {
+          summary: "Кнопка «Вернуть» в заказе 14 дней после доставки, форма с товарами и причиной. Ссылку на возврат добавил и в итоги заказа в чекауте.",
+          files: [
+            { name: "profile/ReturnRequest.tsx", added: 96, removed: 0 },
+            { name: "checkout/OrderSummary.tsx", added: 6, removed: 1 },
+          ],
+        },
       },
       api: {
         work: { agent: "payments-engineer", cost: "$1.40", time: "40m" },
@@ -322,7 +396,11 @@ export const RETURNS: Task = {
       },
     },
     transcript: TRANSCRIPT,
-    fix: { agent: "payments-engineer", summary: "Исправил по замечаниям приёмки.", reply: "Беру в работу. Результат пришлю на приёмку снова." },
+    fix: {
+      agent: "payments-engineer",
+      summary: "Вернул тест на повторный вебхук и починил его; правку `checkout/OrderSummary.tsx` откатил.",
+      reply: "Беру в работу: верну пропущенный тест и откачу правку вне брифа. Результат пришлю на приёмку снова.",
+    },
   },
 };
 
