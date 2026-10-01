@@ -215,16 +215,18 @@ function NewChatLine({
   reason?: string;
   onAsTask: (v: boolean) => void;
 }) {
-  const { blocked, canWait } = useInbox();
+  const { blocked, toReview, canWait } = useInbox();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const line = "flex min-h-[var(--cds-h-control--xs)] items-center gap-sm pb-xs ps-xs text-footnote";
   if (!draft) {
-    if (!blocked.length && !canWait.length) return null;
+    if (!blocked.length && !toReview.length && !canWait.length) return null;
     return (
       <div className={line + " text-muted"}>
         <span className="min-w-0 truncate">
-          {blocked.length} blocked on you{canWait.length > 0 && ` · ${canWait.length} can wait`}
+          {[blocked.length > 0 && `${blocked.length} blocked on you`, toReview.length > 0 && `${toReview.length} to review`, canWait.length > 0 && `${canWait.length} can wait`]
+            .filter(Boolean)
+            .join(" · ")}
         </span>
         <button
           type="button"

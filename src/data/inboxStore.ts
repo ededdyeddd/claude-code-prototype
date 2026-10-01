@@ -52,17 +52,18 @@ function touched(t: Task, answers: Record<string, string>, chat: TaskState) {
 }
 
 /**
- * Where a task stands for the person. Blocked: the agent stopped and waits (a blocking question, a gate of
- * the task chat, an escalation offer). Can wait: questions only, the agent keeps going. Result: a small task's
- * result to accept (the sidebar shows it; the Inbox list does not). None: a small task, not in the Inbox.
+ * Where a task stands for the person, by what its agent is doing. Blocked: it stopped mid-work and waits (a blocking
+ * question, a gate of the task chat, an escalation offer). To review: it finished, the result of a level 2–3 task waits
+ * for acceptance. Can wait: questions only, the agent keeps going. Result: a small task's result to accept (the sidebar
+ * shows it; the Inbox list does not). None: a small task, not in the Inbox.
  */
 export function taskStatus(t: Task, answers: Record<string, string>, chat: TaskState = EMPTY) {
   const open = openQuestions(t, answers);
   const d = deriveTask(t, chat);
-  // A result to accept waits for the person but holds no agent: Can wait; a broken locked criterion blocks it.
-  const brokenResult = d.acceptancePending && !d.acceptance?.canAccept;
-  if (open.some((q) => q.blocking) || d.atGate || d.escalationPending || brokenResult) return "blocked" as const;
-  if (open.length > 0 || d.acceptancePending) return "canWait" as const;
+  // The agent finished: the result waits for review, broken locked criterion or not (the row and the dot say which).
+  if (d.acceptancePending) return "toReview" as const;
+  if (open.some((q) => q.blocking) || d.atGate || d.escalationPending) return "blocked" as const;
+  if (open.length > 0) return "canWait" as const;
   if (d.resultPending) return "result" as const;
   // Accepted: the task is done and leaves the lists.
   if (d.acceptance && d.accepted) return "none" as const;
@@ -81,28 +82,32 @@ export function useInbox() {
   const live = TASKS.map((t) => (chats[t.id] ? deriveTask(t, chats[t.id]).live : t));
   const of = (k: string) => live.filter((t) => status.get(t.id) === k);
   const blocked = of("blocked");
+  // A result with a broken locked criterion cannot be accepted: it is as urgent as Blocked (clay dot, the counter), so it goes first.
+  const broken = (t: Task) => !deriveTask(t, chats[t.id]).acceptance?.canAccept;
+  const toReview = [...of("toReview").filter(broken), ...of("toReview").filter((t) => !broken(t))];
+  const urgentReview = toReview.filter(broken);
   const canWait = of("canWait");
-  const needsYou = [...blocked, ...canWait];
+  const needsYou = [...blocked, ...toReview, ...canWait];
   // Small tasks run too, but only the ones the person has had a hand in are listed; the rest would be noise.
   const listed = (t: Task) => deriveTask(t, chats[t.id]).level >= 2 || touched(t, s.answers, chats[t.id] ?? EMPTY);
   const running = live.filter((t) => status.get(t.id) === "running" && listed(t));
   const results = of("result");
   const smallRunning = live.filter((t) => status.get(t.id) === "running" && !listed(t));
-  // Results waiting for acceptance: the agent is done, so the sidebar shows them still, not pulsing.
-  const accepting = live.filter((t) => deriveTask(t, chats[t.id]).acceptancePending);
-  return { ...s, chats, blocked, canWait, needsYou, running, results, smallRunning, accepting };
+  return { ...s, chats, blocked, toReview, urgentReview, canWait, needsYou, running, results, smallRunning };
 }
 
 /** Live state of a task chat for the sidebar and the chat view; undefined for chats that are not tasks. */
 export function taskState(
   id: string,
-  n: { blocked: Task[]; canWait: Task[]; running: Task[]; results: Task[]; smallRunning: Task[]; accepting?: Task[] },
+  n: { blocked: Task[]; toReview: Task[]; urgentReview: Task[]; canWait: Task[]; running: Task[]; results: Task[]; smallRunning: Task[] },
 ) {
   // Blocked stops one step, not always the task: steps that do not need the answer may keep running in parallel.
   const blocked = n.blocked.find((t) => t.id === id);
   if (blocked) return { waiting: "blocked" as const, running: blocked.stages.some((st) => st.steps.some((p) => p.status === "running" && !p.question)) };
-  if (n.canWait.some((t) => t.id === id))
-    return n.accepting?.some((t) => t.id === id) ? { waiting: "result" as const, running: false } : { waiting: "canWait" as const, running: true };
+  // The agent finished: a still dot, clay if a locked criterion is broken.
+  if (n.toReview.some((t) => t.id === id))
+    return { waiting: n.urgentReview.some((t) => t.id === id) ? ("blocked" as const) : ("result" as const), running: false };
+  if (n.canWait.some((t) => t.id === id)) return { waiting: "canWait" as const, running: true };
   if (n.results.some((t) => t.id === id)) return { waiting: "result" as const, running: false };
   if (n.running.some((t) => t.id === id) || n.smallRunning.some((t) => t.id === id)) return { waiting: undefined, running: true };
   return undefined;
