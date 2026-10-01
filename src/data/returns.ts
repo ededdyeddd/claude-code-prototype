@@ -340,7 +340,7 @@ export const RETURNS: Task = {
   stages: [
     {
       id: "scope",
-      title: "Scope",
+      title: "Brief",
       steps: [{ id: "brief", status: "done", title: "Бриф и план", work: { agent: "payments-engineer", cost: "$0.40", time: "12m" } }],
       gate: { title: "the brief and plan", mine: true, status: "passed" },
     },

@@ -519,8 +519,8 @@ const ONE_CLICK: Task = {
   title: "Оплата в один клик",
   summary: "Повторный заказ — одним нажатием сохранённой картой. Готово, когда 3-D Secure проходит в тесте, а без согласия карта не сохраняется.",
   project: "storefront",
-  stage: "Scope",
-  now: "Scope · waiting for you",
+  stage: "Brief",
+  now: "Brief · waiting for you",
   waitingFor: "1m",
   agent: "payments-engineer",
   model: "Opus 5.5",
@@ -571,7 +571,7 @@ const ONE_CLICK: Task = {
   stages: [
     {
       id: "scope",
-      title: "Scope",
+      title: "Brief",
       steps: [
         {
           id: "read",
@@ -791,7 +791,7 @@ const I18N: Task = {
   stages: [
     {
       id: "scope",
-      title: "Scope",
+      title: "Brief",
       steps: [
         {
           id: "count",
