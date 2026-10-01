@@ -569,8 +569,9 @@ export function AcceptanceTab({
                 const done = acc.handChecks.includes(m.id);
                 return (
                   <li key={m.id}>
-                    <label className="flex items-start gap-sm cursor-[var(--cds-cursor-interactive)]">
-                      <span className="mt-[5px] flex size-3 shrink-0 items-center justify-center">
+                    {/* The box sits in a box one text line tall, centred: on the first line's middle at any size. */}
+                    <label className="flex items-start gap-sm text-body cursor-[var(--cds-cursor-interactive)]">
+                      <span className="flex h-[1lh] shrink-0 items-center">
                         <span className="relative flex size-4 shrink-0">
                           <input
                             type="checkbox"
