@@ -77,7 +77,7 @@ export function SectionTitle({ children, aside }: { children: ReactNode; aside?:
  * fill with the clay dot (needs you) and its own small "Confirm" / "Correct…"; marked, it drops the fill and gets ✓
  * with your words. The row's buttons stay xs and inside the row, so the card's footer keeps the one primary.
  */
-function RiskyAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
+function RiskyAssumption({ view, a, className }: { view: ChatTaskView; a: Assumption; className?: string }) {
   const mark = view.marks[a.id];
   const [fixing, setFixing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -87,7 +87,7 @@ function RiskyAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
     markAssumption(view.id, a.id, { ok: false, note: draft.trim() });
     setFixing(false);
   };
-  const row = "flex items-start gap-sm rounded px-sm py-sm";
+  const row = cx("flex items-start gap-sm rounded px-sm py-sm", className);
 
   if (mark && !fixing)
     return (
@@ -157,7 +157,7 @@ function RiskyAssumption({ view, a }: { view: ChatTaskView; a: Assumption }) {
   );
 }
 
-/** A risky assumption in the Brief tab, read only: marked with your words, or waiting for you in the chat. */
+/** A risky assumption in the Brief tab after the gate, read only: marked with your words, or waiting for you in the chat. */
 function AssumptionState({ view, a }: { view: ChatTaskView; a: Assumption }) {
   const mark = view.marks[a.id];
   return (
@@ -264,7 +264,14 @@ export function BriefView({ view }: { view: ChatTaskView }) {
         </SectionTitle>
         <ul className="flex flex-col gap-sm">
           {risky.map((a) =>
-            view.rejected.has(a.id) ? <SafeAssumption key={a.id} view={view} a={a} /> : <AssumptionState key={a.id} view={view} a={a} />,
+            view.rejected.has(a.id) ? (
+              <SafeAssumption key={a.id} view={view} a={a} />
+            ) : view.atGate ? (
+              // At the gate the brief is where you read the assumption, so you can confirm it right there; the dock follows.
+              <RiskyAssumption key={a.id} view={view} a={a} className="-mx-sm" />
+            ) : (
+              <AssumptionState key={a.id} view={view} a={a} />
+            ),
           )}
         </ul>
         {safe.length > 0 && (
