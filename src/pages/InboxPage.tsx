@@ -259,7 +259,8 @@ function TaskRow({
   const needs = open.length > 0 || !!decision;
   // Blocked on one step, not stopped: steps that do not need the answer keep running in parallel.
   const working = group === "blocked" ? task.stages.flatMap((st) => st.steps).filter((p) => p.status === "running" && !p.question).length : 0;
-  const turn = turnEta(task);
+  // Only Running says when you will be needed; Blocked and To review already say how long the agent has been waiting.
+  const turn = group === "running" ? turnEta(task) : undefined;
   const stageText = needs ? task.stage : task.waitingFor ? `${task.stage} · resumed` : task.now;
 
   // Two lines, same height for every row: what + how long it waits (or when it is your turn);
@@ -282,7 +283,7 @@ function TaskRow({
         <span className="justify-self-end text-footnote tabular-nums text-secondary">
           {needs && task.waitingFor ? (
             `waiting ${task.waitingFor}`
-          ) : !needs && turn ? (
+          ) : turn ? (
             <Hint text={whenHint(turn.source)} focusable={false}>
               Your turn by {turn.eta}
             </Hint>
