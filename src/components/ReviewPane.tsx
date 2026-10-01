@@ -441,7 +441,7 @@ export function AcceptanceTab({
             <ol className="flex flex-col gap-md">
               {acc.groups.map((g) => {
                 return (
-                  // A step is a heading with a rail down its claims, no mark of its own: the only marks are the claims' statuses.
+                  // A step is a heading over its claims, no mark and no rail of its own: the only marks are the claims' statuses.
                   <li key={g.step.id} className="flex flex-col">
                     <div className="flex min-w-0 flex-1 flex-col gap-xs">
                       <div className="flex flex-col gap-0.5">
@@ -455,7 +455,7 @@ export function AcceptanceTab({
                           </Meta>
                         )}
                       </div>
-                      <ul className={cx(LIST, "ms-[5.5px] border-s border-alpha-3 ps-[calc(var(--cds-gap-md)-0.5px)]")}>
+                      <ul className={LIST}>
                         {g.claims.map((c) => {
                           const was = acc.was(c.id);
                           const isOpen = open.has(c.id);
