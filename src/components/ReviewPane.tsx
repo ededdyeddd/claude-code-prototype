@@ -357,9 +357,12 @@ export function AcceptanceTab({
   const skipped = acc.tests.skippedOrDeleted.filter((t) => t.kind === "skipped").length;
   const deleted = acc.tests.skippedOrDeleted.length - skipped;
   // Which round this is, over both tabs: the pane's header is shared with the plan and the brief.
-  const round = view.sentBack
-    ? `Round ${acc.iteration} · sent back · the agent is fixing it`
-    : changed && `Round ${acc.iteration} · ${plural(changed.files.length, "file", "files")} changed since you last looked`;
+  // Accepted, the review stays to read, and says the task is done.
+  const round = view.accepted
+    ? `Round ${acc.iteration} · accepted · PR description ready`
+    : view.sentBack
+      ? `Round ${acc.iteration} · sent back · the agent is fixing it`
+      : changed && `Round ${acc.iteration} · ${plural(changed.files.length, "file", "files")} changed since you last looked`;
   return (
     <div id="review-pane">
       {round && <p className="px-[var(--cds-gap-lg)] pt-xs text-body text-secondary">{round}</p>}
