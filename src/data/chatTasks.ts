@@ -604,7 +604,7 @@ const ONE_CLICK: Task = {
           id: "save-card",
           status: "ahead",
           title: "Сохранение карты в Stripe Customer по согласию",
-          work: { agent: "payments-engineer", cost: "~$1–3", basis: "23 similar tasks" },
+          work: { agent: "payments-engineer", cost: "~$1–3", time: "~40m", basis: "23 similar tasks" },
           plan: {
             what: "Галочка «Запомнить карту» в форме оплаты. С ней платёж создаёт Stripe Customer и сохраняет карту; у нас остаются токен и последние 4 цифры.",
             serves: ["no-consent"],
@@ -614,7 +614,7 @@ const ONE_CLICK: Task = {
           id: "pick-card",
           status: "ahead",
           title: "Выбор сохранённой карты в чекауте",
-          work: { agent: "payments-engineer", cost: "~$2–3", basis: "14 similar tasks" },
+          work: { agent: "payments-engineer", cost: "~$2–3", time: "~45m", basis: "14 similar tasks" },
           plan: {
             what: "Кнопка «Оплатить картой •• 4242» в повторном заказе: карта выбрана заранее, CVC не спрашиваем. Другую карту можно выбрать из списка.",
             serves: ["one-click", "delete"],
@@ -624,7 +624,7 @@ const ONE_CLICK: Task = {
           id: "3ds",
           status: "ahead",
           title: "3-D Secure для повторной оплаты",
-          work: { agent: "payments-engineer", cost: "~$1–2", basis: "size M, the agent's estimate" },
+          work: { agent: "payments-engineer", cost: "~$1–2", time: "~25m", basis: "size M, the agent's estimate" },
           plan: {
             what: "Если банк просит 3-D Secure, повторная оплата уходит в подтверждение и возвращается в заказ. Отказ банка — понятный текст и выбор другой карты.",
             serves: ["3ds", "decline"],
@@ -634,7 +634,7 @@ const ONE_CLICK: Task = {
           id: "wallets",
           status: "ahead",
           title: "Apple Pay и Google Pay через Payment Request",
-          work: { agent: "payments-engineer", cost: "~$1–2", basis: "6 similar tasks" },
+          work: { agent: "payments-engineer", cost: "~$1–2", time: "~20m", basis: "6 similar tasks" },
           plan: {
             what: "Кнопка кошелька рядом с сохранённой картой: тоже оплата в одно нажатие, если кошелёк есть в браузере.",
             serves: ["one-click"],
@@ -651,7 +651,7 @@ const ONE_CLICK: Task = {
           id: "e2e",
           status: "ahead",
           title: "E2E: повторная оплата в тестовом режиме",
-          work: { agent: "test-fixer", cost: "~$1", basis: "31 similar tasks" },
+          work: { agent: "test-fixer", cost: "~$1", time: "~15m", basis: "31 similar tasks" },
           plan: {
             what: "Прогоню весь путь в тестовом режиме Stripe: оплата в одно нажатие, 3-D Secure, отказ банка, заказ без согласия. Тесты чекаута остаются зелёными.",
             serves: ["one-click", "3ds", "decline", "no-consent", "tests"],
@@ -932,15 +932,15 @@ const LOYALTY: Task = {
         id: "migrate",
         title: "Migration",
         steps: [
-          { id: "column", status: "ahead", title: "Колонка `orders_count` у покупателя", work: { agent: "payments-engineer", cost: "~$1–2", basis: "9 similar tasks" } },
-          { id: "backfill", status: "ahead", title: "Заполнить по истории заказов", work: { agent: "payments-engineer", cost: "~$1–3", basis: "size M, the agent's estimate" } },
+          { id: "column", status: "ahead", title: "Колонка `orders_count` у покупателя", work: { agent: "payments-engineer", cost: "~$1–2", time: "~15m", basis: "9 similar tasks" } },
+          { id: "backfill", status: "ahead", title: "Заполнить по истории заказов", work: { agent: "payments-engineer", cost: "~$1–3", time: "~30m", basis: "size M, the agent's estimate" } },
         ],
         gate: { title: "the migration", mine: true, status: "current" },
       },
       {
         id: "verify",
         title: "Verify",
-        steps: [{ id: "email", status: "ahead", title: "Скидка в письме о заказе", work: { agent: "payments-engineer", cost: "~$1", basis: "12 similar tasks" } }],
+        steps: [{ id: "email", status: "ahead", title: "Скидка в письме о заказе", work: { agent: "payments-engineer", cost: "~$1", time: "~10m", basis: "12 similar tasks" } }],
         gate: { title: "the result", mine: true, status: "ahead" },
       },
     ],
@@ -984,9 +984,9 @@ const LOYALTY: Task = {
         { id: "rule", status: "done", title: "Правило скидки в корзине", work: { agent: "payments-engineer", cost: "$1.20", time: "14m" } },
         { id: "ui", status: "done", title: "Строка скидки в корзине", work: { agent: "payments-engineer", cost: "$0.80", time: "9m" } },
         // The agent stopped here: the column is a migration. The offer to split the task waits on this step.
-        { id: "column", status: "waiting", title: "Колонка `orders_count` у покупателя", work: { agent: "payments-engineer", cost: "~$1–2", basis: "9 similar tasks" } },
-        { id: "backfill", status: "ahead", title: "Заполнить по истории заказов", work: { agent: "payments-engineer", cost: "~$1–3", basis: "size M, the agent's estimate" } },
-        { id: "email", status: "ahead", title: "Скидка в письме о заказе", work: { agent: "payments-engineer", cost: "~$1", basis: "12 similar tasks" } },
+        { id: "column", status: "waiting", title: "Колонка `orders_count` у покупателя", work: { agent: "payments-engineer", cost: "~$1–2", time: "~15m", basis: "9 similar tasks" } },
+        { id: "backfill", status: "ahead", title: "Заполнить по истории заказов", work: { agent: "payments-engineer", cost: "~$1–3", time: "~30m", basis: "size M, the agent's estimate" } },
+        { id: "email", status: "ahead", title: "Скидка в письме о заказе", work: { agent: "payments-engineer", cost: "~$1", time: "~10m", basis: "12 similar tasks" } },
       ],
     },
   ],

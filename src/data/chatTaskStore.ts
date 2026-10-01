@@ -290,7 +290,7 @@ function acceptanceTask(task: Task, s: TaskState): Task {
     id: `fix-${n}`,
     status: running ? "running" : "done",
     title: "Исправить по итогам приёмки",
-    work: running ? { agent, cost: "~$1", basis: "the agent's estimate" } : { agent, cost: "$0.80", time: "12m" },
+    work: running ? { agent, cost: "~$1", time: "~20m", basis: "the agent's estimate" } : { agent, cost: "$0.80", time: "12m" },
     ...(running ? {} : { result: { summary } }),
   });
   const fixes = [...Array.from({ length: s.iteration }, (_, i) => fix(i + 1, false)), ...(s.sentBack ? [fix(s.iteration + 1, true)] : [])];
