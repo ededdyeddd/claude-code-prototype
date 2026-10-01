@@ -275,11 +275,8 @@ function TaskRow({
       )}
     >
       {/* Clay only when the agent stopped for you. Can wait keeps working: the running dot, as in the sidebar; the group and "1 question" say it has a question. */}
-      {/* To review: the agent finished, the still grey dot as in the sidebar; clay if a locked criterion is broken. */}
-      <TaskDot
-        state={group === "canWait" ? "running" : group === "toReview" ? (session.acceptance?.canAccept ? "done" : "blocked") : group}
-        className="mt-[5px]"
-      />
+      {/* To review: the agent finished, the still grey dot as in the sidebar; "a locked criterion is broken" says the rest. */}
+      <TaskDot state={group === "canWait" ? "running" : group === "toReview" ? "done" : group} className="mt-[5px]" />
       <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-md gap-y-0.5">
         <span className="truncate text-body font-medium text-primary">{task.title}</span>
         <span className="justify-self-end text-footnote tabular-nums text-secondary">
