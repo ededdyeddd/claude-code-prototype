@@ -9,6 +9,7 @@ import { AWAY, TASKS } from "../data/inbox";
 import { currentGate, gateText, type Task } from "../data/task";
 import { ChangeButton, PaneMeta, PlanPane, whenHint } from "../components/PlanPane";
 import { BriefView, GateCard } from "../components/ChatTask";
+import { AcceptanceTab } from "../components/ReviewPane";
 import { deriveTask, type TaskState } from "../data/chatTaskStore";
 import { openQuestions, useInbox, type Attention } from "../data/inboxStore";
 import { introSeen, markIntroSeen } from "../data/onboarding";
@@ -26,6 +27,9 @@ const I = {
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+
+type PaneTab = "plan" | "brief" | "result" | "diff";
+const PANE_TAB_LABEL: Record<PaneTab, string> = { plan: "Plan", brief: "Brief", result: "Result", diff: "Diff" };
 
 /* ------------------------------------------------------------------ Header */
 
@@ -428,7 +432,7 @@ export function InboxPage() {
   const [selectedId, setSelectedId] = useState<string | null>(() => new URLSearchParams(search).get("task") ?? needsYou[0]?.id ?? null);
   const [expanded, setExpanded] = useState(false);
   // Same pane as beside a task chat: Plan first, Brief a tab away for tasks that have one.
-  const [paneTab, setPaneTab] = useState<"plan" | "brief">("plan");
+  const [paneTab, setPaneTab] = useState<PaneTab>("plan");
   // Another task opens on its plan.
   const [tabFor, setTabFor] = useState(selectedId);
   if (tabFor !== selectedId) {
@@ -443,6 +447,15 @@ export function InboxPage() {
   const selected = TASKS.find((t) => t.id === selectedId);
   // Tasks with a chat level carry session state (gate passed, text edits); the pane shows the plan as it stands.
   const session = selected && deriveTask(selected, chats[selected.id]);
+  const view = selected && session ? { id: selected.id, task: selected, ...session } : undefined;
+  // The same tabs as the task pane beside a chat: Plan, Brief if there is one, and Result | Diff while a result waits for review.
+  const paneTabs: PaneTab[] = [
+    "plan",
+    ...(selected?.brief ? (["brief"] as const) : []),
+    ...(session?.acceptance ? (["result", "diff"] as const) : []),
+  ];
+  // Accepted or sent back, Result | Diff go away: the pane falls back to the plan.
+  const tab = paneTabs.includes(paneTab) ? paneTab : "plan";
 
   const openNext = () => {
     const next = needsYou.find((t) => t.id !== selectedId);
@@ -506,15 +519,12 @@ export function InboxPage() {
           subheader={
             <div className="flex flex-col gap-md pt-xs">
               <p className="text-body text-secondary">{selected.summary}</p>
-              {selected.brief && (
+              {paneTabs.length > 1 && (
                 <Tabs
-                  label="Plan and brief"
-                  value={paneTab}
-                  onChange={(t) => setPaneTab(t as "plan" | "brief")}
-                  items={[
-                    { value: "plan" as const, label: "Plan" },
-                    { value: "brief" as const, label: "Brief" },
-                  ]}
+                  label="Task"
+                  value={tab}
+                  onChange={(t) => setPaneTab(t as PaneTab)}
+                  items={paneTabs.map((t) => ({ value: t, label: PANE_TAB_LABEL[t] }))}
                 />
               )}
             </div>
@@ -535,8 +545,10 @@ export function InboxPage() {
             </Button>
           }
         >
-          {paneTab === "brief" && selected.brief && session ? (
-            <BriefView view={{ id: selected.id, task: selected, ...session }} />
+          {(tab === "result" || tab === "diff") && view?.acceptance ? (
+            <AcceptanceTab view={view} acc={view.acceptance} tab={tab} onTab={setPaneTab} />
+          ) : tab === "brief" && view ? (
+            <BriefView view={view} />
           ) : (
             <PlanPane
               task={session?.live ?? selected}
@@ -551,7 +563,8 @@ export function InboxPage() {
                   <GateCard
                     view={{ id: selected.id, task: selected, ...session }}
                     onOpenBrief={selected.brief ? () => setPaneTab("brief") : undefined}
-                    onOpenResult={() => navigate(`/code/${selected.id}?review=result`)}
+                    // The review opens right here, in the Result tab; talking to the agent stays in the chat.
+                    onOpenResult={() => setPaneTab("result")}
                     onDone={openNext}
                   />
                 )
