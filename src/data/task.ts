@@ -314,6 +314,10 @@ export type Task = {
     steps?: Record<string, { work: StepWork; result: StepResult }>;
     /** The chat up to the result, which replaces the chat's mock transcript in the acceptance scene. */
     transcript?: Turn[];
+    /** The result already waits for acceptance when the prototype opens, with no `?scene=acceptance` needed. */
+    ready?: true;
+    /** After Send back: who fixes the round, what the fix did, and the agent's reply in the feed. */
+    fix?: { agent: string; summary: string; reply: string };
   };
   /** Escalation offered in the feed: the level goes up to `to` once the person agrees. */
   /**

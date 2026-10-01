@@ -1,6 +1,7 @@
 /** Inbox mocks: tasks with their plans and the agent's questions, and the away recap. Model: task.ts. */
 import type { AutoDecision, Stage, StepResult, StepWork, Task } from "./task";
 import { CHAT_TASK_LIST } from "./chatTasks";
+import { CHART_PDF_BRIEF, CHART_PDF_ENVELOPE, CHART_PDF_RESULT } from "./chartPdf";
 
 /** The away window. Decisions and spend are counted from TASKS, so the recap matches the lists behind it. */
 export const AWAY = {
@@ -521,15 +522,24 @@ const INBOX_TASKS: (Omit<Task, "stages"> & { stages: Stage[]; autoDecisions: Aut
     title: "PDF натальной карты",
     summary: "Делаю экспорт натальной карты в PDF: круг карты, таблица позиций и расшифровки по разделам.",
     project: "astrology-app",
-    stage: "Review",
-    now: "Review · running e2e",
+    stage: "Export",
+    now: "Export · e2e на стейджинге",
     level: 2,
     levelReason: "a new export with 3 parts, and 5 similar tasks took half a day",
+    brief: CHART_PDF_BRIEF,
+    envelope: CHART_PDF_ENVELOPE,
+    // The result already waits for acceptance (chartPdf.ts); the steps below are the plan as it stood before it.
+    result: CHART_PDF_RESULT,
     stages: [
       {
         id: "s1",
-        title: "Review",
-        steps: [{ id: "a", status: "running", title: "e2e на стейджинге" }],
+        title: "Export",
+        steps: [
+          { id: "wheel", status: "done", title: "Круг карты и таблица позиций в PDF" },
+          { id: "fonts", status: "done", title: "Шрифты и символы приложения" },
+          { id: "readings", status: "done", title: "Расшифровки с переносом по абзацам" },
+          { id: "e2e", status: "running", title: "e2e на стейджинге" },
+        ],
         gate: { title: "the result", mine: true, status: "ahead", eta: "tomorrow 11:00", etaSource: "the CI queue" },
       },
     ],
@@ -571,7 +581,10 @@ const STEP_WORK: Record<string, StepWork> = {
   "flaky:a": { agent: "test-fixer", cost: "$0.08", time: "5m" },
   "flaky:b": { agent: "test-fixer", cost: "$0.04", time: "2m" },
   "flaky:c": { agent: "test-fixer", cost: "~$0.30", time: "~40m", basis: "2 similar fixes" },
-  "chart-pdf:a": { agent: "ui-engineer", cost: "$1.05", time: "4m" },
+  "chart-pdf:wheel": { agent: "ui-engineer", cost: "$0.35", time: "1h 10m" },
+  "chart-pdf:fonts": { agent: "ui-engineer", cost: "$0.15", time: "25m" },
+  "chart-pdf:readings": { agent: "ui-engineer", cost: "$0.25", time: "40m" },
+  "chart-pdf:e2e": { agent: "ui-engineer", cost: "~$0.30", time: "~35m", basis: "3 similar tasks" },
 };
 
 /** What a finished step produced. Key: `${taskId}:${stepId}`. */
