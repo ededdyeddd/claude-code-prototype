@@ -354,7 +354,8 @@ function deriveAcceptance(task: Task, acc: Acceptance, prev: Acceptance | undefi
       const claims = acc.claims.filter((c) => c.stepId === step.id);
       const touched = facts[step.id]?.result.files ?? step.result?.files ?? [];
       const level = touched.some((f) => zoneOf(f.name).level === "high") ? ("high" as const) : ("normal" as const);
-      const zone = touched.map((f) => zoneOf(f.name)).sort((a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level])[0]?.label;
+      // No known area says nothing: the heading goes without one rather than "Other".
+      const zone = touched.map((f) => zoneOf(f.name)).filter((z) => z.zone !== "other").sort((a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level])[0]?.label;
       return { step, claims, level, zone, order };
     })
     .filter((g) => g.claims.length > 0)
