@@ -422,14 +422,11 @@ function Stat({
   );
 }
 
-/**
- * The task against its own limit, over the plan in the chat and in Up next: steps done, money, working time.
- * Before the start (the task waits at a gate of yours) the money card is the forecast for the whole plan; in work it is
- * what is spent, with what is left of the limit beside it and the forecast for the rest on hover.
- */
-export function PlanStats({ view }: { view: ChatTaskView }) {
+/** "Plan" tab: the same plan as in the Inbox pane, headed by what is left against the envelope. */
+export function PlanView({ view }: { view: ChatTaskView }) {
+  const { answers } = useInbox();
+  const { openReview } = useContext(ChatTaskContext);
   const t = totals(view);
-  const limit = view.envelope.limit;
   const spent = view.live.stages.flatMap((st) => st.steps).reduce((n, p) => n + (p.status === "done" && p.work ? costRange(p.work.cost).min : 0), 0);
   const progress = planProgress(view.live);
   const finished = progress.total > 0 && progress.done === progress.total;
@@ -440,66 +437,6 @@ export function PlanStats({ view }: { view: ChatTaskView }) {
   const worked = steps.filter((p) => p.status === "done").reduce((n, p) => n + anyMinutes(p.work!.time!), 0);
   // The whole task's working time: done steps plus the forecast for the rest, rounded to 10 minutes as a forecast.
   const total = Math.round((worked + steps.filter((p) => p.status !== "done").reduce((n, p) => n + anyMinutes(p.work!.time!), 0)) / 10) * 10;
-  // What the whole task may cost: spent so far plus the forecast for the rest.
-  const whole = { min: spent + t.min, max: spent + t.max };
-  const over = whole.max > limit;
-  const beforeStart = view.atGate && !finished;
-  return (
-    <div className="flex flex-col gap-xs">
-      <div className="grid grid-cols-3 gap-sm">
-        <Stat label="Done" value={`${progress.done}`} of={`of ${progress.total}`} meter={{ used: progress.total ? (progress.done / progress.total) * 100 : 0 }} />
-        {beforeStart ? (
-          // Before the start: what the plan will roughly cost, against this task's limit.
-          <Stat
-            label="Forecast"
-            value={`~${money(whole.min, whole.max)}`}
-            of={`of $${limit}`}
-            meter={{ used: (whole.max / limit) * 100, over }}
-            hint={`What the whole plan will roughly cost, forecast from its steps, against this task's limit of $${limit}.`}
-          />
-        ) : (
-          // In work: the fact, what is left of the limit beside it, the forecast for the rest on hover.
-          <Stat
-            label="Spent"
-            aside={!finished && `${money(Math.max(0, limit - spent))} left`}
-            value={`$${spent.toFixed(2)}`}
-            of={`of $${limit}`}
-            meter={{ used: (spent / limit) * 100, over }}
-            hint={finished ? `What the task cost, against its limit of $${limit}.` : `~${money(t.min, t.max)} more, forecast for what's left in the plan.`}
-          />
-        )}
-        {/* A finished task has no forecast left: what it took, not "of ~". */}
-        <Stat
-          label={finished ? "Worked" : "Working"}
-          aside={!finished && finish?.eta && `by ${finish.eta}`}
-          value={duration(worked)}
-          of={finished ? undefined : `of ~${duration(total)}`}
-          meter={{ used: finished ? 100 : total ? (worked / total) * 100 : 0 }}
-          hint={
-            finished ? (
-              "Agent working time on the whole task."
-            ) : (
-              <>
-                Agent working time: done steps, then the forecast for the rest.
-                {finish?.eta && ` ${finish.mine ? "Ready for you" : "Done"} ${finish.eta}, ${etaFrom(finish.etaSource)}`}
-              </>
-            )
-          }
-        />
-      </div>
-      {over && (
-        <p className="text-footnote text-clay">
-          May go over your limit: up to {money(whole.max)} of ${limit}. Cut scope to fit.
-        </p>
-      )}
-    </div>
-  );
-}
-
-/** "Plan" tab: the same plan as in the Inbox pane, headed by the task against its limit. */
-export function PlanView({ view }: { view: ChatTaskView }) {
-  const { answers } = useInbox();
-  const { openReview } = useContext(ChatTaskContext);
   return (
     <div className={CODE}>
       <PlanPane
@@ -513,7 +450,44 @@ export function PlanView({ view }: { view: ChatTaskView }) {
             <TextLink onClick={() => openReview("result")}>{acceptanceMeta(view)}</TextLink>
           )
         }
-        header={<PlanStats view={view} />}
+        header={
+          <div className="flex flex-col gap-xs">
+            <div className="grid grid-cols-3 gap-sm">
+              <Stat label="Done" value={`${progress.done}`} of={`of ${progress.total}`} meter={{ used: (progress.done / progress.total) * 100 }} />
+              {/* Facts first: what is left against the limit is on hover; the plan's rows carry the forecasts. */}
+              <Stat
+                label="Spent"
+                value={`$${spent.toFixed(2)}`}
+                of={`of $${view.envelope.limit}`}
+                meter={{ used: (spent / view.envelope.limit) * 100, over: t.over }}
+                hint={`~${money(t.min, t.max)} more, forecast for what's left in the plan.`}
+              />
+              {/* A finished task has no forecast left: what it took, not "of ~". */}
+              <Stat
+                label={finished ? "Worked" : "Working"}
+                aside={!finished && finish?.eta && `by ${finish.eta}`}
+                value={duration(worked)}
+                of={finished ? undefined : `of ~${duration(total)}`}
+                meter={{ used: finished ? 100 : total ? (worked / total) * 100 : 0 }}
+                hint={
+                  finished ? (
+                    "Agent working time on the whole task."
+                  ) : (
+                    <>
+                      Agent working time: done steps, then the forecast for the rest.
+                      {finish?.eta && ` ${finish.mine ? "Ready for you" : "Done"} ${finish.eta}, ${etaFrom(finish.etaSource)}`}
+                    </>
+                  )
+                }
+              />
+            </div>
+            {t.over && (
+              <p className="text-footnote text-clay">
+                May go over your limit: up to {money(t.max)} of ${view.envelope.limit}. Cut scope to fit.
+              </p>
+            )}
+          </div>
+        }
       />
     </div>
   );
