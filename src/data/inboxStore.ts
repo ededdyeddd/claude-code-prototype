@@ -85,10 +85,9 @@ export function useInbox() {
   const live = TASKS.map((t) => (chats[t.id] ? deriveTask(t, chats[t.id]).live : t));
   const of = (k: string) => live.filter((t) => status.get(t.id) === k);
   const blocked = of("blocked");
-  // A result with a broken locked criterion cannot be accepted: it is as urgent as Blocked (clay dot, the counter), so it goes first.
+  // Every result to review has the same still grey dot; one that cannot be accepted (a broken locked criterion) goes first.
   const broken = (t: Task) => !deriveTask(t, chats[t.id]).acceptance?.canAccept;
   const toReview = [...of("toReview").filter(broken), ...of("toReview").filter((t) => !broken(t))];
-  const urgentReview = toReview.filter(broken);
   const canWait = of("canWait");
   const needsYou = [...blocked, ...toReview, ...canWait];
   // Small tasks run too, but only the ones the person has had a hand in are listed; the rest would be noise.
@@ -96,20 +95,19 @@ export function useInbox() {
   const running = live.filter((t) => status.get(t.id) === "running" && listed(t));
   const results = of("result");
   const smallRunning = live.filter((t) => status.get(t.id) === "running" && !listed(t));
-  return { ...s, chats, blocked, toReview, urgentReview, canWait, needsYou, running, results, smallRunning };
+  return { ...s, chats, blocked, toReview, canWait, needsYou, running, results, smallRunning };
 }
 
 /** Live state of a task chat for the sidebar and the chat view; undefined for chats that are not tasks. */
 export function taskState(
   id: string,
-  n: { blocked: Task[]; toReview: Task[]; urgentReview: Task[]; canWait: Task[]; running: Task[]; results: Task[]; smallRunning: Task[] },
+  n: { blocked: Task[]; toReview: Task[]; canWait: Task[]; running: Task[]; results: Task[]; smallRunning: Task[] },
 ) {
   // Blocked stops one step, not always the task: steps that do not need the answer may keep running in parallel.
   const blocked = n.blocked.find((t) => t.id === id);
   if (blocked) return { waiting: "blocked" as const, running: blocked.stages.some((st) => st.steps.some((p) => p.status === "running" && !p.question)) };
-  // The agent finished: a still dot, clay if a locked criterion is broken.
-  if (n.toReview.some((t) => t.id === id))
-    return { waiting: n.urgentReview.some((t) => t.id === id) ? ("blocked" as const) : ("result" as const), running: false };
+  // The agent finished: a still grey dot, whether the result can be accepted or not.
+  if (n.toReview.some((t) => t.id === id)) return { waiting: "result" as const, running: false };
   if (n.canWait.some((t) => t.id === id)) return { waiting: "canWait" as const, running: true };
   if (n.results.some((t) => t.id === id)) return { waiting: "result" as const, running: false };
   if (n.running.some((t) => t.id === id) || n.smallRunning.some((t) => t.id === id)) return { waiting: undefined, running: true };
