@@ -96,7 +96,7 @@ const BRIEF_PLAN: Task = {
   stages: [
     {
       id: "scope",
-      title: "Scope",
+      title: "Brief",
       steps: [
         {
           id: "read",
@@ -354,7 +354,7 @@ const UP_NEXT: Task = {
   stages: [
     {
       id: "scope",
-      title: "Scope",
+      title: "Brief",
       steps: [
         {
           id: "read",
@@ -587,7 +587,7 @@ const CHAT_LEVELS: Task = {
   stages: [
     {
       id: "scope",
-      title: "Scope",
+      title: "Brief",
       steps: [
         {
           id: "read",
