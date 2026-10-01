@@ -8,7 +8,7 @@ import { usePersistentWidth } from "../data/usePersistentWidth";
 import { AWAY, TASKS } from "../data/inbox";
 import { currentGate, gateText, type Task } from "../data/task";
 import { ChangeButton, PaneMeta, PlanPane, whenHint } from "../components/PlanPane";
-import { BriefView, GateCard } from "../components/ChatTask";
+import { BriefView, GateCard, PlanStats } from "../components/ChatTask";
 import { AcceptanceTab } from "../components/ReviewPane";
 import { deriveTask, type TaskState } from "../data/chatTaskStore";
 import { openQuestions, useInbox, type Attention } from "../data/inboxStore";
@@ -588,7 +588,13 @@ export function InboxPage() {
             <PlanPane
               task={session?.live ?? selected}
               answers={answers}
-              header={<PaneMeta task={session?.live ?? selected} answers={answers} />}
+              header={
+                // Where the task stands, then the same summary as the chat's Plan tab: done, money against the limit, time.
+                <div className="flex flex-col gap-md">
+                  <PaneMeta task={session?.live ?? selected} answers={answers} />
+                  {view && <PlanStats view={view} />}
+                </div>
+              }
               onTaskDone={openNext}
               edits={session?.planEdits}
               gateCard={
