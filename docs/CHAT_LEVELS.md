@@ -102,11 +102,13 @@
 
 **Бриф на приёмке.** «Done when» во вкладке Brief берёт статусы критериев из Result (`deriveAcceptance`): выполнен — точка и доказательство, нарушен — «Broken: …», защищённый — терракотой. Счётчик «N of M met» тот же, что в Result.
 
+**Risk by area.** Файлы вне брифа — отдельной строкой своей зоны («Payments · outside the brief»), чтобы остальные файлы зоны не считались вне брифа.
+
 **Up next.** Задача на приёмке лежит в группе To review (серая неподвижная точка: агент закончил). С нарушенным защищённым критерием — там же, но первой, с терракотовой точкой и строкой «a locked criterion is broken». Во второй строке — «accept the result». В плане под «You approve the result» — карточка: флаги строками, «4 proven · 2 only claimed · 1 contradicted», те же варианты без клавиш, «Details» открывает чат с `?review=result`.
 
 **Маршруты состояний** (сцена живёт в памяти: в Up next переходи из чата по сайдбару, без перезагрузки):
 - `/code/chart-pdf` — «PDF натальной карты» (уровень 2) открывается уже на приёмке (`result.ready`, данные в `src/data/chartPdf.ts`), так что в Up next всегда есть результат на приёмку. Раунд 1: ничего не нарушено, но изменён файл вне брифа (`src/chart/Wheel.tsx`) и символы в PDF — только слова агента: рекомендован Look deeper first, в Up next — To review. Send back → «Show the next round (demo)» → раунд 2, 4 из 4, рекомендован Accept.
-- `/code/returns` — «Возврат заказа из профиля» (уровень 3, `src/data/returns.ts`) тоже открывается на приёмке. Один раунд, всё доказано, флагов нет, хотя задеты платежи и миграция: рекомендован Accept с клавишей 1, в Up next — To review.
+- `/code/returns` — «Возврат заказа из профиля» (уровень 3, `src/data/returns.ts`) открывается на приёмке — это сценарий презентации без особой ссылки. Раунд 1: агент пишет «все тесты проходят», а система нашла пропущенный тест «a repeated webhook refunds once» и правку вне брифа (`checkout/OrderSummary.tsx`); «Все тесты проходят» опровергнуто, защищённый критерий нарушен — Accept заблокирована, рекомендован Send back с фактами, в Up next — первой в To review, терракотовой точкой. Send back → «Show the next round (demo)» → раунд 2: всё доказано, флагов нет, рекомендован Accept → «Accepted · PR description ready».
 - `/code/one-click-pay?scene=acceptance` — раунд 1, защищённый критерий нарушен: Accept заблокирована, рекомендован Send back, в Up next — To review, первой и с терракотовой точкой.
 - `/code/one-click-pay?scene=acceptance&round=risky` — флаг вне брифа и «only claimed» в платежах, но ничего не нарушено: Accept доступна без клавиши, рекомендован Look deeper first, в Up next — To review.
 - Из первого: Send back → кнопка «Show the next round (demo)» в ленте → раунд 2, всё доказано, флагов нет: рекомендован Accept с клавишей 1.
