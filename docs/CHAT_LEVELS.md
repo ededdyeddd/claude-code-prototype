@@ -2,7 +2,7 @@
 
 Экран чата Claude Code остаётся основой и не заменяется. Элементы задачи (табы, бриф, план, гейты, прогнозы) появляются только тогда, когда задаче есть что в них показать. Всё начинается как обычный чат.
 
-- Маршруты демо: `/code?scene=s2` (S2), `/code/one-click-pay` (S3; план и бриф — `?panel=plan|brief`), `/code/birth-date` (уровень 1, в работе), `/code/i18n` (уровень 3 в работе: принятый бриф, прогресс плана), `/code/loyalty` (эскалация), `/code/chat-levels` (уровень 3 заблокирован на шаге, два агента работают параллельно), приёмка уровней 2–3 — `/code/one-click-pay?scene=acceptance` (за тогглом `acceptance`, см. §2.6).
+- Маршруты демо: `/code?scene=s2` (S2), `/code/one-click-pay` (S3; план и бриф — `?panel=plan|brief`), `/code/birth-date` (уровень 1, в работе), `/code/i18n` (уровень 3 в работе: принятый бриф, прогресс плана), `/code/loyalty` (эскалация), `/code/chat-levels` (уровень 3 заблокирован на шаге, два агента работают параллельно), приёмка уровней 2–3 — `/code/chart-pdf` (результат ждёт приёмки сразу) и `/code/one-click-pay?scene=acceptance` (обе за тогглом `acceptance`, см. §2.6).
 - Код: модель `src/data/task.ts` (общая с Inbox), моки `src/data/chatTasks.ts`, состояние `src/data/chatTaskStore.ts`, экран `src/components/ChatTask.tsx`, план `src/components/PlanPane.tsx` (общий с Inbox), конверт `src/components/EnvelopeChip.tsx`, сборка в `src/components/ChatPanel.tsx`.
 - Принципы Inbox (`docs/INBOX.md`, §1) действуют и здесь: прогноз подписан, терракота значит только «нужен ты», тише со временем.
 
@@ -74,7 +74,7 @@
 
 ### 2.6. Приёмка уровней 2–3
 
-**Фиче-тоггл `acceptance`** (`src/data/features.ts`, по умолчанию включён). Выключить: `?feature-acceptance=off` в любом адресе, включить обратно: `?feature-acceptance=on`; выбор запоминается в `localStorage` (`cc:feature-acceptance`) и применяется при загрузке. Выключенный флаг закрывает единственный вход, сцену приёмки в сторе (`enterAcceptance`, `liveTask`, `deriveTask`). Без неё нет ни плитки, ни панели Result | Diff, ни решения в доке, ни статусов в Up next, и `/code/one-click-pay` показывает прежний S3. Общая модель (`Claim` уровня 1) от флага не зависит: это не поведение, а тип.
+**Фиче-тоггл `acceptance`** (`src/data/features.ts`, по умолчанию включён). Выключить: `?feature-acceptance=off` в любом адресе, включить обратно: `?feature-acceptance=on`; выбор запоминается в `localStorage` (`cc:feature-acceptance`) и применяется при загрузке. Выключенный флаг закрывает единственный вход, сцену приёмки в сторе (и стартовую сцену задач с `result.ready`) (`enterAcceptance`, `liveTask`, `deriveTask`). Без неё нет ни плитки, ни панели Result | Diff, ни решения в доке, ни статусов в Up next, и `/code/one-click-pay` показывает прежний S3. Общая модель (`Claim` уровня 1) от флага не зависит: это не поведение, а тип.
 
 Реестр заявлений: видна граница между «агент сказал, что сделал» и «это проверено кем-то другим». Проверяет система, а не агент: подтверждение даёт только внешний источник (CI, дифф тестов, скриншот, агент-ревьюер), слова агента никогда не становятся отметкой.
 
@@ -103,6 +103,7 @@
 **Up next.** Задача на приёмке лежит в Can wait (серая неподвижная точка: агент закончил и никого не держит), а с нарушенным защищённым критерием — в Blocked. Во второй строке — «accept the result». В плане под «You approve the result» — карточка: флаги строками, «4 proven · 2 only claimed · 1 contradicted», те же варианты без клавиш, «Details» открывает чат с `?review=result`.
 
 **Маршруты состояний** (сцена живёт в памяти: в Up next переходи из чата по сайдбару, без перезагрузки):
+- `/code/chart-pdf` — «PDF натальной карты» (уровень 2) открывается уже на приёмке (`result.ready`, данные в `src/data/chartPdf.ts`), так что в Up next всегда есть результат на приёмку. Раунд 1: ничего не нарушено, но изменён файл вне брифа (`src/chart/Wheel.tsx`) и символы в PDF — только слова агента: рекомендован Look deeper first, в Up next — Can wait. Send back → «Show the next round (demo)» → раунд 2, 4 из 4, рекомендован Accept.
 - `/code/one-click-pay?scene=acceptance` — раунд 1, защищённый критерий нарушен: Accept заблокирована, рекомендован Send back, в Up next — Blocked.
 - `/code/one-click-pay?scene=acceptance&round=risky` — флаг вне брифа и «only claimed» в платежах, но ничего не нарушено: Accept доступна без клавиши, рекомендован Look deeper first, в Up next — Can wait.
 - Из первого: Send back → кнопка «Show the next round (demo)» в ленте → раунд 2, всё доказано, флагов нет: рекомендован Accept с клавишей 1.

@@ -52,8 +52,15 @@ export const EMPTY: TaskState = {
   handChecks: [],
 };
 
+const taskOf = (id: string) => TASKS.find((t) => t.id === id);
+
+/** A task whose result is `ready` opens straight in the acceptance scene, so Up next has a result to accept from the start. */
+const scene = (): TaskState => ({ ...EMPTY, scene: "acceptance", launched: true });
+
 // Shared by the chat, its tabs and the sidebar: a small external store, like inboxStore.
-let state: State = {};
+let state: State = featureOn("acceptance")
+  ? Object.fromEntries(TASKS.filter((t) => t.result?.ready && t.result.iterations?.length).map((t) => [t.id, scene()]))
+  : {};
 const listeners = new Set<() => void>();
 
 function patch(id: string, next: Partial<TaskState> | ((s: TaskState) => Partial<TaskState>)) {
@@ -87,7 +94,7 @@ export function accept(id: string) {
 
 /** Demo: the chat jumps to the moment the plan is done and the result waits for acceptance. */
 export function enterAcceptance(id: string, round?: string) {
-  const result = CHAT_TASKS[id]?.result;
+  const result = taskOf(id)?.result;
   // Off: the task stays where its mock is (the gate on the brief and plan), with no result to accept.
   if (!featureOn("acceptance")) return;
   if (!result?.iterations?.length || (state[id]?.scene && state[id]?.round === round)) return;
@@ -108,9 +115,10 @@ function roundsOf(task: Task, s: TaskState) {
 export function sendBack(id: string, facts: string, words: string) {
   const reason = [facts, words && `“${words}”`].filter(Boolean).join(" · ");
   patch(id, (s) => ({ sentBack: true, handChecks: [], turns: [...s.turns, note(`Sent back: ${reason}`)] }));
-  const task = CHAT_TASKS[id];
+  const task = taskOf(id);
   const next = task?.result?.iterations?.[(state[id]?.iteration ?? 0) + 1];
-  const reply = facts ? "Беру в работу: верну пропущенный тест и откачу правку вне брифа. Результат пришлю на приёмку снова." : "Беру в работу. Результат пришлю на приёмку снова.";
+  const generic = "Беру в работу. Результат пришлю на приёмку снова.";
+  const reply = facts ? (task?.result?.fix?.reply ?? "Беру в работу: верну пропущенный тест и откачу правку вне брифа. Результат пришлю на приёмку снова.") : generic;
   window.setTimeout(
     () =>
       patch(id, (s) => ({
@@ -133,7 +141,7 @@ export function sendBack(id: string, facts: string, words: string) {
 /** Demo: skip ahead to the next acceptance round, as if the agent had finished the fixes. */
 export function nextIteration(id: string) {
   const s = state[id] ?? EMPTY;
-  const next = CHAT_TASKS[id]?.result?.iterations?.[s.iteration + 1];
+  const next = taskOf(id)?.result?.iterations?.[s.iteration + 1];
   if (!next) return;
   patch(id, (cur) => ({
     iteration: cur.iteration + 1,
@@ -145,7 +153,7 @@ export function nextIteration(id: string) {
         role: "assistant",
         thought: "Ran 3 steps",
         time: "just now",
-        steps: [{ icon: RUN, label: "Ran checkout tests", detail: "CI run #418" }],
+        steps: [{ icon: RUN, label: "Ran tests", detail: next.tests.ci?.label }],
         blocks: [
           { type: "p", text: next.message },
           { type: "result-card", iteration: next.iteration },
@@ -276,12 +284,14 @@ export function hasBrief(task: Task) {
  */
 function acceptanceTask(task: Task, s: TaskState): Task {
   const facts = task.result?.steps ?? {};
+  const agent = task.result?.fix?.agent ?? "payments-engineer";
+  const summary = task.result?.fix?.summary ?? "Вернул пропущенный тест и починил его; правку `server/orders/schema.ts` откатил.";
   const fix = (n: number, running: boolean): PlanStep => ({
     id: `fix-${n}`,
     status: running ? "running" : "done",
     title: "Исправить по итогам приёмки",
-    work: running ? { agent: "payments-engineer", cost: "~$1", basis: "the agent's estimate" } : { agent: "payments-engineer", cost: "$0.80", time: "12m" },
-    ...(running ? {} : { result: { summary: "Вернул пропущенный тест и починил его; правку `server/orders/schema.ts` откатил." } }),
+    work: running ? { agent, cost: "~$1", basis: "the agent's estimate" } : { agent, cost: "$0.80", time: "12m" },
+    ...(running ? {} : { result: { summary } }),
   });
   const fixes = [...Array.from({ length: s.iteration }, (_, i) => fix(i + 1, false)), ...(s.sentBack ? [fix(s.iteration + 1, true)] : [])];
   const last = task.stages.length - 1;
